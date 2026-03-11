@@ -103,6 +103,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
   const sectionIdFilter = searchParams.get("sectionId");
 
   const tasks = useTaskStore((s) => s.tasks);
+  const isLoading = useTaskStore((s) => s.isLoading);
   const loadTasks = useTaskStore((s) => s.loadTasks);
   const updateTask = useTaskStore((s) => s.updateTask);
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
@@ -114,6 +115,8 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeTask = useMemo(() => tasks.find((t) => t.id === activeId), [activeId, tasks]);
+
+  const [showLoading, setShowLoading] = useState(true);
 
   const [contextMenu, setContextMenu] = useState<{
     task: Task;
@@ -134,6 +137,10 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
 
   useEffect(() => {
     void loadTasks();
+    
+    // Safety timeout: stop showing loading spinner after 2 seconds regardless
+    const timer = setTimeout(() => setShowLoading(false), 2000);
+    return () => clearTimeout(timer);
   }, [loadTasks]);
 
   useEffect(() => {
@@ -443,6 +450,27 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
       </DroppableSection>
     );
   };
+
+  if (isLoading && showLoading) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3 text-zinc-500">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-800 border-t-zinc-400" />
+        <span className="text-sm">Loading tasks...</span>
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div className="mx-auto flex h-64 w-full max-w-md flex-col items-center justify-center gap-4 text-center">
+        <div className="rounded-2xl bg-white/5 p-6 text-4xl">✨</div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-zinc-300">No tasks yet</p>
+          <p className="text-xs text-zinc-500">Press <kbd className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-300">Cmd+K</kbd> to create your first task.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DndContext

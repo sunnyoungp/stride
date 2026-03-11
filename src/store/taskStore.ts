@@ -9,6 +9,7 @@ import { useDocumentStore } from "./documentStore";
 
 type TaskStore = {
   tasks: Task[];
+  isLoading: boolean;
   loadTasks: () => Promise<void>;
   createTask: (data: Partial<Task>) => Promise<Task>;
   updateTask: (id: string, changes: Partial<Task>) => Promise<void>;
@@ -33,9 +34,13 @@ function isIncomplete(task: Task): boolean {
 
 export const useTaskStore = create<TaskStore>((set, get) => {
   const loadTasks: TaskStore["loadTasks"] = async () => {
-    const tasks = await db.tasks.toArray();
-    set({ tasks });
-    await get().rolloverPastDueTasks();
+    try {
+      const tasks = await db.tasks.toArray();
+      set({ tasks });
+      await get().rolloverPastDueTasks();
+    } finally {
+      set({ isLoading: false });
+    }
   };
 
   const createTask: TaskStore["createTask"] = async (data) => {
@@ -174,6 +179,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
 
   return {
     tasks: [],
+    isLoading: true,
     loadTasks,
     createTask,
     updateTask,
