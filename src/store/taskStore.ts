@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from "zustand";
 
 import { db } from "@/db/index";

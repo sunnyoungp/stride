@@ -1,3 +1,5 @@
+"use client";
+
 import Dexie, { type Table } from "dexie";
 
 import type {
@@ -37,5 +39,19 @@ export class StrideDB extends Dexie {
   }
 }
 
-export const db = new StrideDB();
+// Lazy initialization to avoid SSR issues
+let innerDb: StrideDB | null = null;
+
+export const db = new Proxy({} as StrideDB, {
+  get(_, prop) {
+    if (typeof window === "undefined") {
+      // Return a dummy object or throw a descriptive error if accessed on server
+      return undefined;
+    }
+    if (!innerDb) {
+      innerDb = new StrideDB();
+    }
+    return (innerDb as any)[prop];
+  },
+});
 

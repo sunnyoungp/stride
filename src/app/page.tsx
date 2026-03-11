@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { DailyNote } from "@/components/DailyNote";
 import { TaskListView } from "@/components/TaskListView";
@@ -58,13 +58,15 @@ export default function Page() {
             </h2>
           </div>
           <div ref={taskListRef} className="flex-1 overflow-y-auto px-3 pb-8">
-            <TaskListView 
-              filterDate={today} 
-              onTaskClick={(task, pos) => {
-                setSelectedTaskId(task.id);
-                setClickPos(pos);
-              }} 
-            />
+            <Suspense fallback={<div className="p-6 text-zinc-500 text-sm">Loading tasks...</div>}>
+              <TaskListView 
+                filterDate={today} 
+                onTaskClick={(task, pos) => {
+                  setSelectedTaskId(task.id);
+                  setClickPos(pos);
+                }} 
+              />
+            </Suspense>
           </div>
         </div>
       </div>
