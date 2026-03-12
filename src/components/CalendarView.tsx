@@ -51,10 +51,16 @@ type Props = {
   initialView?: ViewKey;
   hideSidebar?: boolean;
   hideHeader?: boolean;
+  dashboardMode?: boolean;
 };
 
-export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false }: Props) {
-  const [view, setView] = useState<ViewKey>(initialView);
+export function CalendarView({ 
+  initialView = "week", 
+  hideSidebar = false, 
+  hideHeader = false,
+  dashboardMode = false 
+}: Props) {
+  const [view, setView] = useState<ViewKey>(dashboardMode ? "1d" : initialView);
   const calendarRef = useRef<FullCalendar | null>(null);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] =
@@ -68,6 +74,8 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   const tasks = useTaskStore((s) => s.tasks);
   const loadTasks = useTaskStore((s) => s.loadTasks);
   const updateTask = useTaskStore((s) => s.updateTask);
+
+  const selectedCalendarView = useMemo(() => viewToCalendar(view), [view]);
 
   const events = useMemo(
     () =>
@@ -145,52 +153,67 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     });
   };
 
-  const selected = viewToCalendar(view);
+  // Dashboard-specific date label: "Today, March 11"
+  const todayLabel = useMemo(() => {
+    const formattedDate = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    }).format(new Date());
+    return `Today, ${formattedDate}`;
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col">
       {!hideHeader && (
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-          <div className="text-sm font-semibold text-zinc-100">Calendar</div>
-          <div className="flex items-center gap-2">
-            
-            {(
-              [
-                ["1d", "1 Day"],
-                ["2d", "2 Day"],
-                ["3d", "3 Day"],
-                ["4d", "4 Day"],
-                ["week", "Week"],
-                ["month", "Month"],
-              ] as const
-            ).map(([key, label]) => {
-              const active = view === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setView(key);
-                    const api = calendarRef.current?.getApi();
-                    if (api) {
-                      const { type, duration } = viewToCalendar(key);
-                      api.changeView(type);
-                      if (duration) {
-                        api.setOption("duration", duration);
-                      }
-                    }
-                  }}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                    active
-                      ? "bg-white/10 text-zinc-100"
-                      : "text-zinc-300 hover:bg-white/5 hover:text-zinc-100"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 bg-zinc-900/40 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <div className="text-sm font-semibold text-zinc-100 tracking-tight">
+              {dashboardMode ? todayLabel : "Calendar"}
+            </div>
           </div>
+          
+          {!dashboardMode && (
+            <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-lg border border-white/5">
+              {(
+                [
+                  ["1d", "1 Day"],
+                  ["2d", "2 Day"],
+                  ["3d", "3 Day"],
+                  ["4d", "4 Day"],
+                  ["week", "Week"],
+                  ["month", "Month"],
+                ] as const
+              ).map(([key, label]) => {
+                const active = view === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setView(key);
+                      const api = calendarRef.current?.getApi();
+                      if (api) {
+                        const { type, duration } = viewToCalendar(key);
+                        api.changeView(type);
+                        if (duration) {
+                          api.setOption("duration", duration);
+                        }
+                      }
+                    }}
+                    className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-all ${
+                      active
+                        ? "bg-white/10 text-white shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -240,7 +263,8 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
+              initialView={selectedCalendarView.type}
+              duration={selectedCalendarView.duration}
               headerToolbar={false}
               height="100%"
               nowIndicator

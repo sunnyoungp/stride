@@ -9,6 +9,7 @@ import type { TaskSection, TaskSubsection } from "@/types/index";
 type SectionStore = {
   sections: TaskSection[];
   subsections: TaskSubsection[];
+  isLoading: boolean;
   loadSections: () => Promise<void>;
   createSection: (title: string, color?: string, icon?: string) => Promise<TaskSection>;
   updateSection: (id: string, changes: Partial<TaskSection>) => Promise<void>;
@@ -28,23 +29,30 @@ const defaultSections: Array<Pick<TaskSection, "title" | "icon" | "color">> = [
 
 export const useSectionStore = create<SectionStore>((set, get) => {
   const loadSections: SectionStore["loadSections"] = async () => {
-    const existingSections = await db.sections.toArray();
+    try {
+      const existingSections = await db.sections.toArray();
 
-    if (existingSections.length > 0) {
-      set({ sections: existingSections.sort((a, b) => a.order - b.order) });
-      return;
+      if (existingSections.length > 0) {
+        set({ sections: existingSections.sort((a, b) => a.order - b.order) });
+        return;
+      }
+
+      const seeded: TaskSection[] = defaultSections.map((s, idx) => ({
+        id: crypto.randomUUID(),
+        title: s.title,
+        icon: s.icon,
+        color: s.color,
+        order: idx,
+      }));
+
+      await db.sections.bulkPut(seeded);
+      set({ sections: seeded });
+    } catch (error) {
+      console.error("Failed to load sections:", error);
+      set({ sections: [] });
+    } finally {
+      set({ isLoading: false });
     }
-
-    const seeded: TaskSection[] = defaultSections.map((s, idx) => ({
-      id: crypto.randomUUID(),
-      title: s.title,
-      icon: s.icon,
-      color: s.color,
-      order: idx,
-    }));
-
-    await db.sections.bulkPut(seeded);
-    set({ sections: seeded });
   };
 
   const createSection: SectionStore["createSection"] = async (
@@ -88,8 +96,13 @@ export const useSectionStore = create<SectionStore>((set, get) => {
   };
 
   const loadSubsections: SectionStore["loadSubsections"] = async () => {
-    const subsections = await db.taskSubsections.toArray();
-    set({ subsections: subsections.sort((a, b) => a.order - b.order) });
+    try {
+      const subsections = await db.taskSubsections.toArray();
+      set({ subsections: subsections.sort((a, b) => a.order - b.order) });
+    } catch (error) {
+      console.error("Failed to load subsections:", error);
+      set({ subsections: [] });
+    }
   };
 
   const createSubsection: SectionStore["createSubsection"] = async (title, sectionId) => {
@@ -132,6 +145,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
   return {
     sections: [],
     subsections: [],
+    isLoading: true,
     loadSections,
     loadSubsections,
     createSection,

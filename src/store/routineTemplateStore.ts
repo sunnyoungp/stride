@@ -8,6 +8,7 @@ import type { RoutineTemplate, TimeBlock } from "@/types/index";
 
 type RoutineTemplateStore = {
   templates: RoutineTemplate[];
+  isLoading: boolean;
   loadTemplates: () => Promise<void>;
   createTemplate: (data: Partial<RoutineTemplate>) => Promise<RoutineTemplate>;
   updateTemplate: (id: string, changes: Partial<RoutineTemplate>) => Promise<void>;
@@ -40,24 +41,31 @@ function combineDateTime(date: string, timeHHmm: string): Date {
 
 export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) => {
   const loadTemplates: RoutineTemplateStore["loadTemplates"] = async () => {
-    let templates = await db.routineTemplates.toArray();
+    try {
+      let templates = await db.routineTemplates.toArray();
 
-    if (templates.length === 0) {
-      const seeded: RoutineTemplate[] = builtIns.map((t) => ({
-        id: crypto.randomUUID(),
-        title: t.title,
-        startTime: t.startTime,
-        endTime: t.endTime,
-        color: t.color,
-        icon: t.icon,
-        daysOfWeek: [],
-        isBuiltIn: true,
-      }));
-      await db.routineTemplates.bulkPut(seeded);
-      templates = seeded;
+      if (templates.length === 0) {
+        const seeded: RoutineTemplate[] = builtIns.map((t) => ({
+          id: crypto.randomUUID(),
+          title: t.title,
+          startTime: t.startTime,
+          endTime: t.endTime,
+          color: t.color,
+          icon: t.icon,
+          daysOfWeek: [],
+          isBuiltIn: true,
+        }));
+        await db.routineTemplates.bulkPut(seeded);
+        templates = seeded;
+      }
+
+      set({ templates });
+    } catch (error) {
+      console.error("Failed to load routine templates:", error);
+      set({ templates: [] });
+    } finally {
+      set({ isLoading: false });
     }
-
-    set({ templates });
   };
 
   const createTemplate: RoutineTemplateStore["createTemplate"] = async (data) => {
@@ -129,6 +137,7 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
 
   return {
     templates: [],
+    isLoading: true,
     loadTemplates,
     createTemplate,
     updateTemplate,

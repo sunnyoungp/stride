@@ -87,6 +87,7 @@ async function ensureDailyNote(date: string): Promise<DailyNote> {
 
 export function DailyNote() {
   const dailyNotes = useDailyNoteStore((s) => s.dailyNotes);
+  const isLoading = useDailyNoteStore((s) => s.isLoading);
   const loadDailyNotes = useDailyNoteStore((s) => s.loadDailyNotes);
   const getTodayNote = useDailyNoteStore((s) => s.getTodayNote);
   const updateNoteContent = useDailyNoteStore((s) => s.updateNoteContent);
@@ -98,16 +99,27 @@ export function DailyNote() {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [note, setNote] = useState<DailyNote | null>(null);
 
+  const [showLoading, setShowLoading] = useState(true);
+
   const saveTimerRef = useRef<number | null>(null);
   const lastChecksRef = useRef<TaskCheckState>(new Map());
 
   useEffect(() => {
     void (async () => {
-      const n = await getTodayNote();
-      setSelectedDate(n.date);
-      setNote(n);
-      await loadDailyNotes();
+      try {
+        const n = await getTodayNote();
+        setSelectedDate(n.date);
+        setNote(n);
+        await loadDailyNotes();
+      } catch (err) {
+        console.error("DailyNote initial load failed:", err);
+      } finally {
+        setShowLoading(false);
+      }
     })();
+    
+    const timer = setTimeout(() => setShowLoading(false), 2000);
+    return () => clearTimeout(timer);
   }, [getTodayNote, loadDailyNotes]);
 
   useEffect(() => {

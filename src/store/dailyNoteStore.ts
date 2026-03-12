@@ -7,6 +7,7 @@ import type { DailyNote } from "@/types/index";
 
 type DailyNoteStore = {
   dailyNotes: DailyNote[];
+  isLoading: boolean;
   loadDailyNotes: () => Promise<void>;
   getTodayNote: () => Promise<DailyNote>;
   updateNoteContent: (id: string, content: string) => Promise<void>;
@@ -18,32 +19,44 @@ function todayDateString(): string {
 
 export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
   const loadDailyNotes: DailyNoteStore["loadDailyNotes"] = async () => {
-    const dailyNotes = await db.dailyNotes.toArray();
-    set({ dailyNotes });
+    try {
+      const dailyNotes = await db.dailyNotes.toArray();
+      set({ dailyNotes });
+    } catch (error) {
+      console.error("Failed to load daily notes:", error);
+      set({ dailyNotes: [] });
+    } finally {
+      set({ isLoading: false });
+    }
   };
 
   const getTodayNote: DailyNoteStore["getTodayNote"] = async () => {
-    const today = todayDateString();
+    try {
+      const today = todayDateString();
 
-    const existingInState = get().dailyNotes.find((n) => n.date === today);
-    if (existingInState) return existingInState;
+      const existingInState = get().dailyNotes.find((n) => n.date === today);
+      if (existingInState) return existingInState;
 
-    const existingInDb = await db.dailyNotes.where("date").equals(today).first();
-    if (existingInDb) {
-      set({ dailyNotes: [...get().dailyNotes, existingInDb] });
-      return existingInDb;
+      const existingInDb = await db.dailyNotes.where("date").equals(today).first();
+      if (existingInDb) {
+        set({ dailyNotes: [...get().dailyNotes, existingInDb] });
+        return existingInDb;
+      }
+
+      const note: DailyNote = {
+        id: crypto.randomUUID(),
+        date: today,
+        content: JSON.stringify({ type: "doc", content: [] }),
+        linkedTaskIds: [],
+      };
+
+      await db.dailyNotes.put(note);
+      set({ dailyNotes: [...get().dailyNotes, note] });
+      return note;
+    } catch (error) {
+      console.error("Failed to get today note:", error);
+      throw error;
     }
-
-    const note: DailyNote = {
-      id: crypto.randomUUID(),
-      date: today,
-      content: JSON.stringify({ type: "doc", content: [] }),
-      linkedTaskIds: [],
-    };
-
-    await db.dailyNotes.put(note);
-    set({ dailyNotes: [...get().dailyNotes, note] });
-    return note;
   };
 
   const updateNoteContent: DailyNoteStore["updateNoteContent"] = async (
@@ -58,6 +71,7 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
 
   return {
     dailyNotes: [],
+    isLoading: true,
     loadDailyNotes,
     getTodayNote,
     updateNoteContent,

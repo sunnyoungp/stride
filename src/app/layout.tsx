@@ -34,7 +34,7 @@ export default function RootLayout({
           <aside className="h-screen w-[240px] flex-none overflow-hidden">
             <Sidebar />
           </aside>
-          <main className="h-screen flex-1 overflow-y-auto bg-zinc-950 text-zinc-50">
+          <main className="h-screen flex-1 overflow-hidden bg-zinc-950 text-zinc-50">
             {children}
           </main>
         </div>

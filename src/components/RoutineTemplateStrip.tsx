@@ -13,6 +13,7 @@ type Props = {
 
 export function RoutineTemplateStrip({ onManageTemplates }: Props) {
   const templates = useRoutineTemplateStore((s) => s.templates);
+  const isLoading = useRoutineTemplateStore((s) => s.isLoading);
   const loadTemplates = useRoutineTemplateStore((s) => s.loadTemplates);
   const applyTemplatesToDay = useRoutineTemplateStore((s) => s.applyTemplatesToDay);
   
@@ -86,35 +87,44 @@ export function RoutineTemplateStrip({ onManageTemplates }: Props) {
         ref={containerRef}
         className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar"
       >
-        {templates.map((t) => (
-          <div
-            key={t.id}
-            data-template-id={t.id}
-            data-template-title={t.title}
-            data-template-color={t.color}
-            data-template-duration={getDuration(t.startTime, t.endTime)}
-            onClick={() => handleApply(t.id)}
-            className="group cursor-grab active:cursor-grabbing relative flex flex-col gap-1 p-3 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 transition-all"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{t.icon || "⏱️"}</span>
-              <span className="text-sm font-medium text-zinc-200 truncate">{t.title}</span>
-            </div>
-            <div className="text-[11px] text-zinc-500 font-mono">
-              {formatTime(t.startTime)} – {formatTime(t.endTime)}
-            </div>
-            
-            <div 
-              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 rounded-r-full opacity-60"
-              style={{ backgroundColor: t.color }}
-            />
+        {isLoading ? (
+          <div className="flex h-32 flex-col items-center justify-center gap-2 text-zinc-600">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-800 border-t-zinc-500" />
+            <span className="text-[10px]">Loading...</span>
           </div>
-        ))}
+        ) : (
+          <>
+            {templates.map((t) => (
+              <div
+                key={t.id}
+                data-template-id={t.id}
+                data-template-title={t.title}
+                data-template-color={t.color}
+                data-template-duration={getDuration(t.startTime, t.endTime)}
+                onClick={() => handleApply(t.id)}
+                className="group cursor-grab active:cursor-grabbing relative flex flex-col gap-1 p-3 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{t.icon || "⏱️"}</span>
+                  <span className="text-sm font-medium text-zinc-200 truncate">{t.title}</span>
+                </div>
+                <div className="text-[11px] text-zinc-500 font-mono">
+                  {formatTime(t.startTime)} – {formatTime(t.endTime)}
+                </div>
+                
+                <div 
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 rounded-r-full opacity-60"
+                  style={{ backgroundColor: t.color }}
+                />
+              </div>
+            ))}
 
-        {templates.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-xs text-zinc-600 italic">No templates found</p>
-          </div>
+            {templates.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-xs text-zinc-600 italic">No templates found</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

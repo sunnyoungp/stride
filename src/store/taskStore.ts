@@ -38,6 +38,9 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       const tasks = await db.tasks.toArray();
       set({ tasks });
       await get().rolloverPastDueTasks();
+    } catch (error) {
+      console.error("Failed to load tasks:", error);
+      set({ tasks: [] });
     } finally {
       set({ isLoading: false });
     }
