@@ -67,7 +67,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     }
     await db.documents.delete(id);
     set({ documents: get().documents.filter((d) => d.id !== id) });
-    
+
     // Trigger task store reload to reflect deleted tasks
     const { useTaskStore } = await import("./taskStore");
     await useTaskStore.getState().loadTasks();

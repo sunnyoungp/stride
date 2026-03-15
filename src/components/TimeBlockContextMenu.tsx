@@ -1,109 +1,108 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
 import type { TimeBlock } from "@/types/index";
 
 type Props = {
   timeBlock: TimeBlock;
   position: { x: number; y: number };
   onClose: () => void;
-  onSaveAsTemplate: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onSaveAsTemplate: () => void;
 };
 
-function clamp(n: number, min: number, max: number): number {
+function clamp(n: number, min: number, max: number) {
   return Math.min(Math.max(n, min), max);
+}
+
+function formatTime(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(iso));
 }
 
 export function TimeBlockContextMenu({
   timeBlock,
   position,
   onClose,
-  onSaveAsTemplate,
   onEdit,
   onDelete,
+  onSaveAsTemplate,
 }: Props) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [pos, setPos] = useState(position);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [clampedPos, setClampedPos] = useState(position);
 
   useEffect(() => {
-    const onPointerDown = (e: PointerEvent) => {
-      const el = ref.current;
-      if (!el) return;
-      if (e.target instanceof Node && el.contains(e.target)) return;
-      onClose();
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, [onClose]);
-
-  useEffect(() => {
-    const el = ref.current;
+    const el = menuRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setSize({ width: rect.width, height: rect.height });
-  }, [timeBlock.id]);
+    const padding = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    setClampedPos({
+      x: clamp(position.x, padding, vw - rect.width - padding),
+      y: clamp(position.y, padding, vh - rect.height - padding),
+    });
+  }, [position]);
 
   useEffect(() => {
-    const compute = () => {
-      const padding = 8;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const w = size.width || 220;
-      const h = size.height || 120;
-      setPos({
-        x: clamp(position.x, padding, vw - w - padding),
-        y: clamp(position.y, padding, vh - h - padding),
-      });
+    const handlePointerDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
     };
-    compute();
-    window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
-  }, [position.x, position.y, size.height, size.width]);
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [onClose]);
+
+  const handleDelete = () => {
+    if (confirm(`Delete "${timeBlock.title}"?`)) {
+      onDelete();
+    }
+    onClose();
+  };
 
   return (
     <div
-      ref={ref}
-      style={{ left: pos.x, top: pos.y }}
+      ref={menuRef}
+      style={{ left: clampedPos.x, top: clampedPos.y }}
       className="fixed z-50 w-[220px] select-none rounded-lg border border-white/10 bg-zinc-900 p-1 shadow-xl"
       role="menu"
-      aria-label="Time block menu"
     >
+      {/* Block label */}
+      <div className="px-3 py-2 text-xs text-zinc-500 border-b border-white/5 mb-1">
+        <div className="font-medium text-zinc-300 truncate">{timeBlock.title}</div>
+        <div className="mt-0.5 font-mono">{formatTime(timeBlock.startTime)} → {formatTime(timeBlock.endTime)}</div>
+      </div>
+
       <button
         type="button"
-        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
-        onClick={() => {
-          onEdit();
-          onClose();
-        }}
+        onClick={() => { onEdit(); onClose(); }}
+        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5 transition-colors"
       >
         Edit
       </button>
+
+      {timeBlock.type !== "routine" && (
+        <button
+          type="button"
+          onClick={() => { onSaveAsTemplate(); onClose(); }}
+          className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5 transition-colors"
+        >
+          Save as Template
+        </button>
+      )}
+
+      <div className="my-1 h-px bg-white/8" />
+
       <button
         type="button"
-        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
-        onClick={() => {
-          onSaveAsTemplate();
-          onClose();
-        }}
+        onClick={handleDelete}
+        className="w-full rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
       >
-        Save as Template
-      </button>
-      <div className="my-1 h-px bg-white/10" />
-      <button
-        type="button"
-        className="w-full rounded-md px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10"
-        onClick={() => {
-          onDelete();
-          onClose();
-        }}
-      >
-        Delete
+        Delete Block
       </button>
     </div>
   );
 }
-
