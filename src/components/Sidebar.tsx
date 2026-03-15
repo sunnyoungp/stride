@@ -26,6 +26,45 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: "Notes",
+    href: "/notes",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+        <line x1="4.5" y1="5"   x2="10.5" y2="5"   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".7"/>
+        <line x1="4.5" y1="7.5" x2="9"    y2="7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".7"/>
+        <line x1="4.5" y1="10"  x2="8"    y2="10"  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".7"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Inbox",
+    href: "/inbox",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="1" y="7" width="13" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+        <path d="M1 7l2.5-5h8L14 7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+        <line x1="5" y1="7" x2="5" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".6"/>
+        <line x1="5" y1="10" x2="10" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".6"/>
+        <line x1="10" y1="10" x2="10" y2="7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".6"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Next 7 Days",
+    href: "/next7",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="1" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+        <rect x="4.5" y="1" width="1.4" height="3" rx=".7" fill="currentColor"/>
+        <rect x="9.1" y="1" width="1.4" height="3" rx=".7" fill="currentColor"/>
+        <line x1="1" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.2"/>
+        <line x1="7.5" y1="8.5" x2="7.5" y2="11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        <line x1="7.5" y1="11" x2="9.5" y2="11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
     label: "Tasks",
     href: "/tasks",
     icon: (

@@ -2,21 +2,115 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Draggable } from "@fullcalendar/interaction";
+import { Settings } from "lucide-react";
 import {
   Separator as ResizableHandle,
   Panel as ResizablePanel,
   Group as ResizablePanelGroup,
 } from "react-resizable-panels";
 import { CalendarView } from "@/components/CalendarView";
-import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { useTaskStore } from "@/store/taskStore";
+import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
+import type { RoutineTemplate } from "@/types/index";
+
+const PINNED_COUNT = 3;
+
+function getDuration(start: string, end: string): string {
+  const [h1 = 0, m1 = 0] = start.split(":").map(Number);
+  const [h2 = 0, m2 = 0] = end.split(":").map(Number);
+  let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+  if (diff < 0) diff += 24 * 60;
+  return `${String(Math.floor(diff / 60)).padStart(2, "0")}:${String(diff % 60).padStart(2, "0")}`;
+}
+
+function formatTime(time: string): string {
+  const [h = 0, m = 0] = time.split(":").map(Number);
+  const period = h >= 12 ? "pm" : "am";
+  return `${h % 12 || 12}${m > 0 ? ":" + String(m).padStart(2, "0") : ""}${period}`;
+}
+
+function RoutineChip({ t }: { t: RoutineTemplate }) {
+  return (
+    <div
+      data-template-id={t.id}
+      data-template-title={t.title}
+      data-template-color={t.color}
+      data-template-duration={getDuration(t.startTime, t.endTime)}
+      style={{
+        display: "flex", flexDirection: "column",
+        padding: "5px 10px 5px 8px",
+        borderRadius: 8,
+        border: "1px solid var(--border, rgba(0,0,0,0.08))",
+        borderLeft: `3px solid ${t.color ?? "var(--accent)"}`,
+        background: "var(--bg-subtle, #f8f7f5)",
+        cursor: "grab",
+        minWidth: 0, maxWidth: 120,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontSize: "12px", lineHeight: 1, flexShrink: 0 }}>{t.icon ?? "⏱️"}</span>
+        <span style={{
+          fontSize: "11px", fontWeight: 500,
+          color: "var(--fg, #1a1a1a)",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {t.title}
+        </span>
+      </div>
+      <div style={{ fontSize: "10px", color: "var(--fg-faint, #aaa)", marginTop: 2, paddingLeft: 16 }}>
+        {formatTime(t.startTime)}–{formatTime(t.endTime)}
+      </div>
+    </div>
+  );
+}
 
 export default function Page() {
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
-  const tasks = useTaskStore((s) => s.tasks);
-  const incompleteTasks = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
+  const [routinesExpanded, setRoutinesExpanded] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("routines-sidebar-expanded") === "true";
+  });
 
+  const tasks             = useTaskStore((s) => s.tasks);
+  const templates         = useRoutineTemplateStore((s) => s.templates);
+  const isLoadingRoutines = useRoutineTemplateStore((s) => s.isLoading);
+  const loadTemplates     = useRoutineTemplateStore((s) => s.loadTemplates);
+
+  // Unscheduled incomplete tasks only — same set as Tasks tab
+  const incompleteTasks = tasks.filter(
+    (t) => t.status !== "done" && t.status !== "cancelled" && !t.scheduledStart,
+  );
+
+  // Built-in templates first, then custom
+  const sortedTemplates   = [...templates].sort((a, b) => (a.isBuiltIn === b.isBuiltIn ? 0 : a.isBuiltIn ? -1 : 1));
+  const pinnedTemplates   = sortedTemplates.slice(0, PINNED_COUNT);
+  const overflowTemplates = sortedTemplates.slice(PINNED_COUNT);
+
+  useEffect(() => { void loadTemplates(); }, [loadTemplates]);
+
+  // Draggable for routine chips (pinned + overflow share one container)
+  const routineContainerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = routineContainerRef.current;
+    if (!el) return;
+    const draggable = new Draggable(el, {
+      itemSelector: "[data-template-id]",
+      eventData: (eventEl) => {
+        const ds = (eventEl as HTMLElement).dataset;
+        return {
+          title: ds.templateTitle || "Routine",
+          duration: ds.templateDuration || "01:00",
+          backgroundColor: ds.templateColor,
+          borderColor: "transparent",
+          extendedProps: { routineTemplateId: ds.templateId, type: "routine" },
+        };
+      },
+    });
+    return () => draggable.destroy();
+  }, [templates]);
+
+  // Draggable for unscheduled tasks
   const taskPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = taskPanelRef.current;
@@ -31,6 +125,12 @@ export default function Page() {
     });
     return () => draggable.destroy();
   }, [incompleteTasks]);
+
+  const toggleExpanded = () => {
+    const next = !routinesExpanded;
+    setRoutinesExpanded(next);
+    localStorage.setItem("routines-sidebar-expanded", String(next));
+  };
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -58,101 +158,169 @@ export default function Page() {
           minSize="20%"
           maxSize="45%"
           style={{
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
-            overflow: "hidden",
+            display: "flex", flexDirection: "column",
+            height: "100%", overflow: "hidden",
             borderRight: "1px solid var(--border, rgba(0,0,0,0.08))",
             minWidth: 0,
+            background: "var(--bg-sidebar, #faf9f7)",
           }}
         >
-          {/* Unscheduled tasks — scrollable */}
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", minHeight: 0, minWidth: 0 }}>
-            <div style={{
-              padding: "12px 16px",
-              position: "sticky",
-              top: 0,
-              zIndex: 10,
-              borderBottom: "1px solid var(--border, rgba(0,0,0,0.08))",
-              background: "var(--bg-sidebar, #faf9f7)",
-              backdropFilter: "blur(8px)",
-            }}>
-              <h3 style={{ fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-muted, #888)", margin: 0 }}>
-                Unscheduled Tasks
-              </h3>
+          {/* ── ROUTINES ── */}
+          <div style={{ flexShrink: 0, padding: "12px 12px 10px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-muted, #888)" }}>
+                Routines
+              </span>
+              <button
+                type="button"
+                onClick={() => setRoutinePanelOpen(true)}
+                title="Manage Templates"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 24, height: 24, borderRadius: 6,
+                  border: "none", background: "transparent",
+                  color: "var(--fg-faint, #bbb)", cursor: "pointer",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover, rgba(0,0,0,0.05))"; e.currentTarget.style.color = "var(--fg-muted, #888)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint, #bbb)"; }}
+              >
+                <Settings size={13} />
+              </button>
             </div>
 
-            <div ref={taskPanelRef} style={{ padding: "12px", minWidth: 0 }}>
-              {incompleteTasks.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "32px 8px", fontSize: "12px", color: "var(--fg-faint, #bbb)", fontStyle: "italic" }}>
-                  No open tasks
+            <div style={{
+              background: "var(--bg-card, #fff)",
+              borderRadius: 12,
+              border: "1px solid var(--border, rgba(0,0,0,0.08))",
+              padding: 8,
+            }}>
+              {isLoadingRoutines ? (
+                <div style={{ textAlign: "center", padding: "14px 0", fontSize: "11px", color: "var(--fg-faint, #bbb)" }}>Loading…</div>
+              ) : templates.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "14px 0", fontSize: "11px", color: "var(--fg-faint, #bbb)", fontStyle: "italic" }}>
+                  No templates — click ⚙ to add one
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
-                  {incompleteTasks.map((t) => (
-                    <div
-                      key={t.id}
-                      data-task-id={t.id}
-                      data-task-title={t.title}
-                      style={{
-                        cursor: "grab",
-                        display: "flex",
-                        alignItems: "center",
-                        minWidth: 0,
-                        padding: "10px 12px",
-                        borderRadius: "10px",
-                        border: "1px solid var(--border, rgba(0,0,0,0.08))",
-                        background: "var(--bg-card, #fff)",
-                        color: "var(--fg-muted, #666)",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--fg-faint, #ccc)", marginRight: "10px", flexShrink: 0 }} />
-                      <span style={{
-                        fontSize: "13px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        minWidth: 0,
-                        flex: 1,
-                      }}>
-                        {t.title || "(Untitled)"}
-                      </span>
+                /* Single ref wraps pinned + overflow so both are draggable */
+                <div ref={routineContainerRef}>
+                  {/* Pinned row */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {pinnedTemplates.map((t) => <RoutineChip key={t.id} t={t} />)}
+                    {overflowTemplates.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={toggleExpanded}
+                        style={{
+                          display: "flex", alignItems: "center",
+                          padding: "4px 8px", borderRadius: 8,
+                          border: "1px dashed var(--border, rgba(0,0,0,0.14))",
+                          background: "transparent",
+                          fontSize: "11px", fontWeight: 500,
+                          color: "var(--fg-faint, #999)", cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover, rgba(0,0,0,0.04))"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      >
+                        {routinesExpanded ? "▾ less" : `+ ${overflowTemplates.length} more`}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Expandable overflow */}
+                  <div style={{
+                    maxHeight: routinesExpanded ? "400px" : 0,
+                    overflow: "hidden",
+                    transition: "max-height 280ms ease",
+                  }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 6 }}>
+                      {overflowTemplates.map((t) => <RoutineChip key={t.id} t={t} />)}
                     </div>
-                  ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Routine strip — fixed height at bottom */}
-          <div style={{ flexShrink: 0, height: "256px", borderTop: "1px solid var(--border, rgba(0,0,0,0.08))" }}>
-            <RoutineTemplateStrip onManageTemplates={() => setRoutinePanelOpen(true)} />
+          {/* ── UNSCHEDULED TASKS ── */}
+          <div style={{
+            flex: 1, display: "flex", flexDirection: "column",
+            overflow: "hidden", minHeight: 0,
+            borderTop: "1px solid var(--border, rgba(0,0,0,0.06))",
+          }}>
+            <div style={{
+              flexShrink: 0, padding: "10px 16px",
+              borderBottom: "1px solid var(--border, rgba(0,0,0,0.06))",
+              background: "var(--bg-sidebar, #faf9f7)",
+            }}>
+              <h3 style={{
+                fontSize: "10px", fontWeight: 600,
+                textTransform: "uppercase", letterSpacing: "0.1em",
+                color: "var(--fg-muted, #888)", margin: 0,
+              }}>
+                Unscheduled Tasks
+              </h3>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+              <div ref={taskPanelRef} style={{ padding: "10px 12px", minWidth: 0 }}>
+                {incompleteTasks.length === 0 ? (
+                  <div style={{
+                    textAlign: "center", padding: "28px 8px",
+                    fontSize: "12px", color: "var(--fg-faint, #bbb)", fontStyle: "italic",
+                  }}>
+                    No open tasks
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
+                    {incompleteTasks.map((t) => (
+                      <div
+                        key={t.id}
+                        data-task-id={t.id}
+                        data-task-title={t.title}
+                        style={{
+                          cursor: "grab",
+                          display: "flex", alignItems: "center",
+                          minWidth: 0, padding: "8px 10px",
+                          borderRadius: 9,
+                          border: "1px solid var(--border, rgba(0,0,0,0.07))",
+                          background: "var(--bg-card, #fff)",
+                          color: "var(--fg-muted, #666)",
+                        }}
+                      >
+                        <span style={{
+                          width: 5, height: 5, borderRadius: "50%",
+                          background: "var(--fg-faint, #ccc)",
+                          marginRight: 9, flexShrink: 0,
+                        }} />
+                        <span style={{
+                          fontSize: "12px",
+                          overflow: "hidden", textOverflow: "ellipsis",
+                          whiteSpace: "nowrap", minWidth: 0, flex: 1,
+                        }}>
+                          {t.title || "(Untitled)"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </ResizablePanel>
 
-        {/* Horizontal resize handle */}
+        {/* Resize handle */}
         <ResizableHandle
           id="calendar-h-handle"
           style={{
-            width: "8px",
-            height: "100%",
-            cursor: "col-resize",
-            background: "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
+            width: "8px", height: "100%", cursor: "col-resize",
+            background: "transparent", display: "flex",
+            alignItems: "center", justifyContent: "center", flexShrink: 0,
             borderLeft: "1px solid var(--border, rgba(0,0,0,0.08))",
             borderRight: "1px solid var(--border, rgba(0,0,0,0.08))",
           }}
         >
-          <div style={{
-            width: "3px",
-            height: "32px",
-            borderRadius: "9999px",
-            background: "rgba(0,0,0,0.15)",
-          }} />
+          <div style={{ width: "3px", height: "32px", borderRadius: "9999px", background: "rgba(0,0,0,0.15)" }} />
         </ResizableHandle>
 
         {/* ── Main calendar ── */}
@@ -163,9 +331,7 @@ export default function Page() {
           style={{ overflow: "hidden", padding: "16px", height: "100%" }}
         >
           <div style={{
-            height: "100%",
-            borderRadius: "16px",
-            overflow: "hidden",
+            height: "100%", borderRadius: "16px", overflow: "hidden",
             background: "var(--bg-card, #fff)",
             border: "1px solid var(--border, rgba(0,0,0,0.08))",
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",

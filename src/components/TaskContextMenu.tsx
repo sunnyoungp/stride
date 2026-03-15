@@ -10,13 +10,15 @@ type Props = {
   onClose: () => void;
 };
 
-function dateOnlyString(d: Date) { return d.toISOString().slice(0, 10); }
+function localDateString(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 function nextWeekdayDate(targetDay: number) {
   const now = new Date();
   let diff = (targetDay - now.getDay() + 7) % 7;
   if (diff === 0) diff = 7;
   now.setDate(now.getDate() + diff);
-  return dateOnlyString(now);
+  return localDateString(now);
 }
 function clamp(n: number, min: number, max: number) { return Math.min(Math.max(n, min), max); }
 
@@ -35,8 +37,8 @@ export function TaskContextMenu({ task, position, onClose }: Props) {
   const [activePanel, setActivePanel] = useState<"main" | "priority">("main");
   const [clampedPos, setClampedPos]   = useState(position);
 
-  const today    = useMemo(() => dateOnlyString(new Date()), []);
-  const tomorrow = useMemo(() => { const d = new Date(); d.setDate(d.getDate()+1); return dateOnlyString(d); }, []);
+  const today    = useMemo(() => localDateString(new Date()), []);
+  const tomorrow = useMemo(() => { const d = new Date(); d.setDate(d.getDate()+1); return localDateString(d); }, []);
 
   useEffect(() => {
     const el = menuRef.current;

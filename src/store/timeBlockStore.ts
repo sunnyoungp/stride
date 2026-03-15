@@ -21,8 +21,23 @@ function addMinutes(iso: string, minutes: number): string {
 
 export const useTimeBlockStore = create<TimeBlockStore>((set, get) => {
   const loadTimeBlocks: TimeBlockStore["loadTimeBlocks"] = async () => {
-    const timeBlocks = await db.timeBlocks.toArray();
-    set({ timeBlocks });
+    const [timeBlocks, tasks] = await Promise.all([
+      db.timeBlocks.toArray(),
+      db.tasks.toArray(),
+    ]);
+    const taskIdSet = new Set(tasks.map((t) => t.id));
+
+    // Clear taskId references that point to deleted/non-existent tasks
+    const cleaned: TimeBlock[] = [];
+    for (const block of timeBlocks) {
+      if (block.taskId && !taskIdSet.has(block.taskId)) {
+        await db.timeBlocks.update(block.id, { taskId: undefined });
+        cleaned.push({ ...block, taskId: undefined });
+      } else {
+        cleaned.push(block);
+      }
+    }
+    set({ timeBlocks: cleaned });
   };
 
   const createTimeBlock: TimeBlockStore["createTimeBlock"] = async (data) => {

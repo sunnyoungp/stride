@@ -215,13 +215,21 @@ type Props = {
   hideSidebar?: boolean;
   hideHeader?: boolean;
   dashboardMode?: boolean;
+  selectedDate?: string;
 };
 
-export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false }: Props) {
+export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false, selectedDate }: Props) {
   const [view, setView]               = useState<ViewKey>(dashboardMode ? "1d" : initialView);
   const calendarRef                   = useRef<FullCalendar | null>(null);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] = useState<Partial<RoutineTemplate> | null>(null);
+  const [currentTitle, setCurrentTitle] = useState("");
+  const [isViewingToday, setIsViewingToday] = useState(true);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    calendarRef.current?.getApi().gotoDate(selectedDate);
+  }, [selectedDate]);
 
   const timeBlocks      = useTimeBlockStore((s) => s.timeBlocks);
   const loadTimeBlocks  = useTimeBlockStore((s) => s.loadTimeBlocks);
@@ -311,7 +319,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
 
   return (
     <div className="flex h-full w-full flex-col">
-      {!hideHeader && (
+      {!hideHeader && !dashboardMode && (
         <div
           className="flex items-center justify-between gap-3 px-4 py-3 flex-none"
           style={{ borderBottom: "1px solid var(--border)" }}
@@ -375,7 +383,74 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
         )}
 
         {/* Calendar — let globals.css fc variables take over, no inline overrides */}
-        <div className="flex-1 p-2 overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Navigation bar — hidden in dashboard mode (parent handles navigation) */}
+          {!dashboardMode && (
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 flex-none"
+            style={{ borderBottom: "1px solid var(--border)" }}
+          >
+            {/* Prev / Next */}
+            <button
+              type="button"
+              onClick={() => calendarRef.current?.getApi().prev()}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 26, height: 26, borderRadius: 7,
+                border: "1px solid var(--border)",
+                background: "var(--bg-subtle)",
+                color: "var(--fg-muted)", cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M7.5 2L4 6l3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => calendarRef.current?.getApi().next()}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 26, height: 26, borderRadius: 7,
+                border: "1px solid var(--border)",
+                background: "var(--bg-subtle)",
+                color: "var(--fg-muted)", cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M4.5 2L8 6l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {/* Today pill */}
+            <button
+              type="button"
+              onClick={() => calendarRef.current?.getApi().today()}
+              style={{
+                padding: "3px 10px", borderRadius: 20,
+                border: "none",
+                background: "var(--accent)",
+                color: "#fff",
+                fontSize: "0.7rem", fontWeight: 600,
+                cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              Today
+            </button>
+
+            <span
+              style={{
+                fontSize: "0.75rem", fontWeight: 600,
+                color: isViewingToday ? "var(--accent)" : "var(--fg)",
+                marginLeft: 2,
+              }}
+            >
+              {isViewingToday && (view === "1d") ? "Today" : currentTitle}
+            </span>
+          </div>
+          )}
+
+          <div className="flex-1 p-2 overflow-hidden">
           <div className="h-full rounded-xl overflow-hidden">
             <FullCalendar
               ref={calendarRef}
@@ -387,7 +462,13 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               nowIndicator
               allDaySlot={false}
               slotMinTime="05:00:00"
-              slotMaxTime="23:00:00"
+              slotMaxTime="24:00:00"
+              datesSet={(arg) => {
+                setCurrentTitle(arg.view.title);
+                const todayMidnight = new Date();
+                todayMidnight.setHours(0, 0, 0, 0);
+                setIsViewingToday(todayMidnight >= arg.start && todayMidnight < arg.end);
+              }}
               editable droppable weekends
               selectable
               selectMinDistance={5}
@@ -457,6 +538,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               dayHeaderClassNames={() => ["text-xs"]}
               slotLabelClassNames={() => ["text-xs"]}
             />
+          </div>
           </div>
         </div>
       </div>

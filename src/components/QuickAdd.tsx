@@ -5,8 +5,11 @@ import { useTaskStore } from "@/store/taskStore";
 import { useSectionStore } from "@/store/sectionStore";
 import type { Task } from "@/types/index";
 
-function todayStr()    { return new Date().toISOString().slice(0, 10); }
-function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
+function localDateString(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function todayStr()    { return localDateString(new Date()); }
+function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return localDateString(d); }
 
 function parse(input: string): Pick<Task, "title" | "tags" | "dueDate"> {
   const tags: string[] = [];

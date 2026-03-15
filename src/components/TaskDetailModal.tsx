@@ -72,9 +72,10 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const currentSection  = sections.find((s) => s.id === task.sectionId);
   const currentPriority = PRIORITY_OPTIONS.find((p) => p.value === task.priority) ?? PRIORITY_OPTIONS[0]!;
 
-  const todayStr    = new Date().toISOString().slice(0, 10);
-  const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
-  const nextWeekStr = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })();
+  const localDate   = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const todayStr    = localDate(new Date());
+  const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDate(d); })();
+  const nextWeekStr = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return localDate(d); })();
 
   // Clamp to viewport — runs after every render so expanding panels stay on-screen
   useLayoutEffect(() => {

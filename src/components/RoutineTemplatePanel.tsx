@@ -11,7 +11,10 @@ const days = [
   { label: "Thu", value: 4 }, { label: "Fri", value: 5 }, { label: "Sat", value: 6 }, { label: "Sun", value: 0 },
 ] as const;
 
-function todayDateString() { return new Date().toISOString().slice(0, 10); }
+function todayDateString() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 function formatRange(start: string, end: string) { return `${start}–${end}`; }
 
 export function RoutineTemplatePanel({ open, onClose, prefill }: Props) {

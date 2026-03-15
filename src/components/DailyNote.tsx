@@ -2,11 +2,14 @@
 
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
+import type { Node as PmNode } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import type { JSONContent } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 
 import { db } from "@/db/index";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
@@ -17,7 +20,7 @@ import type { DailyNote } from "@/types/index";
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
 function dateOnlyString(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function parseDateOnly(date: string): Date {
@@ -31,11 +34,8 @@ function addDays(date: string, deltaDays: number): string {
   return dateOnlyString(d);
 }
 
-function formatHeading(date: string): string {
-  const d = parseDateOnly(date);
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "long", month: "long", day: "numeric",
-  }).format(d);
+function formatDateLabel(date: string): string {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(parseDateOnly(date));
 }
 
 // ─── TaskItem with stable taskId attr ────────────────────────────────────────
@@ -107,23 +107,37 @@ async function ensureDailyNote(date: string): Promise<DailyNote> {
 
 // ─── NoteItemContextMenu ──────────────────────────────────────────────────────
 
-type NoteMenuState = { title: string; taskId: string | null; x: number; y: number };
+type NoteMenuState = {
+  title: string;
+  taskId: string | null;
+  checked: boolean;
+  pos: number;
+  x: number;
+  y: number;
+};
 
 function NoteItemContextMenu({
-  item, onMove, onDelete, onClose,
+  item, selectedDate, onMove, onDelete, onSchedule, onToggleChecked, onNavigateToTask, onClose,
 }: {
   item: NoteMenuState;
+  selectedDate: string;
   onMove: (date: string) => void;
   onDelete: () => void;
+  onSchedule: (dueDate: string) => void;
+  onToggleChecked: () => void;
+  onNavigateToTask: () => void;
   onClose: () => void;
 }) {
-  const menuRef  = useRef<HTMLDivElement>(null);
-  const dateRef  = useRef<HTMLInputElement>(null);
-  const [clPos, setClPos] = useState({ x: item.x, y: item.y });
+  const menuRef     = useRef<HTMLDivElement>(null);
+  const dateRef     = useRef<HTMLInputElement>(null);
+  const moveDateRef = useRef<HTMLInputElement>(null);
+  const [clPos, setClPos]             = useState({ x: item.x, y: item.y });
+  const [activePanel, setActivePanel] = useState<"main" | "schedule" | "move">("main");
 
   const today    = useMemo(() => dateOnlyString(new Date()), []);
   const tomorrow = useMemo(() => addDays(today, 1), [today]);
 
+  // Clamp to viewport after mount
   useEffect(() => {
     const el = menuRef.current;
     if (!el) return;
@@ -134,50 +148,103 @@ function NoteItemContextMenu({
     });
   }, [item.x, item.y]);
 
+  // 50ms delay prevents the triggering click from immediately dismissing
   useEffect(() => {
     const h = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) onClose(); };
-    window.addEventListener("pointerdown", h);
-    return () => window.removeEventListener("pointerdown", h);
+    const t = setTimeout(() => window.addEventListener("pointerdown", h), 50);
+    return () => { clearTimeout(t); window.removeEventListener("pointerdown", h); };
   }, [onClose]);
 
-  const row = (label: string, action: () => void, danger = false) => (
+  // "Move to Day" dates: yesterday, tomorrow, then +2..+6 relative to selectedDate
+  const moveDates = useMemo(() => {
+    const entries: { label: string; date: string }[] = [
+      { label: "Yesterday", date: addDays(selectedDate, -1) },
+      { label: "Tomorrow",  date: addDays(selectedDate,  1) },
+    ];
+    for (let i = 2; i <= 6; i++) {
+      const d = addDays(selectedDate, i);
+      entries.push({ label: formatDateLabel(d), date: d });
+    }
+    return entries;
+  }, [selectedDate]);
+
+  const row = (label: string, action: () => void, danger = false, suffix?: string) => (
     <button key={label} type="button" onClick={action}
       style={{
-        width: "100%", display: "block", textAlign: "left",
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "6px 12px", borderRadius: 8,
         fontSize: "0.8125rem", color: danger ? "#ef4444" : "var(--fg)",
-        background: "transparent", border: "none", cursor: "pointer",
+        background: "transparent", border: "none", cursor: "pointer", textAlign: "left",
       }}
       onMouseEnter={e => (e.currentTarget.style.background = danger ? "rgba(239,68,68,0.08)" : "var(--bg-hover)")}
       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-    >{label}</button>
+    >
+      <span>{label}</span>
+      {suffix && <span style={{ fontSize: "0.75rem", color: "var(--fg-faint)" }}>{suffix}</span>}
+    </button>
+  );
+
+  const backBtn = (to: "main") => (
+    <button type="button" onClick={() => setActivePanel(to)}
+      style={{
+        display: "flex", alignItems: "center", gap: 4,
+        padding: "5px 12px", borderRadius: 8,
+        fontSize: "0.8125rem", color: "var(--fg-muted)",
+        background: "transparent", border: "none", cursor: "pointer",
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+    >‹ Back</button>
   );
 
   return (
     <div ref={menuRef} style={{
-      position: "fixed", left: clPos.x, top: clPos.y, zIndex: 9999, width: 200,
+      position: "fixed", left: clPos.x, top: clPos.y, zIndex: 9999, width: 220,
       background: "var(--bg-card)", border: "1px solid var(--border-mid)",
       borderRadius: 12, boxShadow: "var(--shadow-lg)", padding: 4,
     }}>
+      {/* Title */}
       <div style={{ padding: "6px 12px 4px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
         <div style={{ fontSize: "0.75rem", color: "var(--fg-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {item.title}
         </div>
       </div>
 
-      {row("Move to Today",    () => { onMove(today);    onClose(); })}
-      {row("Move to Tomorrow", () => { onMove(tomorrow); onClose(); })}
-      <button type="button"
-        onClick={() => dateRef.current?.showPicker?.()}
-        style={{ width: "100%", display: "block", textAlign: "left", padding: "6px 12px", borderRadius: 8, fontSize: "0.8125rem", color: "var(--fg)", background: "transparent", border: "none", cursor: "pointer" }}
-        onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-      >📅 Pick Date…</button>
-      <input ref={dateRef} type="date" style={{ display: "none" }}
-        onChange={e => { if (e.target.value) { onMove(e.target.value); onClose(); } }} />
+      {activePanel === "main" && <>
+        {row("Schedule Task", () => setActivePanel("schedule"), false, "›")}
+        {row("Move to Day",   () => setActivePanel("move"),     false, "›")}
+        {row("Open in Tasks", () => { onNavigateToTask(); onClose(); })}
+        <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
+        {row(item.checked ? "Mark Incomplete" : "Mark Complete", () => { onToggleChecked(); onClose(); })}
+        <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
+        {row("Delete", () => { onDelete(); onClose(); }, true)}
+      </>}
 
-      <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
-      {row(item.taskId ? "Delete Task" : "Remove Item", () => { onDelete(); onClose(); }, true)}
+      {activePanel === "schedule" && <>
+        {backBtn("main")}
+        {row("Today",     () => { onSchedule(today);             onClose(); })}
+        {row("Tomorrow",  () => { onSchedule(tomorrow);          onClose(); })}
+        {row("Next Week", () => { onSchedule(addDays(today, 7)); onClose(); })}
+        <button type="button" onClick={() => dateRef.current?.showPicker?.()}
+          style={{ width: "100%", display: "block", textAlign: "left", padding: "6px 12px", borderRadius: 8, fontSize: "0.8125rem", color: "var(--fg)", background: "transparent", border: "none", cursor: "pointer" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >📅 Pick Date…</button>
+        <input ref={dateRef} type="date" style={{ display: "none" }}
+          onChange={e => { if (e.target.value) { onSchedule(e.target.value); onClose(); } }} />
+      </>}
+
+      {activePanel === "move" && <>
+        {backBtn("main")}
+        {moveDates.map(({ label, date }) => row(label, () => { onMove(date); onClose(); }))}
+        <button type="button" onClick={() => moveDateRef.current?.showPicker?.()}
+          style={{ width: "100%", display: "block", textAlign: "left", padding: "6px 12px", borderRadius: 8, fontSize: "0.8125rem", color: "var(--fg)", background: "transparent", border: "none", cursor: "pointer" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >📅 Pick Date…</button>
+        <input ref={moveDateRef} type="date" style={{ display: "none" }}
+          onChange={e => { if (e.target.value) { onMove(e.target.value); onClose(); } }} />
+      </>}
     </div>
   );
 }
@@ -206,7 +273,7 @@ function UnlinkIcon() {
 
 // ─── DailyNote component ──────────────────────────────────────────────────────
 
-export function DailyNote() {
+export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean }) {
   const dailyNotes        = useDailyNoteStore((s) => s.dailyNotes);
   const loadDailyNotes    = useDailyNoteStore((s) => s.loadDailyNotes);
   const getTodayNote      = useDailyNoteStore((s) => s.getTodayNote);
@@ -217,8 +284,8 @@ export function DailyNote() {
   const createTask = useTaskStore((s) => s.createTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
 
-  const today = useMemo(() => dateOnlyString(new Date()), []);
-  const [selectedDate, setSelectedDate] = useState<string>(today);
+  const router = useRouter();
+
   const [note, setNote]                 = useState<DailyNote | null>(null);
   const [showLoading, setShowLoading]   = useState(true);
   const [noteContextMenu, setNoteContextMenu] = useState<NoteMenuState | null>(null);
@@ -260,7 +327,7 @@ export function DailyNote() {
     void (async () => {
       try {
         const n = await getTodayNote();
-        setSelectedDate(n.date);
+        onDateChange(n.date);
         setNote(n);
         await loadDailyNotes();
       } catch (err) {
@@ -271,7 +338,7 @@ export function DailyNote() {
     })();
     const timer = setTimeout(() => setShowLoading(false), 2000);
     return () => clearTimeout(timer);
-  }, [getTodayNote, loadDailyNotes]);
+  }, [getTodayNote, loadDailyNotes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const inState = dailyNotes.find((n) => n.date === selectedDate);
@@ -330,6 +397,56 @@ export function DailyNote() {
       editorProps: {
         attributes: {
           class: "min-h-[200px] outline-none leading-7 text-[var(--fg)] [&_ul]:ml-6 [&_ol]:ml-6",
+        },
+        handleDOMEvents: {
+          contextmenu: (view, event) => {
+            const liEl = (event.target as HTMLElement | null)?.closest('li[data-checked]') as HTMLElement | null;
+            if (!liEl) return false;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            let title   = "";
+            let taskId: string | null = null;
+            let checked = false;
+            let nodePos = 0;
+
+            // Primary: ProseMirror position resolution
+            const resolved = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (resolved) {
+              const $pos = view.state.doc.resolve(resolved.pos);
+              for (let d = $pos.depth; d >= 0; d--) {
+                const node = $pos.node(d);
+                if (node.type.name === "taskItem") {
+                  title   = node.textContent.trim();
+                  taskId  = (node.attrs as Record<string, unknown>).taskId as string | null ?? null;
+                  checked = Boolean((node.attrs as Record<string, unknown>).checked);
+                  nodePos = $pos.before(d);
+                  break;
+                }
+              }
+            }
+
+            // Fallback: read from DOM when posAtCoords fails or walk finds nothing
+            if (!title) {
+              const contentDiv = liEl.querySelector("div");
+              title   = contentDiv?.textContent?.trim() ?? "";
+              taskId  = liEl.getAttribute("data-task-id") ?? null;
+              checked = liEl.getAttribute("data-checked") === "true";
+              if (title) {
+                view.state.doc.nodesBetween(0, view.state.doc.nodeSize - 2, (node, pos) => {
+                  if (nodePos !== 0) return false;
+                  if (node.type.name === "taskItem" && node.textContent.trim() === title) {
+                    nodePos = pos;
+                  }
+                });
+              }
+            }
+
+            if (!title) return true;
+            setNoteContextMenu({ title, taskId, checked, pos: nodePos, x: event.clientX, y: event.clientY });
+            return true;
+          },
         },
       },
       onUpdate: ({ editor }) => {
@@ -391,13 +508,17 @@ export function DailyNote() {
   }, []);
 
   const goToDate = async (date: string) => {
-    setSelectedDate(date);
     const existing = dailyNotes.find((n) => n.date === date);
     if (existing) { setNote(existing); return; }
     const createdOrFound = await ensureDailyNote(date);
     await loadDailyNotes();
     setNote(createdOrFound);
   };
+
+  // Sync note content whenever the parent changes selectedDate
+  useEffect(() => {
+    void goToDate(selectedDate);
+  }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Move a checklist item to another date's note.
@@ -476,17 +597,60 @@ export function DailyNote() {
     }
   };
 
-  const handleEditorContextMenu = (e: React.MouseEvent) => {
-    if (!editor) return;
-    const li = (e.target as HTMLElement).closest('li[data-type="taskItem"]');
-    if (!li) return;
-    e.preventDefault();
-    const title  = (li.querySelector("div > p") ?? li).textContent?.trim() ?? "";
-    if (!title) return;
-    // Read taskId directly from the DOM attr set by TaskItemWithId.renderHTML
-    const taskId = (li as HTMLElement).getAttribute("data-task-id") ?? null;
-    setNoteContextMenu({ title, taskId, x: e.clientX, y: e.clientY });
-  };
+  const handleScheduleItem = useCallback(async (title: string, taskId: string | null, dueDate: string) => {
+    if (taskId) {
+      await updateTask(taskId, { dueDate });
+      return;
+    }
+    const n = noteRef.current;
+    const created = await createTask({
+      title, status: "todo", dueDate,
+      sourceDocumentId: n?.id,
+      sourceDocumentTitle: n?.date,
+    });
+    const ed = editorRef.current;
+    if (!ed) return;
+    ed.state.doc.nodesBetween(0, ed.state.doc.nodeSize - 2, (node, pos) => {
+      if (node.type.name === "taskItem" && !node.attrs.taskId && node.textContent.trim() === title) {
+        writeTaskIdToNode(ed, pos, created.id, node.attrs as Record<string, unknown>);
+        return false;
+      }
+    });
+  }, [updateTask, createTask]);
+
+  const handleToggleChecked = useCallback((pos: number, checked: boolean, taskId: string | null) => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const node = ed.state.doc.nodeAt(pos) as PmNode | null;
+    if (!node) return;
+    ed.view.dispatch(
+      ed.view.state.tr
+        .setNodeMarkup(pos, undefined, { ...node.attrs, checked: !checked })
+        .setMeta("addToHistory", false)
+    );
+    if (taskId) void updateTask(taskId, { status: !checked ? "done" : "todo" });
+  }, [updateTask]);
+
+  const handleNavigateToTask = useCallback(async (title: string, taskId: string | null) => {
+    if (!taskId) {
+      const n = noteRef.current;
+      const created = await createTask({
+        title, status: "todo",
+        sourceDocumentId: n?.id,
+        sourceDocumentTitle: n?.date,
+      });
+      const ed = editorRef.current;
+      if (ed) {
+        ed.state.doc.nodesBetween(0, ed.state.doc.nodeSize - 2, (node, pos) => {
+          if (node.type.name === "taskItem" && !node.attrs.taskId && node.textContent.trim() === title) {
+            writeTaskIdToNode(ed, pos, created.id, node.attrs as Record<string, unknown>);
+            return false;
+          }
+        });
+      }
+    }
+    router.push("/tasks");
+  }, [createTask, router]);
 
   if (!note) {
     return (
@@ -499,83 +663,40 @@ export function DailyNote() {
   return (
     <div className="mx-auto w-full max-w-2xl px-8 py-8">
       {/* Section label + sync-mode toggle */}
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--fg-faint)" }}>
-          Daily Note
-        </p>
-        <button
-          type="button"
-          onClick={toggleLinked}
-          title={isLinked
-            ? "Linked mode: checklist items sync as tasks. Click to switch to independent."
-            : "Independent mode: checklist items are local only. Click to link to task manager."}
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            padding: "3px 8px", borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: isLinked ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--bg-subtle)",
-            color: isLinked ? "var(--accent)" : "var(--fg-faint)",
-            fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-        >
-          {isLinked ? <LinkIcon /> : <UnlinkIcon />}
-          {isLinked ? "Linked" : "Independent"}
-        </button>
-      </div>
+      {!hideHeader && (
+        <>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--fg-faint)" }}>
+              Daily Note
+            </p>
+            <button
+              type="button"
+              onClick={toggleLinked}
+              title={isLinked
+                ? "Linked mode: checklist items sync as tasks. Click to switch to independent."
+                : "Independent mode: checklist items are local only. Click to link to task manager."}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "3px 8px", borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: isLinked ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--bg-subtle)",
+                color: isLinked ? "var(--accent)" : "var(--fg-faint)",
+                fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {isLinked ? <LinkIcon /> : <UnlinkIcon />}
+              {isLinked ? "Linked" : "Independent"}
+            </button>
+          </div>
 
-      {/* Heading + inline nav arrows */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void goToDate(addDays(selectedDate, -1))}
-            aria-label="Previous day"
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-full transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-            style={{ color: "var(--fg-faint)" }}
-          >
-            <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
-              <path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-
-          <h1
-            className="flex-1 leading-tight"
-            style={{ fontSize: "28px", fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.022em" }}
-          >
-            {formatHeading(selectedDate)}
-          </h1>
-
-          <button
-            type="button"
-            onClick={() => void goToDate(addDays(selectedDate, 1))}
-            aria-label="Next day"
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-full transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-            style={{ color: "var(--fg-faint)" }}
-          >
-            <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
-              <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
-
-        {selectedDate !== today && (
-          <button
-            type="button"
-            onClick={() => void goToDate(today)}
-            className="mt-2 text-[12px] transition-all duration-150 ease-out hover:opacity-70"
-            style={{ color: "var(--accent)" }}
-          >
-            ↩ Back to today
-          </button>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="mb-5 h-px" style={{ background: "var(--border)" }} />
+          {/* Divider */}
+          <div className="mb-5 h-px" style={{ background: "var(--border)" }} />
+        </>
+      )}
 
       {/* Editor */}
-      <div onContextMenu={handleEditorContextMenu} onKeyDown={handleEditorKeyDown}>
+      <div onKeyDown={handleEditorKeyDown}>
         {editor ? <EditorContent editor={editor} /> : null}
       </div>
 
@@ -587,13 +708,18 @@ export function DailyNote() {
         }
       </p>
 
-      {noteContextMenu && (
+      {noteContextMenu && createPortal(
         <NoteItemContextMenu
           item={noteContextMenu}
+          selectedDate={selectedDate}
           onMove={(date) => void handleMoveItem(noteContextMenu.title, noteContextMenu.taskId, date)}
           onDelete={() => void handleDeleteItem(noteContextMenu.title)}
+          onSchedule={(dueDate) => void handleScheduleItem(noteContextMenu.title, noteContextMenu.taskId, dueDate)}
+          onToggleChecked={() => handleToggleChecked(noteContextMenu.pos, noteContextMenu.checked, noteContextMenu.taskId)}
+          onNavigateToTask={() => void handleNavigateToTask(noteContextMenu.title, noteContextMenu.taskId)}
           onClose={() => setNoteContextMenu(null)}
-        />
+        />,
+        document.body,
       )}
     </div>
   );

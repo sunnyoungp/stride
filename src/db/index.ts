@@ -41,7 +41,21 @@ export class StrideDB extends Dexie {
       taskSubsections: "&id, sectionId",
     });
 
+    // v3 — added deletedSections table
     this.version(3).stores({
+      tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
+      sections: "&id",
+      timeBlocks: "&id, taskId, startTime",
+      dailyNotes: "&id, date",
+      documents: "&id, projectId",
+      projects: "&id",
+      routineTemplates: "&id",
+      taskSubsections: "&id, sectionId",
+      deletedSections: "&id",
+    });
+
+    // v4 — schema re-sync; ensures all tables present on existing installs
+    this.version(4).stores({
       tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
       sections: "&id",
       timeBlocks: "&id, taskId, startTime",

@@ -15,6 +15,30 @@ import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { useTaskStore } from "@/store/taskStore";
 
+function shiftDate(date: string, days: number): string {
+  const d = new Date(date + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function localDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDashboardDate(date: string, today: string): string {
+  const d = new Date(date + "T00:00:00");
+  const dayStr = new Intl.DateTimeFormat("en-US", {
+    weekday: "short", month: "short", day: "numeric",
+  }).format(d);
+  const diff = Math.round(
+    (new Date(date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86400000,
+  );
+  if (diff === 0)  return `Today, ${dayStr}`;
+  if (diff === -1) return `Yesterday, ${dayStr}`;
+  if (diff === 1)  return `Tomorrow, ${dayStr}`;
+  return dayStr;
+}
+
 export default function Page() {
   const [selectedTaskId, setSelectedTaskId]     = useState<string | null>(null);
   const [clickPos, setClickPos]                 = useState({ x: 0, y: 0 });
@@ -22,7 +46,25 @@ export default function Page() {
 
   const tasks        = useTaskStore((s) => s.tasks);
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
-  const today        = new Date().toISOString().split("T")[0]!;
+
+  const [today, setToday] = useState<string>(() => localDateString(new Date()));
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = localDateString(new Date());
+      setToday((prev) => (prev !== now ? now : prev));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const [selectedDate, setSelectedDate] = useState<string>(today);
+  useEffect(() => { setSelectedDate(today); }, [today]);
+
+  const [contentDimmed, setContentDimmed] = useState(false);
+  useEffect(() => {
+    setContentDimmed(true);
+    const t = setTimeout(() => setContentDimmed(false), 150);
+    return () => clearTimeout(t);
+  }, [selectedDate]);
 
   const taskListRef = useRef<HTMLDivElement>(null);
 
@@ -45,17 +87,72 @@ export default function Page() {
 
   if (!mounted) return <div className="h-screen w-full" />;
 
-  const todayTaskCount = tasks.filter(
-    (t) => t.dueDate?.startsWith(today) && t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId,
+  const selectedDateTaskCount = tasks.filter(
+    (t) => t.dueDate?.startsWith(selectedDate) && t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId,
   ).length;
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* ── Left column (55%) ── */}
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", overflow: "hidden" }}>
+
+      {/* ── Date navigation header ── */}
+      <div style={{
+        flexShrink: 0, height: 44,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        borderBottom: "1px solid rgba(0,0,0,0.06)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {/* Left chevron */}
+          <button
+            type="button"
+            onClick={() => setSelectedDate((prev) => shiftDate(prev, -1))}
+            aria-label="Previous day"
+            style={{
+              fontSize: "18px", lineHeight: 1,
+              color: "rgba(0,0,0,0.3)", cursor: "pointer",
+              border: "none", background: "transparent",
+              padding: "4px 8px", borderRadius: 6,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.7)"; e.currentTarget.style.background = "rgba(0,0,0,0.05)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.3)"; e.currentTarget.style.background = "transparent"; }}
+          >‹</button>
+
+          {/* Date label */}
+          <span
+            onDoubleClick={() => setSelectedDate(today)}
+            title={selectedDate !== today ? "Double-click to return to today" : undefined}
+            style={{
+              fontSize: "14px", fontWeight: 500,
+              minWidth: 180, textAlign: "center", display: "inline-block",
+              color: selectedDate !== today ? "rgba(0,0,0,0.38)" : "var(--fg, #1a1a1a)",
+              cursor: selectedDate !== today ? "default" : "default",
+              userSelect: "none",
+            }}
+          >
+            {formatDashboardDate(selectedDate, today)}
+          </span>
+
+          {/* Right chevron */}
+          <button
+            type="button"
+            onClick={() => setSelectedDate((prev) => shiftDate(prev, 1))}
+            aria-label="Next day"
+            style={{
+              fontSize: "18px", lineHeight: 1,
+              color: "rgba(0,0,0,0.3)", cursor: "pointer",
+              border: "none", background: "transparent",
+              padding: "4px 8px", borderRadius: 6,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.7)"; e.currentTarget.style.background = "rgba(0,0,0,0.05)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.3)"; e.currentTarget.style.background = "transparent"; }}
+          >›</button>
+        </div>
+      </div>
+
+      {/* ── Panels ── */}
       <ResizablePanelGroup
         orientation="horizontal"
         id="dashboard-main-group"
-        style={{ flex: 1, height: "100%" }}
+        style={{ flex: 1, overflow: "hidden" }}
       >
         <ResizablePanel
           id="dashboard-left-panel"
@@ -77,7 +174,9 @@ export default function Page() {
               minSize="20%"
               style={{ overflow: "auto" }}
             >
-              <DailyNote />
+              <div style={{ opacity: contentDimmed ? 0.6 : 1, transition: "opacity 150ms ease" }}>
+                <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} />
+              </div>
             </ResizablePanel>
 
             {/* Vertical handle */}
@@ -104,7 +203,7 @@ export default function Page() {
               }} />
             </ResizableHandle>
 
-            {/* Today's Focus */}
+            {/* Focus tasks for selected date */}
             <ResizablePanel
               id="dashboard-tasks-panel"
               defaultSize="50%"
@@ -113,16 +212,16 @@ export default function Page() {
             >
               <div style={{ flexShrink: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "20px 24px 12px" }}>
                 <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-faint, #999)" }}>
-                  Today&apos;s Focus
+                  {selectedDate === today ? "Today's Focus" : "Tasks"}
                 </h2>
-                {todayTaskCount > 0 && (
-                  <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{todayTaskCount}</span>
+                {selectedDateTaskCount > 0 && (
+                  <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{selectedDateTaskCount}</span>
                 )}
               </div>
-              <div ref={taskListRef} style={{ flex: 1, overflowY: "auto" }}>
+              <div ref={taskListRef} style={{ flex: 1, overflowY: "auto", opacity: contentDimmed ? 0.6 : 1, transition: "opacity 150ms ease" }}>
                 <Suspense fallback={<div style={{ padding: "16px 24px", fontSize: "12px", color: "#999" }}>Loading…</div>}>
                   <TaskListView
-                    filterDate={today}
+                    filterDate={selectedDate}
                     onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }}
                   />
                 </Suspense>
@@ -173,7 +272,7 @@ export default function Page() {
               border: "1px solid var(--border, rgba(0,0,0,0.08))",
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
-              <CalendarView dashboardMode={true} hideSidebar={true} />
+              <CalendarView dashboardMode={true} hideSidebar={true} selectedDate={selectedDate} />
             </div>
           </div>
 
