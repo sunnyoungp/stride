@@ -12,6 +12,10 @@ import type {
   TimeBlock,
 } from "@/types/index";
 
+export interface DeletedSection extends TaskSection {
+  deletedAt: string;
+}
+
 export class StrideDB extends Dexie {
   tasks!: Table<Task, string>;
   sections!: Table<TaskSection, string>;
@@ -21,13 +25,13 @@ export class StrideDB extends Dexie {
   projects!: Table<Project, string>;
   routineTemplates!: Table<RoutineTemplate, string>;
   taskSubsections!: Table<any, string>;
+  deletedSections!: Table<DeletedSection, string>;
 
   constructor() {
     super("StrideDB");
 
     this.version(2).stores({
-      tasks:
-        "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
+      tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
       sections: "&id",
       timeBlocks: "&id, taskId, startTime",
       dailyNotes: "&id, date",
@@ -35,6 +39,18 @@ export class StrideDB extends Dexie {
       projects: "&id",
       routineTemplates: "&id",
       taskSubsections: "&id, sectionId",
+    });
+
+    this.version(3).stores({
+      tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
+      sections: "&id",
+      timeBlocks: "&id, taskId, startTime",
+      dailyNotes: "&id, date",
+      documents: "&id, projectId",
+      projects: "&id",
+      routineTemplates: "&id",
+      taskSubsections: "&id, sectionId",
+      deletedSections: "&id",
     });
   }
 }
@@ -45,7 +61,6 @@ let innerDb: StrideDB | null = null;
 export const db = new Proxy({} as StrideDB, {
   get(_, prop) {
     if (typeof window === "undefined") {
-      // Return a dummy object or throw a descriptive error if accessed on server
       return undefined;
     }
     if (!innerDb) {
@@ -54,4 +69,3 @@ export const db = new Proxy({} as StrideDB, {
     return (innerDb as any)[prop];
   },
 });
-

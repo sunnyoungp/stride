@@ -16,13 +16,13 @@ import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { useTaskStore } from "@/store/taskStore";
 
 export default function Page() {
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [clickPos, setClickPos]             = useState({ x: 0, y: 0 });
+  const [selectedTaskId, setSelectedTaskId]     = useState<string | null>(null);
+  const [clickPos, setClickPos]                 = useState({ x: 0, y: 0 });
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
 
-  const tasks = useTaskStore((s) => s.tasks);
+  const tasks        = useTaskStore((s) => s.tasks);
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
-  const today = new Date().toISOString().split("T")[0]!;
+  const today        = new Date().toISOString().split("T")[0]!;
 
   const taskListRef = useRef<HTMLDivElement>(null);
 
@@ -43,94 +43,156 @@ export default function Page() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  if (!mounted) {
-    return (
-      <div className="h-screen w-full bg-zinc-950 overflow-hidden flex">
-        <div style={{ width: "55%" }} className="flex flex-col border-r border-white/5 h-full" />
-        <div style={{ width: "45%" }} className="flex flex-col h-full" />
-      </div>
-    );
-  }
+  if (!mounted) return <div className="h-screen w-full" />;
+
+  const todayTaskCount = tasks.filter(
+    (t) => t.dueDate?.startsWith(today) && t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId,
+  ).length;
 
   return (
-    <div className="h-screen w-full bg-zinc-950 overflow-hidden">
-      <ResizablePanelGroup orientation="horizontal" id="dashboard-main-group" className="h-full w-full">
-
-        {/* ── Left column ── */}
-        <ResizablePanel id="dashboard-left-panel" defaultSize={55} minSize={30} maxSize={70}
-          className="flex flex-col border-r border-white/[0.06] h-full"
+    <div style={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* ── Left column (55%) ── */}
+      <ResizablePanelGroup
+        orientation="horizontal"
+        id="dashboard-main-group"
+        style={{ flex: 1, height: "100%" }}
+      >
+        <ResizablePanel
+          id="dashboard-left-panel"
+          defaultSize="55%"
+          minSize="35%"
+          maxSize="70%"
+          style={{ display: "flex", flexDirection: "column", height: "100%", borderRight: "1px solid var(--border, rgba(0,0,0,0.08))" }}
         >
-          <ResizablePanelGroup orientation="vertical" id="dashboard-left-vertical">
-
+          {/* Inner vertical split */}
+          <ResizablePanelGroup
+            orientation="vertical"
+            id="dashboard-left-vertical"
+            style={{ flex: 1, height: "100%" }}
+          >
             {/* Daily Note */}
-            <ResizablePanel id="dashboard-note-panel" defaultSize={50} minSize={20}>
-              <div className="h-full overflow-y-auto">
-                <DailyNote />
-              </div>
+            <ResizablePanel
+              id="dashboard-note-panel"
+              defaultSize="50%"
+              minSize="20%"
+              style={{ overflow: "auto" }}
+            >
+              <DailyNote />
             </ResizablePanel>
 
-            <ResizableHandle id="dashboard-v-handle"
-              className="relative h-px w-full bg-white/[0.06] hover:bg-white/10 transition-colors cursor-row-resize z-10"
-              style={{ touchAction: "none" }}
-            />
+            {/* Vertical handle */}
+            <ResizableHandle
+              id="dashboard-v-handle"
+              style={{
+                height: "8px",
+                width: "100%",
+                cursor: "row-resize",
+                background: "transparent",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                borderTop: "1px solid var(--border, rgba(0,0,0,0.08))",
+                borderBottom: "1px solid var(--border, rgba(0,0,0,0.08))",
+              }}
+            >
+              <div style={{
+                width: "32px",
+                height: "3px",
+                borderRadius: "9999px",
+                background: "rgba(0,0,0,0.15)",
+              }} />
+            </ResizableHandle>
 
             {/* Today's Focus */}
-            <ResizablePanel id="dashboard-tasks-panel" defaultSize={50} minSize={20}>
-              <div className="h-full flex flex-col overflow-hidden">
-                <div className="px-5 pt-4 pb-2 flex items-center justify-between flex-none">
-                  <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">
-                    Today&apos;s Focus
-                  </h2>
-                  <span className="text-[11px] text-zinc-700 tabular-nums">
-                    {tasks.filter((t) =>
-                      t.dueDate?.startsWith(today) &&
-                      t.status !== "done" &&
-                      t.status !== "cancelled" &&
-                      !t.parentTaskId
-                    ).length} tasks
-                  </span>
-                </div>
-                <div ref={taskListRef} className="flex-1 overflow-y-auto">
-                  <Suspense fallback={<div className="p-6 text-zinc-700 text-xs">Loading…</div>}>
-                    <TaskListView
-                      filterDate={today}
-                      onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }}
-                    />
-                  </Suspense>
-                </div>
+            <ResizablePanel
+              id="dashboard-tasks-panel"
+              defaultSize="50%"
+              minSize="20%"
+              style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
+            >
+              <div style={{ flexShrink: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "20px 24px 12px" }}>
+                <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-faint, #999)" }}>
+                  Today&apos;s Focus
+                </h2>
+                {todayTaskCount > 0 && (
+                  <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{todayTaskCount}</span>
+                )}
+              </div>
+              <div ref={taskListRef} style={{ flex: 1, overflowY: "auto" }}>
+                <Suspense fallback={<div style={{ padding: "16px 24px", fontSize: "12px", color: "#999" }}>Loading…</div>}>
+                  <TaskListView
+                    filterDate={today}
+                    onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }}
+                  />
+                </Suspense>
               </div>
             </ResizablePanel>
-
           </ResizablePanelGroup>
         </ResizablePanel>
 
-        <ResizableHandle id="dashboard-h-handle"
-          className="relative w-px h-full bg-white/[0.06] hover:bg-white/10 transition-colors cursor-col-resize z-10"
-          style={{ touchAction: "none" }}
-        />
-
-        {/* ── Right column ── */}
-        <ResizablePanel id="dashboard-right-panel" defaultSize={45} minSize={30} maxSize={60}
-          className="flex flex-col h-full"
+        {/* Horizontal handle */}
+        <ResizableHandle
+          id="dashboard-h-handle"
+          style={{
+            width: "8px",
+            height: "100%",
+            cursor: "col-resize",
+            background: "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            borderLeft: "1px solid var(--border, rgba(0,0,0,0.08))",
+            borderRight: "1px solid var(--border, rgba(0,0,0,0.08))",
+          }}
         >
-          {/* Calendar */}
-          <div className="flex-1 overflow-hidden p-4 pb-2">
-            <div className="h-full rounded-2xl border border-white/[0.06] bg-zinc-900/30 overflow-hidden">
+          <div style={{
+            width: "3px",
+            height: "32px",
+            borderRadius: "9999px",
+            background: "rgba(0,0,0,0.15)",
+          }} />
+        </ResizableHandle>
+
+        {/* ── Right column (45%) ── */}
+        <ResizablePanel
+          id="dashboard-right-panel"
+          defaultSize="45%"
+          minSize="30%"
+          maxSize="65%"
+          style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}
+        >
+          {/* Calendar card */}
+          <div style={{ flex: 1, overflow: "hidden", padding: "12px 12px 8px" }}>
+            <div style={{
+              height: "100%",
+              borderRadius: "16px",
+              overflow: "hidden",
+              background: "var(--bg-card, #fff)",
+              border: "1px solid var(--border, rgba(0,0,0,0.08))",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}>
               <CalendarView dashboardMode={true} hideSidebar={true} />
             </div>
           </div>
 
           {/* Routine strip */}
-          <div className="h-64 flex-none px-4 pb-4">
-            <div className="h-full rounded-2xl border border-white/[0.06] bg-zinc-900/30 overflow-hidden">
+          <div style={{ flexShrink: 0, height: "240px", padding: "0 12px 12px" }}>
+            <div style={{
+              height: "100%",
+              borderRadius: "16px",
+              overflow: "hidden",
+              background: "var(--bg-card, #fff)",
+              border: "1px solid var(--border, rgba(0,0,0,0.08))",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}>
               <RoutineTemplateStrip onManageTemplates={() => setRoutinePanelOpen(true)} />
             </div>
           </div>
         </ResizablePanel>
-
       </ResizablePanelGroup>
 
-      {/* FIX: exactly ONE TaskDetailModal */}
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -138,7 +200,6 @@ export default function Page() {
           onClose={() => setSelectedTaskId(null)}
         />
       )}
-
       <RoutineTemplatePanel open={routinePanelOpen} onClose={() => setRoutinePanelOpen(false)} />
     </div>
   );

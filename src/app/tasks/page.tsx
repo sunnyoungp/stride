@@ -14,20 +14,21 @@ export default function Page() {
   return (
     <div className="relative flex h-full w-full overflow-hidden">
       <div className="flex-1 overflow-y-auto">
-        <Suspense fallback={<div className="p-8 text-zinc-500">Loading tasks...</div>}>
-          <TaskListView onTaskClick={(task, pos) => {
-            setSelectedTaskId(task.id);
-            setClickPos(pos);
-          }} />
+        {/* Page header */}
+        <div
+          className="sticky top-0 z-10 flex-none flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}
+        >
+          <h1 className="text-[15px] font-semibold" style={{ color: "var(--fg)" }}>Tasks</h1>
+        </div>
+        <Suspense fallback={
+          <div className="p-8 text-sm" style={{ color: "var(--fg-muted)" }}>Loading tasks…</div>
+        }>
+          <TaskListView onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }} />
         </Suspense>
       </div>
-      
       {selectedTask && (
-        <TaskDetailModal 
-          task={selectedTask} 
-          position={clickPos}
-          onClose={() => setSelectedTaskId(null)} 
-        />
+        <TaskDetailModal task={selectedTask} position={clickPos} onClose={() => setSelectedTaskId(null)} />
       )}
     </div>
   );

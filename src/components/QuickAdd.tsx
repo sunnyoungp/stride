@@ -6,7 +6,7 @@ import { useSectionStore } from "@/store/sectionStore";
 import type { Task } from "@/types/index";
 
 function todayStr()    { return new Date().toISOString().slice(0, 10); }
-function tomorrowStr() { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
+function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
 
 function parse(input: string): Pick<Task, "title" | "tags" | "dueDate"> {
   const tags: string[] = [];
@@ -15,7 +15,6 @@ function parse(input: string): Pick<Task, "title" | "tags" | "dueDate"> {
     if (t && !tags.includes(t)) tags.push(t);
   }
 
-  // FIX: don't use \b — @ is not a word char so boundary doesn't fire before @today
   const lower = input.toLowerCase();
   const dueDate = /@?tomorrow\b/i.test(lower) ? tomorrowStr()
     : /@?today\b/i.test(lower) ? todayStr()
@@ -35,12 +34,31 @@ export function QuickAdd() {
   const createTask = useTaskStore((s) => s.createTask);
   const sections   = useSectionStore((s) => s.sections);
 
-  const [open, setOpen]         = useState(false);
-  const [value, setValue]       = useState("");
-  const [sectionId, setSectionId] = useState("");
+  const [open, setOpen]               = useState(false);
+  const [value, setValue]             = useState("");
+  const [sectionId, setSectionId]     = useState("");
+  const [selectedDate, setSelectedDate] = useState<string | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const preview = useMemo(() => (value.trim() ? parse(value) : null), [value]);
+  const preview      = useMemo(() => (value.trim() ? parse(value) : null), [value]);
+  const effectiveDate = selectedDate ?? preview?.dueDate;
+
+  const close = () => {
+    setOpen(false);
+    setValue("");
+    setSectionId("");
+    setSelectedDate(undefined);
+  };
+
+  const submit = () => {
+    const p = parse(value);
+    if (!p.title) return;
+    void createTask({
+      ...p,
+      dueDate: effectiveDate,
+      sectionId: sectionId || undefined,
+    }).then(close);
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,19 +66,13 @@ export function QuickAdd() {
         e.preventDefault(); setOpen((v) => !v); return;
       }
       if (!open) return;
-      if (e.key === "Escape") { e.preventDefault(); setOpen(false); return; }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const p = parse(value);
-        if (!p.title) return;
-        void createTask({ ...p, sectionId: sectionId || undefined }).then(() => {
-          setValue(""); setSectionId(""); setOpen(false);
-        });
-      }
+      if (e.key === "Escape") { e.preventDefault(); close(); return; }
+      if (e.key === "Enter")  { e.preventDefault(); submit(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [createTask, open, value, sectionId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, value, sectionId, effectiveDate]);
 
   useEffect(() => {
     if (!open) return;
@@ -70,50 +82,162 @@ export function QuickAdd() {
 
   if (!open) return null;
 
+  const today    = todayStr();
+  const tomorrow = tomorrowStr();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[14vh]">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+      <div
+        className="absolute inset-0 backdrop-fade"
+        style={{ background: "rgba(0,0,0,0.22)" }}
+        onClick={close}
+      />
 
       {/* Panel */}
-      <div className="relative w-full max-w-lg mx-4 rounded-2xl border border-white/[0.08] bg-[#18181b] shadow-[0_32px_80px_rgba(0,0,0,0.7)] overflow-hidden">
-
-        {/* Input row */}
-        <div className="flex items-center gap-3 px-4 py-4">
-          <svg className="w-4 h-4 text-zinc-600 flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      <div
+        className="cmd-palette relative mx-4 w-full max-w-[560px] overflow-hidden rounded-2xl"
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-mid)",
+          boxShadow: "var(--shadow-float)",
+        }}
+      >
+        {/* ── Input row ── */}
+        <div className="flex items-center gap-4 px-5 py-[18px]">
+          {/* Icon */}
+          <svg
+            width="18" height="18" viewBox="0 0 18 18" fill="none"
+            className="flex-none"
+            style={{ color: "var(--fg-faint)" }}
+          >
+            <line x1="9" y1="2" x2="9" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-          <input ref={inputRef} value={value}
+
+          <input
+            ref={inputRef}
+            value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="Add a task… (@today, @tomorrow, #tag)"
-            className="flex-1 bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-700"
+            placeholder="New task…"
+            className="flex-1 bg-transparent outline-none"
+            style={{
+              fontSize: "16px",
+              fontWeight: 450,
+              color: "var(--fg)",
+              caretColor: "var(--accent)",
+            }}
           />
+
+          {/* Submit hint */}
+          {value.trim() && (
+            <button
+              type="button"
+              onClick={submit}
+              className="flex-none flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 ease-out"
+              style={{ background: "var(--accent)", color: "white" }}
+            >
+              Add
+              <kbd className="text-[10px] opacity-70">↵</kbd>
+            </button>
+          )}
         </div>
 
-        {/* Options row */}
-        <div className="flex items-center gap-3 px-4 pb-3 border-t border-white/[0.05] pt-3">
-          <select value={sectionId} onChange={(e) => setSectionId(e.target.value)}
-            className="bg-zinc-900 border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 outline-none cursor-pointer hover:border-white/15 transition-colors"
-          >
-            <option value="">No section</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>{s.icon} {s.title}</option>
-            ))}
-          </select>
-
-          {/* Live preview chips */}
-          <div className="flex items-center gap-1.5 flex-1">
-            {preview?.dueDate && (
-              <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[11px] text-blue-400">
-                📅 {preview.dueDate === todayStr() ? "Today" : "Tomorrow"}
-              </span>
-            )}
-            {preview?.tags?.map((t) => (
-              <span key={t} className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] text-zinc-500">#{t}</span>
-            ))}
+        {/* ── Options ── */}
+        <div
+          className="space-y-3 px-5 py-4"
+          style={{ borderTop: "1px solid var(--border)" }}
+        >
+          {/* Date */}
+          <div className="flex items-center gap-3">
+            <span
+              className="w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]"
+              style={{ color: "var(--fg-faint)" }}
+            >
+              Date
+            </span>
+            <div className="flex items-center gap-1.5">
+              {[
+                { label: "Today",    val: today    },
+                { label: "Tomorrow", val: tomorrow },
+              ].map(({ label, val }) => {
+                const active = effectiveDate === val;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setSelectedDate((v) => (v === val ? undefined : val))}
+                    className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150 ease-out"
+                    style={active
+                      ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
+                      : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <kbd className="text-[10px] text-zinc-700 rounded bg-zinc-800 px-1.5 py-0.5">↵</kbd>
+          {/* Section */}
+          {sections.length > 0 && (
+            <div className="flex items-start gap-3">
+              <span
+                className="mt-[3px] w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]"
+                style={{ color: "var(--fg-faint)" }}
+              >
+                Section
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {sections.map((s) => {
+                  const active = sectionId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSectionId((v) => (v === s.id ? "" : s.id))}
+                      className="flex items-center gap-1 rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150 ease-out"
+                      style={active
+                        ? { background: "var(--bg-active)", color: "var(--accent)" }
+                        : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
+                      }
+                    >
+                      {s.icon && <span>{s.icon}</span>}
+                      <span>{s.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Live tag preview */}
+          {(preview?.tags?.length ?? 0) > 0 && (
+            <div className="flex items-center gap-3">
+              <span
+                className="w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]"
+                style={{ color: "var(--fg-faint)" }}
+              >
+                Tags
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {preview!.tags!.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-md px-2.5 py-1 text-[12px]"
+                    style={{
+                      background: "var(--bg-hover)",
+                      color: "var(--fg-muted)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

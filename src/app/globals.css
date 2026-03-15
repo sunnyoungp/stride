@@ -1,31 +1,197 @@
 @import "tailwindcss";
 
+/* ── Class-based dark mode (toggled via .dark on <html>) ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══════════════════════════════════════════
+   LIGHT MODE — warm cream (#faf7f4 base)
+═══════════════════════════════════════════ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* backgrounds */
+  --bg:           #faf7f4;
+  --bg-subtle:    #f4efe9;
+  --bg-card:      #ffffff;
+  --bg-sidebar:   #faf7f4;
+  --bg-hover:     rgba(30, 20, 10, 0.04);
+  --bg-active:    rgba(232, 96, 60, 0.07);
+
+  /* text */
+  --fg:           #1a1310;
+  --fg-muted:     #6b5f57;
+  --fg-faint:     #a8998f;
+  --fg-placeholder: #c8b8ae;
+
+  /* accent — coral */
+  --accent:       #e8603c;
+  --accent-hover: #d44e2a;
+  --accent-fg:    #ffffff;
+  --accent-bg:    rgba(232, 96, 60, 0.08);
+  --accent-bg-strong: rgba(232, 96, 60, 0.14);
+
+  /* borders */
+  --border:       rgba(30, 20, 10, 0.07);
+  --border-mid:   rgba(30, 20, 10, 0.11);
+  --border-strong:rgba(30, 20, 10, 0.18);
+
+  /* shadows */
+  --shadow-sm:    0 1px 2px rgba(30,20,10,0.05), 0 1px 4px rgba(30,20,10,0.03);
+  --shadow-md:    0 4px 16px rgba(30,20,10,0.08), 0 2px 6px rgba(30,20,10,0.04);
+  --shadow-lg:    0 12px 40px rgba(30,20,10,0.11), 0 4px 16px rgba(30,20,10,0.05);
+  --shadow-float: 0 24px 80px rgba(30,20,10,0.14), 0 8px 32px rgba(30,20,10,0.08);
+  --shadow-card:  0 1px 3px rgba(30,20,10,0.06), 0 1px 8px rgba(30,20,10,0.04);
+  --shadow-card-hover: 0 4px 14px rgba(30,20,10,0.10), 0 2px 6px rgba(30,20,10,0.06);
+  --shadow-drawer: -8px 0 40px rgba(30,20,10,0.12), -2px 0 8px rgba(30,20,10,0.06);
+
+  /* priorities */
+  --priority-low:    #3b82f6;
+  --priority-medium: #f59e0b;
+  --priority-high:   #ef4444;
+
+  /* section pastels (light) */
+  --section-work:        rgba(99,102,241,0.10);
+  --section-personal:    rgba(34,197,94,0.10);
+  --section-health:      rgba(239,68,68,0.10);
+  --section-work-fg:     #6366f1;
+  --section-personal-fg: #16a34a;
+  --section-health-fg:   #dc2626;
 }
 
+/* ═══════════════════════════════════════════
+   DARK MODE — warm near-black
+═══════════════════════════════════════════ */
+.dark {
+  --bg:           #110e0a;
+  --bg-subtle:    #1a1612;
+  --bg-card:      #201c17;
+  --bg-sidebar:   #161210;
+  --bg-hover:     rgba(245, 235, 225, 0.05);
+  --bg-active:    rgba(232, 96, 60, 0.10);
+
+  --fg:           #f0e8e0;
+  --fg-muted:     #8f8078;
+  --fg-faint:     #4f4640;
+  --fg-placeholder: #382f28;
+
+  --accent:       #e8603c;
+  --accent-hover: #eb7052;
+  --accent-fg:    #ffffff;
+  --accent-bg:    rgba(232, 96, 60, 0.11);
+  --accent-bg-strong: rgba(232, 96, 60, 0.20);
+
+  --border:       rgba(245, 235, 225, 0.07);
+  --border-mid:   rgba(245, 235, 225, 0.11);
+  --border-strong:rgba(245, 235, 225, 0.17);
+
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.28);
+  --shadow-lg:    0 12px 40px rgba(0,0,0,0.60), 0 4px 16px rgba(0,0,0,0.38);
+  --shadow-float: 0 24px 80px rgba(0,0,0,0.76), 0 8px 32px rgba(0,0,0,0.44);
+  --shadow-card:  0 1px 4px rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.44), 0 2px 8px rgba(0,0,0,0.28);
+  --shadow-drawer: -8px 0 40px rgba(0,0,0,0.50), -2px 0 8px rgba(0,0,0,0.30);
+
+  --section-work:        rgba(99,102,241,0.14);
+  --section-personal:    rgba(34,197,94,0.13);
+  --section-health:      rgba(239,68,68,0.13);
+  --section-work-fg:     #818cf8;
+  --section-personal-fg: #4ade80;
+  --section-health-fg:   #f87171;
+}
+
+/* ═══════════════════════════════════════════
+   TAILWIND THEME
+═══════════════════════════════════════════ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ═══════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════ */
+html {
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Tiptap Editor Styles */
+/* Smooth transitions on interactive elements */
+a, button, input, select, textarea {
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBARS
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--fg-faint); }
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════ */
+
+/* Command palette / QuickAdd */
+@keyframes cmd-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+.cmd-palette {
+  animation: cmd-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Side drawer slide-in from right */
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+.drawer-panel {
+  animation: drawer-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Backdrop fade */
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.backdrop-fade {
+  animation: backdrop-in 150ms ease both;
+}
+
+/* ═══════════════════════════════════════════
+   TASK CARDS — floating white cards
+═══════════════════════════════════════════ */
+.task-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: box-shadow 150ms cubic-bezier(0.16,1,0.3,1), transform 150ms cubic-bezier(0.16,1,0.3,1);
+  border: 1px solid var(--border);
+}
+.task-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+.task-card:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-card);
+}
+
+/* ═══════════════════════════════════════════
+   TIPTAP EDITOR
+═══════════════════════════════════════════ */
 .ProseMirror ul[data-type="taskList"] {
   list-style: none;
   padding: 0;
@@ -52,5 +218,77 @@ body {
   cursor: pointer;
   width: 1rem;
   height: 1rem;
-  accent-color: #10b981; /* emerald-500 */
+  accent-color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════
+   FULLCALENDAR — warm palette overrides
+═══════════════════════════════════════════ */
+.fc {
+  --fc-border-color: var(--border);
+  --fc-today-bg-color: rgba(232, 96, 60, 0.04);
+  --fc-neutral-bg-color: transparent;
+  --fc-page-bg-color: transparent;
+  --fc-small-font-size: 0.77rem;
+  --fc-event-border-color: transparent;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--fg-faint);
+  font-size: 0.72rem;
+}
+
+/* Pastel event blocks — colored bg, darker text of same hue */
+.fc .fc-event {
+  border-radius: 12px !important;
+  border: none !important;
+  font-size: 0.78rem;
+  font-weight: 500;
+  box-shadow: none !important;
+  opacity: 0.92;
+}
+
+.fc .fc-event-main {
+  padding: 4px 8px;
+}
+
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid-section > td,
+.fc .fc-scrollgrid-section-header > td {
+  border: none !important;
+}
+
+.fc .fc-timegrid-slot {
+  height: 2.5rem;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: var(--border) !important;
+}
+
+.fc .fc-timegrid-now-indicator-line {
+  border-color: var(--accent) !important;
+  border-width: 1.5px !important;
+  opacity: 0.7;
+}
+
+.fc .fc-timegrid-now-indicator-arrow {
+  border-top-color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+
+/* ═══════════════════════════════════════════
+   REACT-RESIZABLE-PANELS handles
+═══════════════════════════════════════════ */
+[data-panel-resize-handle-enabled] {
+  transition: background 150ms ease;
 }

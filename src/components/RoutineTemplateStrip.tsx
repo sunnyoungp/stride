@@ -1,32 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
-import { useTimeBlockStore } from "@/store/timeBlockStore";
 import { Settings } from "lucide-react";
-import { RoutineTemplate } from "@/types";
 
-type Props = {
-  onManageTemplates: () => void;
-};
+type Props = { onManageTemplates: () => void };
 
 export function RoutineTemplateStrip({ onManageTemplates }: Props) {
-  const templates = useRoutineTemplateStore((s) => s.templates);
-  const isLoading = useRoutineTemplateStore((s) => s.isLoading);
-  const loadTemplates = useRoutineTemplateStore((s) => s.loadTemplates);
+  const templates           = useRoutineTemplateStore((s) => s.templates);
+  const isLoading           = useRoutineTemplateStore((s) => s.isLoading);
+  const loadTemplates       = useRoutineTemplateStore((s) => s.loadTemplates);
   const applyTemplatesToDay = useRoutineTemplateStore((s) => s.applyTemplatesToDay);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef        = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    void loadTemplates();
-  }, [loadTemplates]);
+  useEffect(() => { void loadTemplates(); }, [loadTemplates]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
     const draggable = new Draggable(el, {
       itemSelector: "[data-template-id]",
       eventData: (eventEl) => {
@@ -35,15 +27,11 @@ export function RoutineTemplateStrip({ onManageTemplates }: Props) {
           title: ds.templateTitle || "Routine",
           duration: ds.templateDuration || "01:00",
           backgroundColor: ds.templateColor,
-          borderColor: ds.templateColor,
-          extendedProps: { 
-            routineTemplateId: ds.templateId,
-            type: "routine"
-          },
+          borderColor: "transparent",
+          extendedProps: { routineTemplateId: ds.templateId, type: "routine" },
         };
       },
     });
-
     return () => draggable.destroy();
   }, [templates]);
 
@@ -56,76 +44,53 @@ export function RoutineTemplateStrip({ onManageTemplates }: Props) {
     const [h1, m1] = start.split(":").map(Number);
     const [h2, m2] = end.split(":").map(Number);
     let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-    if (diff < 0) diff += 24 * 60; // Handle overnight
-    
-    const h = Math.floor(diff / 60);
-    const m = diff % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    if (diff < 0) diff += 24 * 60;
+    return `${String(Math.floor(diff / 60)).padStart(2, "0")}:${String(diff % 60).padStart(2, "0")}`;
   };
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":").map(Number);
     const period = h >= 12 ? "pm" : "am";
-    const hours = h % 12 || 12;
-    return `${hours}${m > 0 ? ":" + String(m).padStart(2, "0") : ""}${period}`;
+    return `${h % 12 || 12}${m > 0 ? ":" + String(m).padStart(2, "0") : ""}${period}`;
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-900/50 overflow-hidden">
-      <div className="p-4 border-b border-white/5 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Routines</h3>
-        <button 
-          onClick={onManageTemplates}
-          className="p-1.5 rounded-md hover:bg-white/5 text-zinc-500 hover:text-zinc-300 transition-colors"
-          title="Manage Templates"
-        >
-          <Settings size={14} />
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-4 py-3 flex items-center justify-between flex-none" style={{ borderBottom: "1px solid var(--border)" }}>
+        <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--fg-muted)" }}>Routines</h3>
+        <button onClick={onManageTemplates} className="p-1.5 rounded-lg transition-all duration-150 hover:bg-[var(--bg-hover)]" style={{ color: "var(--fg-faint)" }} title="Manage Templates">
+          <Settings size={13} />
         </button>
       </div>
-      
-      <div 
-        ref={containerRef}
-        className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar"
-      >
-        {isLoading ? (
-          <div className="flex h-32 flex-col items-center justify-center gap-2 text-zinc-600">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-800 border-t-zinc-500" />
-            <span className="text-[10px]">Loading...</span>
-          </div>
-        ) : (
-          <>
-            {templates.map((t) => (
-              <div
-                key={t.id}
-                data-template-id={t.id}
-                data-template-title={t.title}
-                data-template-color={t.color}
-                data-template-duration={getDuration(t.startTime, t.endTime)}
-                onClick={() => handleApply(t.id)}
-                className="group cursor-grab active:cursor-grabbing relative flex flex-col gap-1 p-3 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{t.icon || "⏱️"}</span>
-                  <span className="text-sm font-medium text-zinc-200 truncate">{t.title}</span>
-                </div>
-                <div className="text-[11px] text-zinc-500 font-mono">
-                  {formatTime(t.startTime)} – {formatTime(t.endTime)}
-                </div>
-                
-                <div 
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 rounded-r-full opacity-60"
-                  style={{ backgroundColor: t.color }}
-                />
-              </div>
-            ))}
 
-            {templates.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-xs text-zinc-600 italic">No templates found</p>
-              </div>
-            )}
-          </>
-        )}
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-3 space-y-1.5">
+        {isLoading ? (
+          <div className="flex h-20 items-center justify-center">
+            <div className="h-4 w-4 animate-spin rounded-full border-2" style={{ borderColor: "var(--border-mid)", borderTopColor: "var(--fg-muted)" }} />
+          </div>
+        ) : templates.length === 0 ? (
+          <div className="py-6 text-center text-xs italic" style={{ color: "var(--fg-faint)" }}>No templates yet</div>
+        ) : templates.map((t) => (
+          <div
+            key={t.id}
+            data-template-id={t.id}
+            data-template-title={t.title}
+            data-template-color={t.color}
+            data-template-duration={getDuration(t.startTime, t.endTime)}
+            onClick={() => handleApply(t.id)}
+            className="relative flex flex-col gap-0.5 px-3 py-2.5 rounded-xl cursor-grab active:cursor-grabbing transition-all duration-150 hover:bg-[var(--bg-hover)]"
+            style={{ border: "1px solid var(--border)" }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-base leading-none">{t.icon || "⏱️"}</span>
+              <span className="text-sm font-medium truncate" style={{ color: "var(--fg)" }}>{t.title}</span>
+            </div>
+            <div className="text-[11px] font-mono pl-7" style={{ color: "var(--fg-faint)" }}>
+              {formatTime(t.startTime)} – {formatTime(t.endTime)}
+            </div>
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 rounded-r-full opacity-60" style={{ backgroundColor: t.color }} />
+          </div>
+        ))}
       </div>
     </div>
   );

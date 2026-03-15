@@ -27,14 +27,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div className="flex h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-50">
-          <aside className="h-screen w-[240px] flex-none overflow-hidden">
+      <head>
+        {/* Init dark mode before first paint to prevent flicker */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var s=localStorage.getItem('stride-theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s===null&&p))document.documentElement.classList.add('dark');}catch(e){}})();` }} />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
+          <aside className="h-screen w-[220px] flex-none overflow-hidden">
             <Sidebar />
           </aside>
-          <main className="h-screen flex-1 overflow-hidden bg-zinc-950 text-zinc-50">
+          <main className="h-screen flex-1 overflow-hidden bg-[var(--bg)]">
             {children}
           </main>
         </div>

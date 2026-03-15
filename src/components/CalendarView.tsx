@@ -3,7 +3,7 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin, {
-  Draggable, type DateClickArg, type EventReceiveArg,
+  Draggable, type EventReceiveArg,
 } from "@fullcalendar/interaction";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +16,15 @@ import { useTimeBlockStore } from "@/store/timeBlockStore";
 import type { RoutineTemplate, TimeBlock } from "@/types/index";
 
 type ViewKey = "1d" | "2d" | "3d" | "4d" | "week" | "month";
+
+/** Convert a hex color to rgba */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 function addMins(iso: string, m: number) {
   const d = new Date(iso); d.setMinutes(d.getMinutes() + m); return d.toISOString();
@@ -32,6 +41,175 @@ function viewConfig(v: ViewKey): { type: string; duration?: { days: number } } {
   }
 }
 
+/** Default color for new time blocks — warm coral accent */
+const DEFAULT_BLOCK_COLOR = "#f4714a";
+
+const PRESET_COLORS = ["#f4714a", "#6c7ce7", "#4ecdc4", "#45b7d1", "#96ceb4", "#e8a0bf"];
+
+type PendingBlock = { startTime: string; endTime: string; x: number; y: number };
+
+// ─── New Event Creation Popover ───────────────────────────────────────────────
+
+function NewEventPopover({
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  pending: PendingBlock;
+  onConfirm: (title: string, color: string) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [color, setColor] = useState(DEFAULT_BLOCK_COLOR);
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Refs so mousedown handler always reads latest values without re-registering
+  const titleRef = useRef(title);
+  const colorRef = useRef(color);
+  titleRef.current = title;
+  colorRef.current = color;
+
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Click-outside: save if title has content, cancel if empty
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        if (titleRef.current.trim()) {
+          onConfirm(titleRef.current.trim(), colorRef.current);
+        } else {
+          onCancel();
+        }
+      }
+    };
+    // Delay so the same click that triggered select doesn't immediately close
+    const t = setTimeout(() => document.addEventListener("mousedown", handleMouseDown), 150);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [onConfirm, onCancel]);
+
+  const fmtTime = (iso: string) =>
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
+  const fmtDate = (iso: string) =>
+    new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date(iso));
+
+  const mins = Math.round(
+    (new Date(pending.endTime).getTime() - new Date(pending.startTime).getTime()) / 60000
+  );
+
+  const confirm = () => onConfirm(title.trim() || "New Event", colorRef.current);
+
+  // Clamp popover to viewport edges
+  const W = 276, H = 230;
+  const vw = typeof window !== "undefined" ? window.innerWidth  : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const px = Math.max(8, Math.min(pending.x + 12, vw - W - 8));
+  const py = Math.max(8, Math.min(pending.y - 20, vh - H - 8));
+
+  return (
+    <div
+      ref={popoverRef}
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{
+        position: "fixed", left: px, top: py, width: W,
+        zIndex: 1000,
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: 12,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2)",
+        padding: "14px 14px 12px",
+      }}
+    >
+      {/* Title */}
+      <input
+        ref={inputRef}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter")  confirm();
+          if (e.key === "Escape") onCancel();
+        }}
+        placeholder="New Event"
+        style={{
+          width: "100%", boxSizing: "border-box",
+          background: "var(--bg-subtle)",
+          border: "1px solid var(--border)",
+          borderRadius: 8, padding: "6px 10px",
+          fontSize: "0.875rem", fontWeight: 600,
+          color: "var(--fg)", outline: "none",
+          marginBottom: 10,
+        }}
+      />
+
+      {/* Time range */}
+      <div style={{
+        fontSize: "0.75rem", marginBottom: 10,
+        display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap",
+      }}>
+        <span style={{ color: "var(--fg)", fontWeight: 500 }}>{fmtTime(pending.startTime)}</span>
+        <span style={{ color: "var(--fg-faint)" }}>→</span>
+        <span style={{ color: "var(--fg)", fontWeight: 500 }}>{fmtTime(pending.endTime)}</span>
+        <span style={{ color: "var(--fg-faint)" }}>{mins}min</span>
+        <span style={{ color: "var(--fg-faint)", marginLeft: 2 }}>{fmtDate(pending.startTime)}</span>
+      </div>
+
+      {/* Color picker */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
+        {PRESET_COLORS.map((c) => (
+          <button
+            key={c} type="button"
+            onClick={() => setColor(c)}
+            style={{
+              width: 14, height: 14, borderRadius: "50%",
+              background: c,
+              border: color === c ? `2px solid var(--fg)` : "2px solid transparent",
+              outline: color === c ? "1px solid var(--bg-card)" : "none",
+              outlineOffset: "-3px",
+              cursor: "pointer", padding: 0, flexShrink: 0,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+        <button
+          type="button" onClick={onCancel}
+          style={{
+            padding: "5px 12px", borderRadius: 7,
+            border: "1px solid var(--border)",
+            background: "transparent",
+            color: "var(--fg-muted)",
+            fontSize: "0.75rem", cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button" onClick={confirm}
+          style={{
+            padding: "5px 12px", borderRadius: 7,
+            border: "none",
+            background: color, color: "#fff",
+            fontSize: "0.75rem", fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Create
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 type Props = {
   initialView?: ViewKey;
   hideSidebar?: boolean;
@@ -40,27 +218,53 @@ type Props = {
 };
 
 export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false }: Props) {
-  const [view, setView]         = useState<ViewKey>(dashboardMode ? "1d" : initialView);
-  const calendarRef             = useRef<FullCalendar | null>(null);
+  const [view, setView]               = useState<ViewKey>(dashboardMode ? "1d" : initialView);
+  const calendarRef                   = useRef<FullCalendar | null>(null);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] = useState<Partial<RoutineTemplate> | null>(null);
 
-  const timeBlocks     = useTimeBlockStore((s) => s.timeBlocks);
-  const loadTimeBlocks = useTimeBlockStore((s) => s.loadTimeBlocks);
+  const timeBlocks      = useTimeBlockStore((s) => s.timeBlocks);
+  const loadTimeBlocks  = useTimeBlockStore((s) => s.loadTimeBlocks);
   const createTimeBlock = useTimeBlockStore((s) => s.createTimeBlock);
   const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
 
-  const tasks     = useTaskStore((s) => s.tasks);
-  const loadTasks = useTaskStore((s) => s.loadTasks);
+  const tasks      = useTaskStore((s) => s.tasks);
+  const loadTasks  = useTaskStore((s) => s.loadTasks);
   const updateTask = useTaskStore((s) => s.updateTask);
 
   const cfg = useMemo(() => viewConfig(view), [view]);
 
-  const events = useMemo(() => timeBlocks.map((b) => ({
-    id: b.id, title: b.title, start: b.startTime, end: b.endTime,
-    backgroundColor: b.color ?? "#3f3f46", borderColor: b.color ?? "#3f3f46", textColor: "#fafafa",
-    extendedProps: { timeBlockType: b.type, taskId: b.taskId },
-  })), [timeBlocks]);
+  // Pending (ghost) block state — lives only until confirmed or cancelled
+  const [pendingBlock, setPendingBlock] = useState<PendingBlock | null>(null);
+
+  const events = useMemo(() => {
+    const base = timeBlocks.map((b) => {
+      const color = b.color ?? DEFAULT_BLOCK_COLOR;
+      return {
+        id: b.id, title: b.title, start: b.startTime, end: b.endTime,
+        backgroundColor: hexToRgba(color, 0.15),
+        borderColor: hexToRgba(color, 0.4),
+        textColor: color,
+        extendedProps: { timeBlockType: b.type, taskId: b.taskId },
+      };
+    });
+
+    // Ghost placeholder while creation popover is open
+    if (pendingBlock) {
+      base.push({
+        id: "__pending__",
+        title: "New Event",
+        start: pendingBlock.startTime,
+        end: pendingBlock.endTime,
+        backgroundColor: hexToRgba(DEFAULT_BLOCK_COLOR, 0.08),
+        borderColor: hexToRgba(DEFAULT_BLOCK_COLOR, 0.35),
+        textColor: DEFAULT_BLOCK_COLOR,
+        extendedProps: { isPending: true } as any,
+      });
+    }
+
+    return base;
+  }, [timeBlocks, pendingBlock]);
 
   useEffect(() => { void loadTimeBlocks(); void loadTasks(); }, [loadTasks, loadTimeBlocks]);
 
@@ -81,7 +285,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     return () => d.destroy();
   }, []);
 
-  const [popover, setPopover]       = useState<{ timeBlockId: string; x: number; y: number } | null>(null);
+  const [popover, setPopover]         = useState<{ timeBlockId: string; x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ timeBlockId: string; x: number; y: number } | null>(null);
 
   const activeBlock: TimeBlock | undefined = useMemo(() => {
@@ -95,7 +299,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     const api = calendarRef.current?.getApi();
     if (!api) return;
     const { type, duration } = viewConfig(key);
-    api.changeView(type, duration ? { duration } : undefined);
+    api.changeView(type, duration ? ({ duration } as any) : undefined);
   };
 
   const todayLabel = useMemo(() =>
@@ -108,20 +312,30 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   return (
     <div className="flex h-full w-full flex-col">
       {!hideHeader && (
-        <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-3 flex-none"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
           <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-sm font-semibold text-zinc-200">
+            {/* Today dot — accent colored */}
+            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "var(--accent)" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--fg)" }}>
               {dashboardMode ? todayLabel : "Calendar"}
             </span>
           </div>
+
           {!dashboardMode && (
-            <div className="flex items-center gap-0.5 rounded-xl bg-white/[0.04] p-1 border border-white/[0.06]">
+            <div
+              className="flex items-center gap-0.5 rounded-xl p-1"
+              style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
+            >
               {VIEW_LABELS.map(([key, label]) => (
                 <button key={key} type="button" onClick={() => switchView(key)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${
-                    view === key ? "bg-white/10 text-zinc-100" : "text-zinc-600 hover:text-zinc-400"
-                  }`}
+                  className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all duration-150 ease-out"
+                  style={view === key
+                    ? { background: "var(--bg-card)", color: "var(--fg)", boxShadow: "var(--shadow-sm)" }
+                    : { color: "var(--fg-faint)" }
+                  }
                 >{label}</button>
               ))}
             </div>
@@ -131,29 +345,37 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
 
       <div className="flex flex-1 overflow-hidden">
         {!hideSidebar && (
-          <div className="w-64 flex-none border-r border-white/[0.06]">
-            <div className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-700">Tasks</div>
+          <div className="w-64 flex-none overflow-y-auto" style={{ borderRight: "1px solid var(--border)" }}>
+            <div
+              className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: "var(--fg-faint)" }}
+            >
+              Tasks
+            </div>
             <div ref={taskPanelRef} className="px-2 pb-4">
               {incompleteTasks.length === 0
-                ? <div className="px-3 py-6 text-xs text-zinc-700 text-center">No incomplete tasks</div>
+                ? (
+                  <div className="px-3 py-6 text-xs text-center" style={{ color: "var(--fg-faint)" }}>
+                    No incomplete tasks
+                  </div>
+                )
                 : incompleteTasks.map((t) => (
                   <div key={t.id} data-task-id={t.id} data-task-title={t.title}
-                    className="cursor-grab mb-1 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200 active:cursor-grabbing transition-colors"
+                    className="cursor-grab mb-1 rounded-xl px-3 py-2 text-sm transition-all duration-150 ease-out active:cursor-grabbing hover:bg-[var(--bg-hover)]"
+                    style={{
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-subtle)",
+                      color: "var(--fg-muted)",
+                    }}
                   >{t.title || "(Untitled)"}</div>
-                ))}
+                ))
+              }
             </div>
           </div>
         )}
 
-        <div className="flex-1 p-2"
-          style={{
-            ["--fc-today-bg-color" as any]: "rgba(255,255,255,0.025)",
-            ["--fc-border-color" as any]: "rgba(255,255,255,0.07)",
-            ["--fc-neutral-bg-color" as any]: "rgba(255,255,255,0.02)",
-            ["--fc-page-bg-color" as any]: "transparent",
-            ["--fc-small-font-size" as any]: "0.78rem",
-          } as React.CSSProperties}
-        >
+        {/* Calendar — let globals.css fc variables take over, no inline overrides */}
+        <div className="flex-1 p-2 overflow-hidden">
           <div className="h-full rounded-xl overflow-hidden">
             <FullCalendar
               ref={calendarRef}
@@ -167,12 +389,25 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               slotMinTime="05:00:00"
               slotMaxTime="23:00:00"
               editable droppable weekends
+              selectable
+              selectMinDistance={5}
+              unselectAuto={false}
               events={events}
-              dateClick={(arg: DateClickArg) => {
-                const start = arg.date.toISOString();
-                void createTimeBlock({ type: "event", title: "New Block", startTime: start, endTime: addMins(start, 30), color: "#3f3f46" });
+              select={(arg) => {
+                // Dismiss previous pending block (no title = cancel)
+                setPendingBlock(null);
+                const x = arg.jsEvent?.clientX ?? window.innerWidth / 2;
+                const y = arg.jsEvent?.clientY ?? window.innerHeight / 2;
+                calendarRef.current?.getApi().unselect();
+                setPendingBlock({
+                  startTime: arg.start.toISOString(),
+                  endTime: arg.end.toISOString(),
+                  x, y,
+                });
               }}
               eventClick={(arg) => {
+                // Don't open popover on the ghost pending event
+                if (arg.event.extendedProps.isPending) return;
                 setContextMenu(null);
                 setPopover({ timeBlockId: arg.event.id, x: arg.jsEvent.clientX, y: arg.jsEvent.clientY });
               }}
@@ -201,20 +436,46 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 if (!start || !end) return;
                 void (async () => {
                   if (type === "routine" && routineTemplateId) {
-                    await createTimeBlock({ type: "routine", routineTemplateId, title, startTime: start, endTime: end, color: color || "#3f3f46" });
+                    await createTimeBlock({ type: "routine", routineTemplateId, title, startTime: start, endTime: end, color: color || DEFAULT_BLOCK_COLOR });
                   } else if (taskId) {
-                    await createTimeBlock({ type: "task", taskId, title, startTime: start, endTime: end, color: "#3f3f46" });
+                    await createTimeBlock({ type: "task", taskId, title, startTime: start, endTime: end, color: DEFAULT_BLOCK_COLOR });
                     await updateTask(taskId, { scheduledStart: start, scheduledEnd: end });
                   }
                 })();
               }}
-              eventClassNames={() => ["rounded-lg"]}
-              dayHeaderClassNames={() => ["text-zinc-500 text-xs"]}
-              slotLabelClassNames={() => ["text-zinc-700 text-xs"]}
+              eventContent={(arg) => (
+                <div style={{
+                  padding: "2px 6px", overflow: "hidden", height: "100%",
+                  opacity: arg.event.extendedProps.isPending ? 0.5 : 1,
+                }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 600, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {arg.event.title}
+                  </div>
+                </div>
+              )}
+              eventClassNames={() => ["rounded-xl"]}
+              dayHeaderClassNames={() => ["text-xs"]}
+              slotLabelClassNames={() => ["text-xs"]}
             />
           </div>
         </div>
       </div>
+
+      {pendingBlock && (
+        <NewEventPopover
+          pending={pendingBlock}
+          onConfirm={(title, color) => {
+            void createTimeBlock({
+              type: "event", title,
+              startTime: pendingBlock.startTime,
+              endTime: pendingBlock.endTime,
+              color,
+            });
+            setPendingBlock(null);
+          }}
+          onCancel={() => setPendingBlock(null)}
+        />
+      )}
 
       {popover && activeBlock && (
         <TimeBlockPopover timeBlock={activeBlock} position={{ x: popover.x, y: popover.y }} onClose={() => setPopover(null)} />
@@ -236,7 +497,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
           onSaveAsTemplate={() => {
             const s = new Date(activeBlock.startTime), e = new Date(activeBlock.endTime);
             const hhmm = (d: Date) => `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-            setTemplatePrefill({ title: activeBlock.title, startTime: hhmm(s), endTime: hhmm(e), color: activeBlock.color ?? "#3f3f46", icon: "⏱️", daysOfWeek: [], isBuiltIn: false });
+            setTemplatePrefill({ title: activeBlock.title, startTime: hhmm(s), endTime: hhmm(e), color: activeBlock.color ?? DEFAULT_BLOCK_COLOR, icon: "⏱️", daysOfWeek: [], isBuiltIn: false });
             setRoutineOpen(true);
           }}
         />
