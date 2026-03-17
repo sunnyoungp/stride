@@ -752,7 +752,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 height="100%"
                 nowIndicator
                 allDaySlot={false}
-                slotMinTime="05:00:00"
+                slotMinTime="00:00:00"
                 slotMaxTime="24:00:00"
                 datesSet={(arg) => {
                   setCurrentTitle(arg.view.title);
