@@ -14,8 +14,6 @@ import { RoutineChip } from "@/components/RoutineChip";
 import { useTaskStore } from "@/store/taskStore";
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
 
-const PINNED_COUNT = 3;
-
 export default function Page() {
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
   const [routinesExpanded, setRoutinesExpanded] = useState<boolean>(() => {
@@ -34,9 +32,8 @@ export default function Page() {
   );
 
   // Built-in templates first, then custom
-  const sortedTemplates   = [...templates].sort((a, b) => (a.isBuiltIn === b.isBuiltIn ? 0 : a.isBuiltIn ? -1 : 1));
-  const pinnedTemplates   = sortedTemplates.slice(0, PINNED_COUNT);
-  const overflowTemplates = sortedTemplates.slice(PINNED_COUNT);
+  const pinnedTemplates   = templates.filter((t) => t.pinned === true).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const overflowTemplates = templates.filter((t) => t.pinned !== true);
 
   useEffect(() => { void loadTemplates(); }, [loadTemplates]);
 
