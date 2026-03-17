@@ -6,12 +6,14 @@ import type { Node as PmNode } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
+import Placeholder from "@tiptap/extension-placeholder";
 import type { JSONContent } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { db } from "@/db/index";
+import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -391,14 +393,34 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
 
   const editor = useEditor(
     {
-      extensions: [StarterKit, TaskList, TaskItemWithId, XChecklistExtension],
+      extensions: [
+        StarterKit,
+        TaskList,
+        TaskItemWithId,
+        XChecklistExtension,
+        DragHandleExtension,
+        Placeholder.configure({ placeholder: "Start writing…" }),
+      ],
       immediatelyRender: false,
       content: note?.content ? safeParseJson(note.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
-          class: "min-h-[200px] outline-none leading-7 text-[var(--fg)] [&_ul]:ml-6 [&_ol]:ml-6",
+          class: "min-h-[200px] outline-none leading-7 text-[var(--fg)]",
         },
         handleDOMEvents: {
+          // Cross-component drag: let task items carry their taskId to external targets (e.g. MiniCalendar)
+          dragstart: (_view, event) => {
+            const liEl = (event.target as HTMLElement | null)?.closest("li[data-checked]") as HTMLElement | null;
+            if (!liEl || !event.dataTransfer) return false;
+            const taskId = liEl.getAttribute("data-task-id") ?? "";
+            const title  = liEl.querySelector("div")?.textContent?.trim() ?? "";
+            if (!title) return false;
+            event.dataTransfer.setData("stride/taskId",    taskId);
+            event.dataTransfer.setData("stride/taskTitle", title);
+            event.dataTransfer.setData("text/plain",       title);
+            // Let ProseMirror's own dragstart also fire (don't stopPropagation)
+            return false;
+          },
           contextmenu: (view, event) => {
             const liEl = (event.target as HTMLElement | null)?.closest('li[data-checked]') as HTMLElement | null;
             if (!liEl) return false;
@@ -491,6 +513,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
 
   // Keep editorRef current
   useEffect(() => { editorRef.current = editor ?? null; }, [editor]);
+
 
   useEffect(() => {
     if (!editor || !note) return;

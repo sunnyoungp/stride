@@ -34,7 +34,7 @@ const defaultSections: Array<Pick<TaskSection, "title" | "icon" | "color">> = [
 
 export const useSectionStore = create<SectionStore>((set, get) => {
   const loadSections: SectionStore["loadSections"] = async () => {
-    if (get().sectionsLoaded) return;
+    if (get()?.sectionsLoaded) return;
     try {
       // Use count() first — faster and avoids loading all records just to check
       const count = await db.sections.count();
@@ -127,7 +127,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
   };
 
   const loadSubsections: SectionStore["loadSubsections"] = async () => {
-    if (get().subsectionsLoaded) return;
+    if (get()?.subsectionsLoaded) return;
     try {
       const subsections = await db.taskSubsections.toArray();
       set({ subsections: subsections.sort((a, b) => a.order - b.order), subsectionsLoaded: true });
@@ -168,9 +168,9 @@ export const useSectionStore = create<SectionStore>((set, get) => {
     await useTaskStore.getState().loadTasks();
   };
 
-  void loadSections();
-  void loadSubsections();
-  void loadDeletedSections();
+  if (typeof window !== "undefined") void loadSections();
+  if (typeof window !== "undefined") void loadSubsections();
+  if (typeof window !== "undefined") void loadDeletedSections();
 
   return {
     sections: [],

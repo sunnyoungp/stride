@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { useSectionStore } from "@/store/sectionStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useDragStore } from "@/store/dragStore";
+import { useUIStore } from "@/store/uiStore";
 import { SectionContextMenu } from "@/components/SectionContextMenu";
 import { ProjectContextMenu } from "@/components/ProjectContextMenu";
 import type { TaskSection, Project } from "@/types/index";
@@ -266,6 +267,7 @@ export function Sidebar() {
 
   const updateTask     = useTaskStore((s) => s.updateTask);
   const draggingTaskId = useDragStore((s) => s.draggingTaskId);
+  const openSearch     = useUIStore((s) => s.openSearch);
 
   const [isDark, setIsDark] = useState(false);
 
@@ -297,6 +299,21 @@ export function Sidebar() {
   const [showDeleted, setShowDeleted] = useState(false);
 
   const pathname = usePathname();
+
+  // Read nav visibility/order config from localStorage
+  const visibleNavItems = useMemo(() => {
+    if (typeof window === "undefined") return NAV_ITEMS;
+    try {
+      const raw = localStorage.getItem("stride-nav-config");
+      if (!raw) return NAV_ITEMS;
+      const config = JSON.parse(raw) as { id: string; visible: boolean; order: number }[];
+      const sorted = [...config].sort((a, b) => a.order - b.order);
+      return sorted
+        .filter((c) => c.visible)
+        .map((c) => NAV_ITEMS.find((n) => n.href === c.id))
+        .filter(Boolean) as typeof NAV_ITEMS;
+    } catch { return NAV_ITEMS; }
+  }, []);
 
   useEffect(() => {
     void loadProjects();
@@ -354,9 +371,30 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* ── Search button ── */}
+      <div className="px-2 pb-2 flex-none">
+        <button
+          type="button"
+          onClick={openSearch}
+          className="flex w-full h-9 items-center gap-2.5 rounded-xl px-3 text-[13px] transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+          style={{ color: "var(--fg-faint)" }}
+        >
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.4"/>
+            <line x1="9" y1="9" x2="13" y2="13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          <span style={{ flex: 1, textAlign: "left" }}>Search</span>
+          <kbd style={{
+            fontSize: 10, padding: "1px 5px", borderRadius: 5,
+            background: "var(--bg-hover)", border: "1px solid var(--border)",
+            color: "var(--fg-faint)", lineHeight: "1.6",
+          }}>⌘F</kbd>
+        </button>
+      </div>
+
       {/* ── Primary nav ── */}
       <nav className="flex flex-col gap-1 px-2 flex-none">
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const active = isActive(item.href);
           return (
             <Link
@@ -629,20 +667,18 @@ export function Sidebar() {
           onClose={() => setSectionMenu(null)}
           onAddSubsection={() => {
             setAddingSubSectionId(sectionMenu.section.id);
-            setSectionMenu(null);
           }}
           onRename={() => {
             setRenamingId(sectionMenu.section.id);
             setRenameDraft(sectionMenu.section.title);
-            setSectionMenu(null);
           }}
           onEditIcon={() => {
             setIconEditId(sectionMenu.section.id);
-            setSectionMenu(null);
           }}
           onDelete={() => {
-            const { id, title } = sectionMenu.section;
-            setSectionMenu(null);
+            // Capture before onClose() runs (MenuItem calls onClose after this returns)
+            const id    = sectionMenu.section.id;
+            const title = sectionMenu.section.title;
             if (window.confirm(`Delete "${title}"? Tasks in this section will become unsorted.`)) {
               void deleteSection(id);
             }

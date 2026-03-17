@@ -88,7 +88,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     }
   };
 
-  void loadDocuments();
+  if (typeof window !== "undefined") void loadDocuments();
 
   return {
     documents: [],

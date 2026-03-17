@@ -167,6 +167,23 @@ a, button, input, select, textarea {
   animation: backdrop-in 150ms ease both;
 }
 
+/* Agenda today-card pulse */
+@keyframes agenda-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(232, 96, 60, 0.45); }
+  60%  { box-shadow: 0 0 0 7px rgba(232, 96, 60, 0);    }
+  100% { box-shadow: 0 0 0 0   rgba(232, 96, 60, 0);    }
+}
+
+/* Global Search animations */
+@keyframes gs-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes gs-scale {
+  from { opacity: 0; transform: scale(0.96) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
 /* ═══════════════════════════════════════════
    TASK CARDS — floating white cards
 ═══════════════════════════════════════════ */
@@ -192,33 +209,142 @@ a, button, input, select, textarea {
 /* ═══════════════════════════════════════════
    TIPTAP EDITOR
 ═══════════════════════════════════════════ */
+
+/* ── Headings ── */
+.ProseMirror h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3;  margin: 1rem 0 0.5rem;   color: var(--fg); }
+.ProseMirror h2 { font-size: 1.4rem;  font-weight: 600; line-height: 1.35; margin: 0.875rem 0 0.375rem; color: var(--fg); }
+.ProseMirror h3 { font-size: 1.15rem; font-weight: 600; line-height: 1.4;  margin: 0.75rem 0 0.25rem;  color: var(--fg); }
+
+/* ── Blockquote ── */
+.ProseMirror blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+/* ── Inline code ── */
+.ProseMirror code {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+/* ── Code block ── */
+.ProseMirror pre {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+.ProseMirror pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875em;
+}
+
+/* ── Bullet lists (override Tailwind preflight which resets list-style) ── */
+.ProseMirror ul:not([data-type="taskList"]) {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.25rem 0;
+}
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.25rem 0;
+}
+.ProseMirror ul:not([data-type="taskList"]) li,
+.ProseMirror ol li {
+  display: list-item;
+  padding: 0;
+  margin: 0.1rem 0;
+}
+.ProseMirror ul:not([data-type="taskList"]) li::marker,
+.ProseMirror ol li::marker {
+  color: var(--fg-muted);
+}
+/* Nested lists */
+.ProseMirror ul:not([data-type="taskList"]) ul,
+.ProseMirror ol ol,
+.ProseMirror ul:not([data-type="taskList"]) ol,
+.ProseMirror ol ul {
+  padding-left: 1.2rem;
+  margin: 0;
+}
+
+/* ── Task list (checklist) ── */
 .ProseMirror ul[data-type="taskList"] {
   list-style: none;
-  padding: 0;
+  padding-left: 0;
+  margin-left: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 8px;
+  padding: 0;
+  margin: 0.1rem 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label {
-  flex: none;
+  flex-shrink: 0;
   user-select: none;
-  margin-top: 0.25rem;
+  margin-top: 3px;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
 }
 
 .ProseMirror ul[data-type="taskList"] li > div {
-  flex: 1 1 auto;
+  flex: 1;
+  min-width: 0;
 }
 
-.ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
-  cursor: pointer;
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--accent);
+/* ── Drag handle ── */
+.pm-drag-handle {
+  position: absolute;
+  left: -20px;
+  opacity: 0;
+  cursor: grab;
+  border-radius: 4px;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 100ms ease, background 100ms ease;
+  user-select: none;
+  pointer-events: all;
+}
+.pm-drag-handle:hover {
+  opacity: 1 !important;
+  background: var(--bg-hover);
+}
+.pm-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ── Placeholder (TipTap Placeholder extension) ── */
+.tiptap p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--fg-faint);
+  font-style: italic;
+  pointer-events: none;
+  height: 0;
 }
 
 /* ═══════════════════════════════════════════

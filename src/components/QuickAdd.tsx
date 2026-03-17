@@ -65,7 +65,7 @@ export function QuickAdd() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === "k" || e.key.toLowerCase() === "n")) {
         e.preventDefault(); setOpen((v) => !v); return;
       }
       if (!open) return;
@@ -76,6 +76,13 @@ export function QuickAdd() {
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, value, sectionId, effectiveDate]);
+
+  // Also respond to the custom event fired by GlobalShortcuts
+  useEffect(() => {
+    const onOpen = () => setOpen((v) => !v);
+    window.addEventListener("stride:open-quickadd", onOpen);
+    return () => window.removeEventListener("stride:open-quickadd", onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

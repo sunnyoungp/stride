@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import { Sidebar } from "@/components/Sidebar";
-import { QuickAdd } from "@/components/QuickAdd";
+import { GlobalSearch }    from "@/components/GlobalSearch";
+import { GlobalShortcuts }  from "@/components/GlobalShortcuts";
+import { Sidebar }          from "@/components/Sidebar";
+import { QuickAdd }         from "@/components/QuickAdd";
+import { SettingsApplier }  from "@/components/SettingsApplier";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,7 +43,10 @@ export default function RootLayout({
             {children}
           </main>
         </div>
+        <GlobalSearch />
         <QuickAdd />
+        <GlobalShortcuts />
+        <SettingsApplier />
       </body>
     </html>
   );

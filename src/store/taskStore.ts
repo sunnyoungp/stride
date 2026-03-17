@@ -179,7 +179,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     });
   };
 
-  void loadTasks();
+  if (typeof window !== "undefined") void loadTasks();
 
   return {
     tasks: [],

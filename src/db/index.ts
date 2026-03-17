@@ -41,7 +41,6 @@ export class StrideDB extends Dexie {
       taskSubsections: "&id, sectionId",
     });
 
-    // v3 — added deletedSections table
     this.version(3).stores({
       tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
       sections: "&id",
@@ -54,7 +53,6 @@ export class StrideDB extends Dexie {
       deletedSections: "&id",
     });
 
-    // v4 — schema re-sync; ensures all tables present on existing installs
     this.version(4).stores({
       tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
       sections: "&id",
@@ -66,10 +64,72 @@ export class StrideDB extends Dexie {
       taskSubsections: "&id, sectionId",
       deletedSections: "&id",
     });
-  }
+
+    this.version(5).stores({
+      tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
+      sections: "&id",
+      timeBlocks: "&id, taskId, startTime",
+      dailyNotes: "&id, date",
+      documents: "&id, projectId",
+      projects: "&id",
+      routineTemplates: "&id",
+      taskSubsections: "&id, sectionId",
+      deletedSections: "&id",
+    });
+
+    this.version(6).stores({
+      tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
+      sections: "&id",
+      timeBlocks: "&id, taskId, startTime",
+      dailyNotes: "&id, date",
+      documents: "&id, projectId",
+      projects: "&id",
+      routineTemplates: "&id, pinned",
+      taskSubsections: "&id, sectionId",
+      deletedSections: "&id",
+    }).upgrade(async (tx) => {
+      const rows = await tx.table("routineTemplates").toArray() as any[];
+      for (let i = 0; i < rows.length; i++) {
+        const t = rows[i] as any;
+        if (t.durationMinutes == null && t.startTime && t.endTime) {
+          const [sh = 0, sm = 0] = (t.startTime as string).split(":").map(Number);
+          const [eh = 0, em = 0] = (t.endTime as string).split(":").map(Number);
+          let diff = (eh * 60 + em) - (sh * 60 + sm);
+          if (diff <= 0) diff += 24 * 60;
+          t.durationMinutes = diff;
+          t.defaultStartTime = t.startTime as string;
+        }
+        if (t.order == null) t.order = i;
+        if (t.pinned == null) t.pinned = true;
+        delete t.startTime;
+        delete t.endTime;
+        await tx.table("routineTemplates").put(t);
+      }
+    });
+
+    // v7 — force pinned: true on any templates where pinned is still undefined
+    this.version(7).stores({
+      tasks: "&id, dueDate, sectionId, projectId, sourceDocumentId, parentTaskId, status, subsectionId",
+      sections: "&id",
+      timeBlocks: "&id, taskId, startTime",
+      dailyNotes: "&id, date",
+      documents: "&id, projectId",
+      projects: "&id",
+      routineTemplates: "&id, pinned",
+      taskSubsections: "&id, sectionId",
+      deletedSections: "&id",
+    }).upgrade(async (tx) => {
+      const rows = await tx.table("routineTemplates").toArray() as any[];
+      for (const t of rows) {
+        if (t.pinned == null) {
+          await tx.table("routineTemplates").put({ ...t, pinned: true });
+        }
+      }
+    });
+
+  } // end constructor
 }
 
-// Lazy initialization to avoid SSR issues
 let innerDb: StrideDB | null = null;
 
 export const db = new Proxy({} as StrideDB, {

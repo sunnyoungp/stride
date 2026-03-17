@@ -87,12 +87,14 @@ export interface Project {
 export interface RoutineTemplate {
   id: string;
   title: string;
-  startTime: string;
-  endTime: string;
+  durationMinutes: number;
+  defaultStartTime?: string;
   color: string;
   daysOfWeek: number[];
   isBuiltIn: boolean;
   icon?: string;
+  pinned?: boolean;
+  order: number;
 }
 
 export interface TaskSubsection {

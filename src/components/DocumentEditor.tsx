@@ -7,6 +7,7 @@ import TaskList from "@tiptap/extension-task-list";
 import type { JSONContent } from "@tiptap/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -102,13 +103,13 @@ export function DocumentEditor({ documentId }: Props) {
         TaskList,
         CustomTaskItem.configure({ nested: true }),
         XChecklistExtension,
+        DragHandleExtension,
       ],
       immediatelyRender: false,
       content: doc?.content ? safeParseJson(doc.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
-          class:
-            "min-h-[360px] outline-none leading-7 text-zinc-100 [&_ul]:ml-6 [&_ol]:ml-6",
+          class: "min-h-[360px] outline-none leading-7 text-[var(--fg)]",
         },
       },
       onUpdate: ({ editor }) => {

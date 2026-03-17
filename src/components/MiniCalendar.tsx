@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DailyNote } from "@/types/index";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -63,10 +63,12 @@ export function MiniCalendar({
   selectedDate,
   onDateChange,
   dailyNotes,
+  onTaskDrop,
 }: {
   selectedDate: string;
   onDateChange: (date: string) => void;
   dailyNotes: DailyNote[];
+  onTaskDrop?: (taskId: string, taskTitle: string, date: string) => void;
 }) {
   const today = useMemo(() => localDateString(new Date()), []);
 
@@ -74,6 +76,7 @@ export function MiniCalendar({
   const [viewYear, setViewYear] = useState(initParsed.getFullYear());
   const [viewMonth, setViewMonth] = useState(initParsed.getMonth());
   const [hovered, setHovered]   = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
 
   // When selectedDate changes via editor chevrons, navigate to that month
   useEffect(() => {
@@ -119,6 +122,26 @@ export function MiniCalendar({
     if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
     else setViewMonth(m => m + 1);
   };
+  const handleDragOver = useCallback((e: React.DragEvent, date: string) => {
+    if (!onTaskDrop) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOver(date);
+  }, [onTaskDrop]);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, date: string) => {
+    if (!onTaskDrop) return;
+    e.preventDefault();
+    setDragOver(null);
+    const taskId    = e.dataTransfer.getData("stride/taskId")    ?? "";
+    const taskTitle = e.dataTransfer.getData("stride/taskTitle") ?? e.dataTransfer.getData("text/plain") ?? "";
+    if (taskTitle) onTaskDrop(taskId, taskTitle, date);
+  }, [onTaskDrop]);
+
   const goToToday = () => {
     const d = new Date();
     setViewYear(d.getFullYear());
@@ -171,12 +194,32 @@ export function MiniCalendar({
           const isSelected = date === selectedDate;
           const hasContent = !overflow && noteDates.has(date);
           const isHovered  = hovered === date && !isToday;
+          const isDragOver = dragOver === date && !overflow;
 
-          const bg = isToday ? "var(--accent)" : isHovered ? "var(--bg-hover)" : "transparent";
+          const bg = isDragOver
+            ? "color-mix(in srgb, var(--accent) 15%, transparent)"
+            : isToday
+            ? "var(--accent)"
+            : isHovered
+            ? "var(--bg-hover)"
+            : "transparent";
+
           const fg = isToday ? "white" : isSelected ? "var(--accent)" : "var(--fg)";
 
+          const borderStyle = isDragOver
+            ? "1.5px solid var(--accent)"
+            : isSelected && !isToday
+            ? "1.5px solid var(--accent)"
+            : "1.5px solid transparent";
+
           return (
-            <div key={date} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              key={date}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+              onDragOver={(e) => handleDragOver(e, date)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, date)}
+            >
               <button
                 type="button"
                 onClick={() => onDateChange(date)}
@@ -186,7 +229,7 @@ export function MiniCalendar({
                   position: "relative",
                   width: 32, height: 32, borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  border: isSelected && !isToday ? "1.5px solid var(--accent)" : "1.5px solid transparent",
+                  border: borderStyle,
                   background: bg,
                   color: fg,
                   fontSize: 12,
@@ -194,7 +237,7 @@ export function MiniCalendar({
                   opacity: overflow ? 0.3 : 1,
                   cursor: "pointer",
                   lineHeight: 1,
-                  transition: "background 100ms ease",
+                  transition: "background 100ms ease, border-color 100ms ease",
                 }}
               >
                 {day}

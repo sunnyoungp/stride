@@ -7,9 +7,9 @@ export const XChecklistExtension = Extension.create({
   name: "xChecklistExtension",
 
   addInputRules() {
-    return [
+    const triggerRule = (find: RegExp) =>
       new InputRule({
-        find: /^([xX])\s$/,
+        find,
         handler: ({ state, range, chain }) => {
           // Only trigger at very start of the textblock.
           const { from } = range;
@@ -19,7 +19,11 @@ export const XChecklistExtension = Extension.create({
 
           chain().focus().deleteRange(range).toggleTaskList().run();
         },
-      }),
+      });
+
+    return [
+      triggerRule(/^([xX])\s$/),   // x  or X  → checklist
+      triggerRule(/^\[\]\s$/),      // [] → checklist
     ];
   },
 });

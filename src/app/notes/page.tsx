@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DailyNote } from "@/components/DailyNote";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
+import { useTaskStore } from "@/store/taskStore";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -91,6 +92,24 @@ export default function NotesPage() {
 
   const dailyNotes     = useDailyNoteStore(s => s.dailyNotes);
   const loadDailyNotes = useDailyNoteStore(s => s.loadDailyNotes);
+
+  const updateTask = useTaskStore(s => s.updateTask);
+  const createTask = useTaskStore(s => s.createTask);
+  const tasks      = useTaskStore(s => s.tasks);
+
+  const handleTaskDrop = (taskId: string, taskTitle: string, date: string) => {
+    if (taskId) {
+      void updateTask(taskId, { dueDate: date });
+    } else {
+      // No linked task — create one with the given due date
+      const existing = tasks.find(t => t.title.trim() === taskTitle.trim());
+      if (existing) {
+        void updateTask(existing.id, { dueDate: date });
+      } else {
+        void createTask({ title: taskTitle, status: "todo", dueDate: date });
+      }
+    }
+  };
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { void loadDailyNotes(); }, [loadDailyNotes]);
@@ -206,6 +225,7 @@ export default function NotesPage() {
                 selectedDate={selectedDate}
                 onDateChange={setSelectedDate}
                 dailyNotes={dailyNotes}
+                onTaskDrop={handleTaskDrop}
               />
             </div>
           </div>

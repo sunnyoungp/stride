@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { TaskSection } from "@/types/index";
 
@@ -17,12 +17,15 @@ type Props = {
 function clamp(n: number, min: number, max: number) { return Math.min(Math.max(n, min), max); }
 
 export function SectionContextMenu({ section, position, onClose, onAddSubsection, onRename, onEditIcon, onDelete }: Props) {
-  const menuRef     = useRef<HTMLDivElement | null>(null);
+  const menuRef    = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
   const [pos, setPos] = useState({ x: position.x, y: position.y });
-  const [ready, setReady] = useState(false);
 
-  // Clamp position once the menu has rendered and we know its size
-  useEffect(() => {
+  // Keep ref in sync so the stable outside-click handler always calls the latest onClose
+  useEffect(() => { onCloseRef.current = onClose; });
+
+  // Clamp position after first paint so the menu is always fully on-screen
+  useLayoutEffect(() => {
     const el = menuRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
@@ -31,26 +34,33 @@ export function SectionContextMenu({ section, position, onClose, onAddSubsection
       x: clamp(position.x, p, window.innerWidth  - r.width  - p),
       y: clamp(position.y, p, window.innerHeight - r.height - p),
     });
-    setReady(true);
-  }, [position]);
+  }, []); // only run once on mount — position doesn't change after open
 
-  // Delay attaching the outside-click listener so the right-click pointerdown
-  // that opened this menu doesn't immediately close it again.
+  // Attach outside-click listener once (empty deps), referencing onClose via ref
+  // to avoid the timer resetting every time onClose identity changes.
   useEffect(() => {
-    let handler: ((e: PointerEvent) => void) | null = null;
+    let removeListener: (() => void) | null = null;
     const timer = setTimeout(() => {
-      handler = (e: PointerEvent) => {
+      const handler = (e: PointerEvent) => {
         if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-          onClose();
+          onCloseRef.current();
         }
       };
       window.addEventListener("pointerdown", handler);
+      removeListener = () => window.removeEventListener("pointerdown", handler);
     }, 50);
     return () => {
       clearTimeout(timer);
-      if (handler) window.removeEventListener("pointerdown", handler);
+      removeListener?.();
     };
-  }, [onClose]);
+  }, []); // intentionally empty — stable via onCloseRef
+
+  // Also close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const menu = (
     <div
@@ -60,8 +70,6 @@ export function SectionContextMenu({ section, position, onClose, onAddSubsection
         left: pos.x,
         top: pos.y,
         zIndex: 9999,
-        opacity: ready ? 1 : 0,          // hide until position is clamped
-        pointerEvents: ready ? "auto" : "none",
         background: "var(--bg-card)",
         border: "1px solid var(--border-mid)",
         boxShadow: "var(--shadow-lg)",
@@ -80,8 +88,6 @@ export function SectionContextMenu({ section, position, onClose, onAddSubsection
     </div>
   );
 
-  // Portal to document.body so no parent overflow/transform/z-index can
-  // interfere with visibility or pointer events.
   if (typeof document === "undefined") return null;
   return createPortal(menu, document.body);
 }
@@ -94,6 +100,7 @@ function MenuItem({ children, onClick, danger }: {
   return (
     <button
       type="button"
+      onPointerDown={(e) => e.stopPropagation()} // prevent outside-click listener from firing on menu items
       onClick={onClick}
       style={{
         display: "block",
@@ -108,7 +115,7 @@ function MenuItem({ children, onClick, danger }: {
         color: danger ? "#ef4444" : "var(--fg)",
         transition: "background 0.1s",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = danger ? "rgba(239,68,68,0.08)" : "var(--bg-hover)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
     >
       {children}

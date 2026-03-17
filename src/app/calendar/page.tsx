@@ -10,60 +10,11 @@ import {
 } from "react-resizable-panels";
 import { CalendarView } from "@/components/CalendarView";
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
+import { RoutineChip } from "@/components/RoutineChip";
 import { useTaskStore } from "@/store/taskStore";
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
-import type { RoutineTemplate } from "@/types/index";
 
 const PINNED_COUNT = 3;
-
-function getDuration(start: string, end: string): string {
-  const [h1 = 0, m1 = 0] = start.split(":").map(Number);
-  const [h2 = 0, m2 = 0] = end.split(":").map(Number);
-  let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-  if (diff < 0) diff += 24 * 60;
-  return `${String(Math.floor(diff / 60)).padStart(2, "0")}:${String(diff % 60).padStart(2, "0")}`;
-}
-
-function formatTime(time: string): string {
-  const [h = 0, m = 0] = time.split(":").map(Number);
-  const period = h >= 12 ? "pm" : "am";
-  return `${h % 12 || 12}${m > 0 ? ":" + String(m).padStart(2, "0") : ""}${period}`;
-}
-
-function RoutineChip({ t }: { t: RoutineTemplate }) {
-  return (
-    <div
-      data-template-id={t.id}
-      data-template-title={t.title}
-      data-template-color={t.color}
-      data-template-duration={getDuration(t.startTime, t.endTime)}
-      style={{
-        display: "flex", flexDirection: "column",
-        padding: "5px 10px 5px 8px",
-        borderRadius: 8,
-        border: "1px solid var(--border, rgba(0,0,0,0.08))",
-        borderLeft: `3px solid ${t.color ?? "var(--accent)"}`,
-        background: "var(--bg-subtle, #f8f7f5)",
-        cursor: "grab",
-        minWidth: 0, maxWidth: 120,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <span style={{ fontSize: "12px", lineHeight: 1, flexShrink: 0 }}>{t.icon ?? "⏱️"}</span>
-        <span style={{
-          fontSize: "11px", fontWeight: 500,
-          color: "var(--fg, #1a1a1a)",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {t.title}
-        </span>
-      </div>
-      <div style={{ fontSize: "10px", color: "var(--fg-faint, #aaa)", marginTop: 2, paddingLeft: 16 }}>
-        {formatTime(t.startTime)}–{formatTime(t.endTime)}
-      </div>
-    </div>
-  );
-}
 
 export default function Page() {
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
@@ -205,7 +156,7 @@ export default function Page() {
                 <div ref={routineContainerRef}>
                   {/* Pinned row */}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {pinnedTemplates.map((t) => <RoutineChip key={t.id} t={t} />)}
+                    {pinnedTemplates.map((t) => <RoutineChip key={t.id} template={t} draggable />)}
                     {overflowTemplates.length > 0 && (
                       <button
                         type="button"
@@ -234,7 +185,7 @@ export default function Page() {
                     transition: "max-height 280ms ease",
                   }}>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 6 }}>
-                      {overflowTemplates.map((t) => <RoutineChip key={t.id} t={t} />)}
+                      {overflowTemplates.map((t) => <RoutineChip key={t.id} template={t} draggable />)}
                     </div>
                   </div>
                 </div>

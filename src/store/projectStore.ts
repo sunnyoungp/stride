@@ -58,7 +58,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     set({ projects: get().projects.filter((p) => p.id !== id) });
   };
 
-  void loadProjects();
+  if (typeof window !== "undefined") void loadProjects();
 
   return {
     projects: [],
