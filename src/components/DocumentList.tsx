@@ -44,11 +44,11 @@ export function DocumentList() {
   return (
     <div className="mx-auto h-full w-full max-w-4xl px-6 py-8">
       <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-zinc-100">Documents</h1>
+        <h1 className="text-2xl font-bold text-black-100">Documents</h1>
         <button
           type="button"
           onClick={() => void onNew()}
-          className="rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/15"
+          className="rounded-md bg-black/100 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/15"
         >
           + New Document
         </button>
