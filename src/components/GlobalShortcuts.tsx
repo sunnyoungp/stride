@@ -1,65 +1,44 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useUIStore } from "@/store/uiStore";
-import { useShortcutStore, normalizeKey } from "@/store/shortcutStore";
+import { useFocusStore } from "@/store/focusStore";
 
-export function GlobalShortcuts() {
-  const router          = useRouter();
-  const openSearch      = useUIStore((s) => s.openSearch);
-  const shortcuts       = useShortcutStore((s) => s.shortcuts);
-  const loadFromStorage = useShortcutStore((s) => s.loadFromStorage);
+export const GlobalShortcuts = () => {
+    // Pulling the state and actions from your updated focusStore
+    const toggleZenMode = useFocusStore((state) => state.toggleZenMode);
+    const isSetupModalOpen = useFocusStore((state) => state.isSetupModalOpen);
+    const setSetupModalOpen = useFocusStore((state) => state.setSetupModalOpen);
 
-  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // --- Safety Check ---
+            // Don't trigger shortcuts if the user is typing in an input, textarea, or editor
+            const isTyping =
+                document.activeElement?.tagName === "INPUT" ||
+                document.activeElement?.tagName === "TEXTAREA" ||
+                (document.activeElement as HTMLElement)?.isContentEditable;
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
+            if (isTyping) return;
 
-      const combo = normalizeKey(e);
-      const tag = (e.target as HTMLElement).tagName;
-      const isEditing = tag === "INPUT" || tag === "TEXTAREA" ||
-        (e.target as HTMLElement).isContentEditable;
+            // --- 1. Global Zen Toggle (Cmd + \) ---
+            if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+                e.preventDefault();
+                toggleZenMode();
+            }
 
-      const match = shortcuts.find((s) => (s.customBinding ?? s.defaultBinding) === combo);
-      if (!match) return;
+            // --- 2. Focus Setup Modal (Cmd + J) ---
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+                e.preventDefault();
+                setSetupModalOpen(!isSetupModalOpen);
+            }
+        };
 
-      // These work even when editing
-      if (match.action === "open-quickadd" || match.action === "new-task") {
-        e.preventDefault();
-        window.dispatchEvent(new CustomEvent("stride:open-quickadd"));
-        return;
-      }
-      if (match.action === "search") {
-        e.preventDefault();
-        openSearch();
-        return;
-      }
+        // Start listening
+        window.addEventListener("keydown", handleKeyDown);
 
-      if (isEditing) return;
+        // Stop listening if the component is removed
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [toggleZenMode, isSetupModalOpen, setSetupModalOpen]);
 
-      const navMap: Record<string, string> = {
-        "go-dashboard":  "/",
-        "go-notes":      "/notes",
-        "go-inbox":      "/inbox",
-        "go-next7":      "/next7",
-        "go-tasks":      "/tasks",
-        "go-calendar":   "/calendar",
-        "go-documents":  "/documents",
-        "go-settings":   "/settings",
-      };
-
-      if (navMap[match.action]) {
-        e.preventDefault();
-        router.push(navMap[match.action]!);
-      }
-    };
-
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [router, openSearch, shortcuts]);
-
-  return null;
-}
+    return null; // This component is invisible logic only
+};

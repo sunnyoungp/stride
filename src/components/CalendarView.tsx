@@ -432,6 +432,9 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   const [todayPulse, setTodayPulse]   = useState(false);
   const todayCardRef    = useRef<HTMLDivElement | null>(null);
   const agendaScrollRef = useRef<HTMLDivElement | null>(null);
+  const calendarBodyRef = useRef<HTMLDivElement | null>(null);
+  const wheelAccum      = useRef(0);
+  const wheelCooldown   = useRef(false);
 
   const todayStr = useMemo(() => localDateStr(new Date()), []);
 
@@ -454,6 +457,43 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     }
     setTodayPulse(true);
     setTimeout(() => setTodayPulse(false), 1200);
+  }, []);
+
+  // ── Horizontal trackpad scroll → move 1 day at a time ───────────────────
+  useEffect(() => {
+    const el = calendarBodyRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Ignore when vertical scroll dominates (normal scrolling)
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 0.6) return;
+
+      // Prevent browser back/forward navigation swipe
+      e.preventDefault();
+
+      if (wheelCooldown.current) return;
+
+      wheelAccum.current += e.deltaX;
+
+      const THRESHOLD = 40;
+      if (Math.abs(wheelAccum.current) < THRESHOLD) return;
+
+      const direction = wheelAccum.current > 0 ? 1 : -1;
+      wheelAccum.current = 0;
+      wheelCooldown.current = true;
+
+      const api = calendarRef.current?.getApi();
+      if (api) {
+        const next = new Date(api.getDate());
+        next.setDate(next.getDate() + direction);
+        api.gotoDate(next);
+      }
+
+      setTimeout(() => { wheelCooldown.current = false; }, 180);
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
   useEffect(() => {
@@ -537,6 +577,8 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     if (!api) return;
     const { type, duration } = viewConfig(key);
     api.changeView(type, duration ? ({ duration } as any) : undefined);
+    // 1D–4D toggle views always reset to today; week/month go to today's range too
+    api.today();
   };
 
   const todayLabel = useMemo(() =>
@@ -741,7 +783,11 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
           )}
 
           {/* ── FullCalendar (hidden when agenda) ── */}
-          <div className="flex-1 p-2 overflow-hidden" style={{ display: isAgenda ? "none" : undefined }}>
+          <div
+            ref={calendarBodyRef}
+            className="flex-1 p-2 overflow-hidden"
+            style={{ display: isAgenda ? "none" : undefined, overscrollBehaviorX: "none" }}
+          >
             <div className="h-full rounded-xl overflow-hidden">
               <FullCalendar
                 ref={calendarRef}
