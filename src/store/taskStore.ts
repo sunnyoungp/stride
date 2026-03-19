@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-
 import { db } from "@/db/index";
 import type { Task } from "@/types/index";
 import { generateNextRecurringInstance } from "@/lib/recurrence";
@@ -49,6 +48,16 @@ export const useTaskStore = create<TaskStore>((set, get) => {
 
   const createTask: TaskStore["createTask"] = async (data) => {
     const now = new Date().toISOString();
+    const currentTasks = get().tasks;
+    
+    let inheritedDueDate = data.dueDate;
+    if (data.parentTaskId) {
+      const parent = currentTasks.find(t => t.id === data.parentTaskId);
+      if (parent?.dueDate) {
+        inheritedDueDate = parent.dueDate;
+      }
+    }
+
     const task: Task = {
       id: crypto.randomUUID(),
       title: data.title ?? "",
@@ -57,7 +66,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       priority: data.priority ?? "none",
       tags: data.tags ?? [],
       sectionId: data.sectionId,
-      dueDate: data.dueDate,
+      dueDate: inheritedDueDate,
       scheduledStart: data.scheduledStart,
       scheduledEnd: data.scheduledEnd,
       rolledOver: data.rolledOver ?? false,
@@ -68,30 +77,45 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       sourceDocumentId: data.sourceDocumentId,
       sourceDocumentTitle: data.sourceDocumentTitle,
       projectId: data.projectId,
-      order: data.order ?? get().tasks.filter(t => t.sectionId === data.sectionId).length,
+      order: data.order ?? currentTasks.filter(t => t.sectionId === data.sectionId).length,
       createdAt: now,
       updatedAt: now,
     };
 
     await db.tasks.put(task);
-    set({ tasks: [...get().tasks, task] });
+    set({ tasks: [...currentTasks, task] });
     return task;
   };
 
   const updateTask: TaskStore["updateTask"] = async (id, changes) => {
     const currentState = get();
     const originalTask = currentState.tasks.find((t) => t.id === id);
+    if (!originalTask) return;
 
     const updatedAt = new Date().toISOString();
-    await db.tasks.update(id, { ...changes, updatedAt });
-    
-    set({
-      tasks: get().tasks.map((t) =>
-        t.id === id ? { ...t, ...changes, updatedAt } : t,
-      ),
+    const subtaskIds = originalTask.subtaskIds ?? [];
+    const shouldSyncSubtasks = !!(changes.dueDate && subtaskIds.length > 0);
+
+    await db.transaction("rw", db.tasks, async () => {
+      await db.tasks.update(id, { ...changes, updatedAt });
+      if (shouldSyncSubtasks && changes.dueDate) {
+        for (const subId of subtaskIds) {
+          await db.tasks.update(subId, { dueDate: changes.dueDate, updatedAt });
+        }
+      }
     });
 
-    if (changes.status === "done" && originalTask?.recurrence) {
+    set({
+      tasks: currentState.tasks.map((t) => {
+        if (t.id === id) return { ...t, ...changes, updatedAt };
+        if (shouldSyncSubtasks && subtaskIds.includes(t.id)) {
+          return { ...t, dueDate: changes.dueDate, updatedAt };
+        }
+        return t;
+      }),
+    });
+
+    if (changes.status === "done" && originalTask.recurrence) {
       const nextInstance = generateNextRecurringInstance(originalTask);
       if (nextInstance.dueDate) {
         await get().createTask(nextInstance);
@@ -100,7 +124,6 @@ export const useTaskStore = create<TaskStore>((set, get) => {
   };
 
   const deleteTask: TaskStore["deleteTask"] = async (id) => {
-    // Proactively clean up document references
     const docStore = useDocumentStore.getState();
     const affectedDocs = docStore.documents.filter((d) => 
       d.linkedTaskIds && d.linkedTaskIds.includes(id)
@@ -117,13 +140,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
 
   const reorderTasks: TaskStore["reorderTasks"] = async (updates) => {
     const updatedAt = new Date().toISOString();
-    const updatedTasks = get().tasks.map((t) => {
-      const update = updates.find((u) => u.id === t.id);
-      if (update) {
-        return { ...t, order: update.order, sectionId: update.sectionId ?? t.sectionId, updatedAt };
-      }
-      return t;
-    });
+    const currentTasks = get().tasks;
 
     await db.transaction("rw", db.tasks, async () => {
       for (const update of updates) {
@@ -135,7 +152,15 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       }
     });
 
-    set({ tasks: updatedTasks });
+    set({
+      tasks: currentTasks.map((t) => {
+        const update = updates.find((u) => u.id === t.id);
+        if (update) {
+          return { ...t, order: update.order, sectionId: update.sectionId ?? t.sectionId, updatedAt };
+        }
+        return t;
+      }),
+    });
   };
 
   const getTasksBySection: TaskStore["getTasksBySection"] = (sectionId) => {
@@ -179,6 +204,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     });
   };
 
+  // Immediate load on mount
   if (typeof window !== "undefined") void loadTasks();
 
   return {
@@ -194,4 +220,3 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     rolloverPastDueTasks,
   };
 });
-

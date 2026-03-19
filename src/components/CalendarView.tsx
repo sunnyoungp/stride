@@ -32,15 +32,33 @@ function addMins(iso: string, m: number) {
   const d = new Date(iso); d.setMinutes(d.getMinutes() + m); return d.toISOString();
 }
 
-function viewConfig(v: ViewKey): { type: string; duration?: { days: number } } {
+function viewConfig(v: ViewKey): { type: string; duration?: { days?: number; weeks?: number } } {
   switch (v) {
     case "1d":    return { type: "timeGridDay" };
     case "2d":    return { type: "timeGrid", duration: { days: 2 } };
     case "3d":    return { type: "timeGrid", duration: { days: 3 } };
     case "4d":    return { type: "timeGrid", duration: { days: 4 } };
-    case "month": return { type: "dayGridMonth" };
-    default:      return { type: "timeGridWeek" };
+    // "week" uses a sliding 7-day window so trackpad can shift by 1 day at a time
+    case "week":  return { type: "timeGrid", duration: { days: 7 } };
+    // "month" uses a 5-week grid so vertical trackpad shifts by 1 week at a time
+    case "month": return { type: "dayGrid", duration: { weeks: 5 } };
+    default:      return { type: "timeGridDay" };
   }
+}
+
+/** Returns the Sunday of the week containing d */
+function startOfWeek(d: Date): Date {
+  const s = new Date(d);
+  s.setHours(0, 0, 0, 0);
+  s.setDate(s.getDate() - s.getDay());
+  return s;
+}
+
+/** Default anchor date for a view — today-first, week-aligned for week/month */
+function defaultStart(v: ViewKey): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return (v === "week" || v === "month") ? startOfWeek(today) : today;
 }
 
 /** Default color for new time blocks — warm coral accent */
@@ -435,6 +453,8 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   const calendarBodyRef = useRef<HTMLDivElement | null>(null);
   const wheelAccum      = useRef(0);
   const wheelCooldown   = useRef(false);
+  // Keep a live ref so the wheel handler (attached once) always sees the current view
+  const viewRef         = useRef<ViewKey>(dashboardMode ? "1d" : initialView);
 
   const todayStr = useMemo(() => localDateStr(new Date()), []);
 
@@ -459,24 +479,42 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     setTimeout(() => setTodayPulse(false), 1200);
   }, []);
 
-  // ── Horizontal trackpad scroll → move 1 day at a time ───────────────────
+  // ── Fluid trackpad scroll ─────────────────────────────────────────────────
+  // • Horizontal scroll → move 1 day (all non-agenda views)
+  // • Vertical scroll   → move 1 week (month view only)
+  // • Velocity-aware cooldown so fast swipes advance quickly
+  // • preventDefault blocks macOS browser back/forward gesture
   useEffect(() => {
     const el = calendarBodyRef.current;
     if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
-      // Ignore when vertical scroll dominates (normal scrolling)
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 0.6) return;
+      const absX = Math.abs(e.deltaX);
+      const absY = Math.abs(e.deltaY);
+      const currentView = viewRef.current;
 
-      // Prevent browser back/forward navigation swipe
-      e.preventDefault();
+      // ── Month view: vertical scroll → shift 1 week ──────────────────────
+      if (currentView === "month" && absY > absX && absY > 8) {
+        e.preventDefault();
+        if (wheelCooldown.current) return;
+        wheelCooldown.current = true;
+        const api = calendarRef.current?.getApi();
+        if (api) {
+          const d = new Date(api.getDate());
+          d.setDate(d.getDate() + (e.deltaY > 0 ? 7 : -7));
+          api.gotoDate(d);
+        }
+        setTimeout(() => { wheelCooldown.current = false; }, 220);
+        return;
+      }
 
+      // ── All views: horizontal scroll → shift 1 day ──────────────────────
+      if (absX <= absY * 0.6) return;   // vertical dominates — ignore
+      e.preventDefault();               // block browser back/forward swipe
       if (wheelCooldown.current) return;
 
       wheelAccum.current += e.deltaX;
-
-      const THRESHOLD = 40;
-      if (Math.abs(wheelAccum.current) < THRESHOLD) return;
+      if (Math.abs(wheelAccum.current) < 40) return;
 
       const direction = wheelAccum.current > 0 ? 1 : -1;
       wheelAccum.current = 0;
@@ -484,12 +522,14 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
 
       const api = calendarRef.current?.getApi();
       if (api) {
-        const next = new Date(api.getDate());
-        next.setDate(next.getDate() + direction);
-        api.gotoDate(next);
+        const d = new Date(api.getDate());
+        d.setDate(d.getDate() + direction);
+        api.gotoDate(d);
       }
 
-      setTimeout(() => { wheelCooldown.current = false; }, 180);
+      // Faster swipe → shorter cooldown (feels more fluid with momentum)
+      const cooldownMs = absX > 25 ? 90 : 170;
+      setTimeout(() => { wheelCooldown.current = false; }, cooldownMs);
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });
@@ -571,14 +611,15 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   }, [contextMenu?.timeBlockId, popover?.timeBlockId, timeBlocks]);
 
   const switchView = (key: ViewKey) => {
+    viewRef.current = key;
     setView(key);
-    if (key === "agenda") return;  // no FullCalendar API call for agenda
+    if (key === "agenda") return;
     const api = calendarRef.current?.getApi();
     if (!api) return;
     const { type, duration } = viewConfig(key);
     api.changeView(type, duration ? ({ duration } as any) : undefined);
-    // 1D–4D toggle views always reset to today; week/month go to today's range too
-    api.today();
+    // Always snap to today's default position when switching views
+    api.gotoDate(defaultStart(key));
   };
 
   const todayLabel = useMemo(() =>
@@ -665,10 +706,17 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               {/* Prev */}
               <button
                 type="button"
-                onClick={() => isAgenda
-                  ? setAgendaStart(s => s - 7)
-                  : calendarRef.current?.getApi().prev()
-                }
+                onClick={() => {
+                  if (isAgenda) { setAgendaStart(s => s - 7); return; }
+                  const api = calendarRef.current?.getApi();
+                  if (!api) return;
+                  // Month view: jump ~1 month (4 weeks) backward
+                  if (view === "month") {
+                    const d = new Date(api.getDate()); d.setDate(d.getDate() - 28); api.gotoDate(d);
+                  } else {
+                    api.prev();
+                  }
+                }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 26, height: 26, borderRadius: 7,
@@ -685,10 +733,17 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               {/* Next */}
               <button
                 type="button"
-                onClick={() => isAgenda
-                  ? setAgendaEnd(e => e + 7)
-                  : calendarRef.current?.getApi().next()
-                }
+                onClick={() => {
+                  if (isAgenda) { setAgendaEnd(e => e + 7); return; }
+                  const api = calendarRef.current?.getApi();
+                  if (!api) return;
+                  // Month view: jump ~1 month (4 weeks) forward
+                  if (view === "month") {
+                    const d = new Date(api.getDate()); d.setDate(d.getDate() + 28); api.gotoDate(d);
+                  } else {
+                    api.next();
+                  }
+                }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 26, height: 26, borderRadius: 7,
@@ -705,10 +760,10 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               {/* Today */}
               <button
                 type="button"
-                onClick={() => isAgenda
-                  ? scrollToToday()
-                  : calendarRef.current?.getApi().today()
-                }
+                onClick={() => {
+                  if (isAgenda) { scrollToToday(); return; }
+                  calendarRef.current?.getApi().gotoDate(defaultStart(view));
+                }}
                 style={{
                   padding: "3px 10px", borderRadius: 20,
                   border: "none",

@@ -371,19 +371,13 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
               {task.rolledOver && (
                 <span className="text-[11px] opacity-40 flex-none" title={`Rolled over from ${task.rolledOverFrom}`}>↩</span>
               )}
-              {task.sourceDocumentId && (
-                <Link
-                  href={`/documents/${task.sourceDocumentId}`}
-                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                  className="flex-none text-[11px] opacity-40 hover:opacity-70 transition-opacity"
-                  title={`From: ${task.sourceDocumentTitle}`}
-                >📄</Link>
-              )}
+            
             </div>
           </div>
 
           {/* Right side: chips + collapse chevron */}
           <div className="flex flex-none items-center gap-1.5">
+            {task.priority !== "none" && <PriorityFlag priority={task.priority} />}
             {task.dueDate && (
               <span
                 className="rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
@@ -395,7 +389,6 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                 {friendlyDate(dateOnly(task.dueDate))}
               </span>
             )}
-            {task.priority !== "none" && <PriorityFlag priority={task.priority} />}
             {hasSubtasks && (
               <button
                 type="button"
@@ -426,7 +419,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                 <div
                   key={st.id}
                   className="flex items-center gap-2.5 py-[6px] pr-4"
-                  style={{ paddingLeft: "46px" }}
+                  style={{ paddingLeft: "36px" }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -462,13 +455,13 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                           void updateTask(st.id, { title: editSubVal.trim() });
                         setEditSubId(null);
                       }}
-                      className="flex-1 bg-transparent text-[12.5px] leading-snug outline-none"
+                      className="flex-1 bg-transparent text-[13.5px] leading-snug outline-none"
                       style={{ color: "var(--fg)" }}
                     />
                   ) : (
                     <span
                       onClick={(e) => { e.stopPropagation(); setEditSubId(st.id); setEditSubVal(st.title); }}
-                      className="flex-1 cursor-text text-[12.5px] leading-snug"
+                      className="flex-1 cursor-text text-[13.5px] leading-snug"
                       style={stDone
                         ? { textDecoration: "line-through", color: "var(--fg-faint)" }
                         : { color: "var(--fg-muted)" }

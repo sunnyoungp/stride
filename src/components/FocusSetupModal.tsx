@@ -9,20 +9,20 @@ import type { Task } from "@/types/index";
 
 export function FocusSetupModal() {
   const { isSetupModalOpen, setSetupModalOpen, startFocusSession } = useFocusStore();
-  const tasks = useTaskStore((state) => state.tasks);
+  // Get all tasks from the Task Store to pass into the flattening logic
+  const allTasks = useTaskStore((state) => state.tasks);
   
   const [selectedMode, setSelectedMode] = useState<FocusMode>("tunnel");
   const [playlist, setPlaylist] = useState<Task[]>([]);
 
-  // Filtering: Only incomplete tasks due today (no timezone ambiguity)
   const eligibleTasks = useMemo(() => {
     const todayStr = new Date().toLocaleDateString('en-CA');
-    return tasks.filter(t => {
+    return allTasks.filter(t => {
       const isCompleted = t.status === "done" || t.status === "cancelled";
       if (isCompleted) return false;
       return t.dueDate && t.dueDate.startsWith(todayStr);
     });
-  }, [tasks]);
+  }, [allTasks]);
 
   const availableTasks = useMemo(() => {
     const playlistIds = new Set(playlist.map(t => t.id));
@@ -47,7 +47,8 @@ export function FocusSetupModal() {
 
   const handleStart = () => {
     if (playlist.length === 0) return;
-    startFocusSession(selectedMode, playlist, 1500); // 25 min default
+    // CRITICAL UPDATE: Passing allTasks as the 3rd argument
+    startFocusSession(selectedMode, playlist, allTasks, 1500); 
   };
 
   return (
@@ -61,8 +62,6 @@ export function FocusSetupModal() {
         className="w-full max-w-4xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Header: OS-style header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">Setup Focus</h2>
           <button 
@@ -74,8 +73,6 @@ export function FocusSetupModal() {
         </div>
 
         <div className="p-8 overflow-y-auto flex-1 space-y-10 min-h-0">
-          
-          {/* Mode Selection */}
           <section className="shrink-0">
             <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mb-5 uppercase tracking-[0.1em]">Session Mode</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -103,19 +100,14 @@ export function FocusSetupModal() {
             </div>
           </section>
 
-          {/* Task Selection */}
           <section className="flex flex-col flex-1 min-h-[350px]">
             <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mb-5 uppercase tracking-[0.1em]">Playlist Configuration</h3>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 min-h-0">
-              
-              {/* === Available Tasks === */}
               <div className="flex flex-col bg-zinc-50/20 dark:bg-zinc-800/20 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
                 <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-300">TODAY</span>
                   <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full text-zinc-500">{availableTasks.length}</span>
                 </div>
-                
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                   <AnimatePresence initial={false}>
                     {availableTasks.length === 0 ? (
@@ -144,7 +136,6 @@ export function FocusSetupModal() {
                 </div>
               </div>
 
-              {/* === Selected Playlist === */}
               <div className={`flex flex-col rounded-xl border transition-all duration-300 flex-1 min-h-0 ${
                 playlist.length === 0 
                   ? 'border-dashed border-zinc-200 dark:border-zinc-800 opacity-60' 
@@ -154,7 +145,6 @@ export function FocusSetupModal() {
                    <span className="text-xs font-bold text-zinc-900 dark:text-zinc-300">PLAYLIST</span>
                    <span className="text-[10px] bg-zinc-200 dark:bg-zinc-800/80 px-2 py-0.5 rounded-full text-zinc-600 dark:text-zinc-400 font-bold">{playlist.length}</span>
                 </div>
-                
                 <div className="flex-1 overflow-y-auto p-2">
                   <AnimatePresence initial={false}>
                     {playlist.length === 0 ? (
@@ -195,12 +185,10 @@ export function FocusSetupModal() {
                   </AnimatePresence>
                 </div>
               </div>
-
             </div>
           </section>
         </div>
 
-        {/* Footer */}
         <div className="px-8 py-6 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
           <button 
             onClick={handleStart}

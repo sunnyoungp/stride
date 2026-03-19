@@ -198,6 +198,9 @@ function DayGroup({
         border: "1px solid var(--border)",
         boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
         overflow: "hidden",
+        // ADD THESE TWO LINES:
+        height: "fit-content", 
+        flexShrink: 0,
       }}
     >
       {/* Group header */}
