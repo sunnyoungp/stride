@@ -78,16 +78,24 @@ function createDragHandlePlugin() {
           // ProseMirror reads this on drop to know what was dragged
           (view as unknown as Record<string, unknown>).dragging = { slice, move: true };
 
-          // If dragging a taskItem, attach task data so cross-component drops (e.g. MiniCalendar) work
+          // Attach block-type-aware drag data for external drop targets
           try {
             const node = view.state.doc.nodeAt(currentTopPos);
-            if (node && node.type.name === "taskItem") {
-              const taskId = (node.attrs as Record<string, unknown>).taskId as string ?? "";
+            if (node) {
               const title  = node.textContent?.trim() ?? "";
+              const isTask = node.type.name === "taskItem";
+              const taskId = isTask
+                ? ((node.attrs as Record<string, unknown>).taskId as string ?? "")
+                : "";
               if (title) {
-                e.dataTransfer.setData("stride/taskId",    taskId);
+                e.dataTransfer.setData("text/block-type",  isTask ? "task" : "note");
+                e.dataTransfer.setData("text/task-title",  title);
                 e.dataTransfer.setData("stride/taskTitle", title);
                 e.dataTransfer.setData("text/plain",       title);
+                if (taskId) {
+                  e.dataTransfer.setData("text/task-id",   taskId);
+                  e.dataTransfer.setData("stride/taskId",  taskId);
+                }
               }
             }
           } catch { /* ignore */ }

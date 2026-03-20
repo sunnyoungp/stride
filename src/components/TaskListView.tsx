@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverlay,
@@ -20,6 +19,7 @@ import { useSectionStore } from "@/store/sectionStore";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { useDragStore } from "@/store/dragStore";
+import { AddTaskRow, friendlyDate, isOverdue, PriorityFlag, SelectionActionBar } from "@/components/TaskList";
 
 type Props = {
   onTaskClick: (task: Task, position: { x: number; y: number }) => void;
@@ -44,45 +44,10 @@ function getSectionAccent(s: TaskSection): string {
 
 function dateOnly(v: string) { return v.includes("T") ? v.slice(0, 10) : v; }
 
-function friendlyDate(v: string): string {
-  const date = new Date(v + "T00:00:00");
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const diff = Math.round((date.getTime() - today.getTime()) / 86400000);
-  if (diff === 0)  return "Today";
-  if (diff === 1)  return "Tomorrow";
-  if (diff === -1) return "Yesterday";
-  if (diff < -1)  return `${Math.abs(diff)}d ago`;
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
-}
-
-function isOverdue(v: string): boolean {
-  return new Date(v + "T00:00:00") < new Date(new Date().toDateString());
-}
-
-// ── Priority flag icon ────────────────────────────────────────────────────────
-
-const PRIORITY_COLOR: Partial<Record<TaskPriority, string>> = {
-  high:   "var(--priority-high)",
-  medium: "var(--priority-medium)",
-  low:    "var(--priority-low)",
-};
-
-function PriorityFlag({ priority }: { priority: TaskPriority }) {
-  const color = PRIORITY_COLOR[priority];
-  if (!color) return null;
-  return (
-    <svg width="11" height="13" viewBox="0 0 11 13" fill="none" style={{ flexShrink: 0 }}>
-      <line x1="2" y1="1" x2="2" y2="12" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M2 1.5H9.5L7.5 5L9.5 8.5H2V1.5Z" fill={color} opacity=".9"/>
-    </svg>
-  );
-}
-
 // ── DnD wrappers ──────────────────────────────────────────────────────────────
 
-function SortableTaskRow({ task, activeId, renderTaskRow }: {
+function SortableTaskRow({ task, renderTaskRow }: {
   task: Task;
-  activeId: string | null;
   renderTaskRow: (t: Task) => React.ReactElement;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
@@ -108,65 +73,6 @@ function DroppableSection({ id, children }: { id: string; children: React.ReactN
       style={isOver ? { outline: "2px solid var(--accent)", outlineOffset: "2px", borderRadius: "18px" } : {}}
     >
       {children}
-    </div>
-  );
-}
-
-// ── Inline add-task row ───────────────────────────────────────────────────────
-
-function AddTaskRow({ sectionId, subsectionId }: { sectionId?: string; subsectionId?: string }) {
-  const createTask = useTaskStore((s) => s.createTask);
-  const [active, setActive] = useState(false);
-  const [draft, setDraft]   = useState("");
-
-  const commit = () => {
-    const title = draft.trim();
-    if (title) void createTask({ title, sectionId, subsectionId, status: "todo" });
-    setDraft("");
-    setActive(false);
-  };
-
-  if (!active) {
-    return (
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); setActive(true); }}
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-[13px] transition-colors duration-150 hover:bg-[var(--bg-hover)]"
-        style={{ color: "var(--fg-faint)" }}
-      >
-        <span
-          className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full text-[13px] leading-none"
-          style={{ border: "1.5px dashed var(--border-strong)" }}
-        >
-          +
-        </span>
-        Add task
-      </button>
-    );
-  }
-
-  return (
-    <div
-      className="flex items-center gap-3 px-4 py-2.5"
-      style={{ borderTop: "1px solid var(--border)" }}
-    >
-      <span
-        className="h-[18px] w-[18px] flex-none rounded-full"
-        style={{ border: "1.5px dashed var(--border-strong)" }}
-      />
-      <input
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter")  commit();
-          if (e.key === "Escape") { setDraft(""); setActive(false); }
-        }}
-        onBlur={commit}
-        placeholder="Task name"
-        className="flex-1 bg-transparent text-[13.5px] outline-none"
-        style={{ color: "var(--fg)" }}
-      />
     </div>
   );
 }
@@ -197,6 +103,36 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
   const [editSubVal, setEditSubVal]       = useState("");
   const [addingSection, setAddingSection] = useState(false);
   const [sectionDraft, setSectionDraft]   = useState("");
+
+  // Multi-select state
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const anchorTaskIdRef    = useRef<string | null>(null);
+  const selectedTaskIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => { selectedTaskIdsRef.current = selectedTaskIds; }, [selectedTaskIds]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedTaskIds(new Set());
+    anchorTaskIdRef.current = null;
+  }, []);
+
+  // Escape clears selection
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clearSelection(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearSelection]);
+
+  // Click outside task rows clears selection
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest("[data-task-id]") && !target?.closest("[data-selection-bar]")) {
+        clearSelection();
+      }
+    };
+    window.addEventListener("pointerdown", onPointer, true);
+    return () => window.removeEventListener("pointerdown", onPointer, true);
+  }, [clearSelection]);
 
   const activeTask = useMemo(() => tasks.find((t) => t.id === activeId), [activeId, tasks]);
 
@@ -320,11 +256,47 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
 
   // ── Task row renderer ─────────────────────────────────────────────────────
 
+  // Flat visible order for range selection (mirrors visual render order, including expanded subtasks)
+  const flatVisibleOrder = useMemo(() => {
+    const withSubs = (taskList: Task[]) => taskList.flatMap((t) => {
+      const subs = tasks.filter((st) => st.parentTaskId === t.id);
+      const expanded = expandedSubs[t.id] ?? true;
+      return expanded ? [t, ...subs] : [t];
+    });
+    return [
+      ...withSubs(unsorted),
+      ...groups.flatMap((g) => [
+        ...withSubs(g.mainTasks),
+        ...g.subsections.flatMap((s) => withSubs(s.items)),
+      ]),
+    ];
+  }, [unsorted, groups, tasks, expandedSubs]);
+
   const renderRow = (task: Task): React.ReactElement => {
     const isDone       = task.status === "done";
     const subtaskItems = tasks.filter((t) => t.parentTaskId === task.id);
     const hasSubtasks  = subtaskItems.length > 0;
     const expanded     = expandedSubs[task.id] ?? true;
+    const isSelected   = selectedTaskIds.has(task.id);
+
+    const handleRowClick = (e: React.MouseEvent) => {
+      if (e.shiftKey) {
+        e.preventDefault();
+        window.getSelection()?.removeAllRanges();
+        if (anchorTaskIdRef.current) {
+          const aIdx = flatVisibleOrder.findIndex((t) => t.id === anchorTaskIdRef.current);
+          const bIdx = flatVisibleOrder.findIndex((t) => t.id === task.id);
+          if (aIdx >= 0 && bIdx >= 0) {
+            const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+            setSelectedTaskIds(new Set(flatVisibleOrder.slice(lo, hi + 1).map((t) => t.id)));
+          }
+        }
+        return;
+      }
+      clearSelection();
+      anchorTaskIdRef.current = task.id;
+      onTaskClick(task, { x: e.clientX, y: e.clientY });
+    };
 
     return (
       <div key={task.id} className={activeId === task.id ? "opacity-0" : ""}>
@@ -332,12 +304,27 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
         <div
           role="button"
           tabIndex={0}
-          onClick={(e) => onTaskClick(task, { x: e.clientX, y: e.clientY })}
+          onClick={handleRowClick}
           onContextMenu={(e) => { e.preventDefault(); setContextMenu({ task, x: e.clientX, y: e.clientY }); }}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTaskClick(task, { x: 0, y: 0 }); }}
           data-task-id={task.id}
           data-task-title={task.title}
-          className="group/row flex cursor-pointer items-center gap-3 px-4 py-[11px] transition-colors duration-100 hover:bg-[var(--bg-hover)]"
+          draggable={true}
+          onDragStart={(e) => {
+            e.dataTransfer.setData("text/task-id", task.id);
+            e.dataTransfer.setData("text/task-title", task.title);
+            e.dataTransfer.setData("stride/taskId", task.id);
+            e.dataTransfer.setData("stride/taskTitle", task.title);
+            e.dataTransfer.setData("text/plain", task.title);
+            e.dataTransfer.effectAllowed = "move";
+          }}
+          className="group/row flex cursor-pointer items-center gap-3 px-4 py-[11px] transition-colors duration-100"
+          style={{
+            background: isSelected ? "var(--accent-bg)" : undefined,
+            outline: isSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
+          }}
+          onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "var(--accent-bg)" : ""; }}
         >
           {/* Checkbox — rounded rectangle */}
           <button
@@ -415,12 +402,42 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
             {subtaskItems.map((st) => {
               const stDone    = st.status === "done";
               const isEditing = editSubId === st.id;
+              const stSelected = selectedTaskIds.has(st.id);
+
+              const handleSubtaskClick = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                if (e.shiftKey) {
+                  e.preventDefault();
+                  window.getSelection()?.removeAllRanges();
+                  if (anchorTaskIdRef.current) {
+                    const aIdx = flatVisibleOrder.findIndex((t) => t.id === anchorTaskIdRef.current);
+                    const bIdx = flatVisibleOrder.findIndex((t) => t.id === st.id);
+                    if (aIdx >= 0 && bIdx >= 0) {
+                      const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+                      setSelectedTaskIds(new Set(flatVisibleOrder.slice(lo, hi + 1).map((t) => t.id)));
+                    }
+                  }
+                  return;
+                }
+                clearSelection();
+                anchorTaskIdRef.current = st.id;
+              };
+
               return (
                 <div
                   key={st.id}
+                  data-task-id={st.id}
+                  data-task-title={st.title}
                   className="flex items-center gap-2.5 py-[6px] pr-4"
-                  style={{ paddingLeft: "36px" }}
-                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    paddingLeft: "36px",
+                    background: stSelected ? "var(--accent-bg)" : undefined,
+                    outline: stSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
+                    cursor: "pointer",
+                  }}
+                  onClick={handleSubtaskClick}
+                  onMouseEnter={(e) => { if (!stSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = stSelected ? "var(--accent-bg)" : ""; }}
                 >
                   <button
                     type="button"
@@ -545,7 +562,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                 <SortableContext items={mainTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                   {mainTasks.map((t) => (
                     <div key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                      <SortableTaskRow task={t} activeId={activeId} renderTaskRow={renderRow} />
+                      <SortableTaskRow task={t} renderTaskRow={renderRow} />
                     </div>
                   ))}
                 </SortableContext>
@@ -576,7 +593,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                       <SortableContext items={sub.items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                         {sub.items.map((t) => (
                           <div key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                            <SortableTaskRow task={t} activeId={activeId} renderTaskRow={renderRow} />
+                            <SortableTaskRow task={t} renderTaskRow={renderRow} />
                           </div>
                         ))}
                       </SortableContext>
@@ -653,7 +670,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
               <SortableContext items={filteredTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 {filteredTasks.map((t, idx) => (
                   <div key={t.id} style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}>
-                    <SortableTaskRow task={t} activeId={activeId} renderTaskRow={renderRow} />
+                    <SortableTaskRow task={t} renderTaskRow={renderRow} />
                   </div>
                 ))}
               </SortableContext>
@@ -751,6 +768,10 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onClose={() => setContextMenu(null)}
         />
+      )}
+
+      {selectedTaskIds.size >= 2 && (
+        <SelectionActionBar selectedIds={selectedTaskIds} onClear={clearSelection} />
       )}
 
       <DragOverlay

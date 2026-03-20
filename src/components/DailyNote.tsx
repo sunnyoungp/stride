@@ -8,7 +8,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import Placeholder from "@tiptap/extension-placeholder";
 import type { JSONContent } from "@tiptap/core";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
@@ -17,7 +17,7 @@ import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
-import type { DailyNote } from "@/types/index";
+import type { DailyNote, Task } from "@/types/index";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -105,6 +105,147 @@ async function ensureDailyNote(date: string): Promise<DailyNote> {
   };
   await db.dailyNotes.put(note);
   return note;
+}
+
+// ─── DnSelectionBar ───────────────────────────────────────────────────────────
+
+function DnSelectionBar({
+  selectedPoses,
+  editorRef,
+  updateTask,
+  deleteTask,
+  onClear,
+}: {
+  selectedPoses: Set<number>;
+  editorRef: React.MutableRefObject<Editor | null>;
+  updateTask: (id: string, patch: Partial<Task>) => Promise<unknown>;
+  deleteTask: (id: string) => Promise<unknown>;
+  onClear: () => void;
+}) {
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const getSelectedItems = (): TaskItemScan[] => {
+    const ed = editorRef.current;
+    if (!ed) return [];
+    const result: TaskItemScan[] = [];
+    selectedPoses.forEach((pos) => {
+      try {
+        const node = ed.state.doc.nodeAt(pos);
+        if (node?.type.name === "taskItem") {
+          result.push({
+            title: node.textContent.trim(),
+            checked: Boolean(node.attrs.checked),
+            taskId: (node.attrs as Record<string, unknown>).taskId as string | null ?? null,
+            pos,
+          });
+        }
+      } catch { /* ignore stale pos */ }
+    });
+    return result;
+  };
+
+  const handleCompleteAll = () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const items = getSelectedItems();
+    const tr = ed.view.state.tr;
+    let modified = false;
+    items.forEach(({ pos, checked, taskId }) => {
+      if (!checked) {
+        try {
+          const node = tr.doc.nodeAt(pos);
+          if (node) { tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: true }); modified = true; }
+        } catch { /* ignore */ }
+        if (taskId) void updateTask(taskId, { status: "done" });
+      }
+    });
+    if (modified) { tr.setMeta("addToHistory", false); ed.view.dispatch(tr); }
+    onClear();
+  };
+
+  const handleReschedule = (date: string) => {
+    if (!date) return;
+    getSelectedItems().forEach(({ taskId }) => {
+      if (taskId) void updateTask(taskId, { dueDate: date });
+    });
+    onClear();
+  };
+
+  const handleDelete = () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    // Sort descending so positions stay valid as we remove nodes
+    const items = getSelectedItems().sort((a, b) => b.pos - a.pos);
+    const tr = ed.view.state.tr;
+    items.forEach(({ pos }) => {
+      try {
+        const node = tr.doc.nodeAt(pos);
+        if (node) tr.delete(pos, pos + node.nodeSize);
+      } catch { /* ignore */ }
+    });
+    ed.view.dispatch(tr);
+    // onUpdate will detect missing taskIds and call deleteTask automatically
+    onClear();
+  };
+
+  const btn = (label: string, onClick: () => void, danger = false) => (
+    <button
+      key={label}
+      type="button"
+      onClick={onClick}
+      style={{
+        fontSize: 12, fontWeight: 500,
+        color: danger ? "var(--priority-high)" : "var(--fg)",
+        background: "none", border: "none", cursor: "pointer",
+        padding: "4px 8px", borderRadius: 6,
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = danger ? "rgba(239,68,68,0.08)" : "var(--bg-hover)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div
+      data-selection-bar
+      style={{
+        position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+        zIndex: 9999, display: "flex", alignItems: "center", gap: 8,
+        padding: "10px 14px", background: "var(--bg-card)",
+        border: "1px solid var(--border)", borderRadius: 14,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        animation: "gs-scale 150ms cubic-bezier(0.16,1,0.3,1) both",
+      }}
+    >
+      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", marginRight: 4 }}>
+        {selectedPoses.size} selected
+      </span>
+      <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+      {btn("Complete all", handleCompleteAll)}
+      <button
+        type="button"
+        onClick={() => dateInputRef.current?.showPicker?.()}
+        style={{
+          fontSize: 12, fontWeight: 500, color: "var(--fg)",
+          background: "none", border: "none", cursor: "pointer",
+          padding: "4px 8px", borderRadius: 6, position: "relative",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        Reschedule
+        <input
+          ref={dateInputRef} type="date" tabIndex={-1}
+          onChange={(e) => handleReschedule(e.target.value)}
+          style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+        />
+      </button>
+      {btn("Delete", handleDelete, true)}
+      <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+      {btn("✕", onClear)}
+    </div>
+  );
 }
 
 // ─── NoteItemContextMenu ──────────────────────────────────────────────────────
@@ -292,6 +433,12 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   const [showLoading, setShowLoading]   = useState(true);
   const [noteContextMenu, setNoteContextMenu] = useState<NoteMenuState | null>(null);
 
+  // Multi-select state for checklist items
+  const [dnSelectedPoses, setDnSelectedPoses] = useState<Set<number>>(new Set());
+  const dnAnchorPosRef      = useRef<number | null>(null);
+  const dnSelectedPosesRef  = useRef<Set<number>>(new Set());
+  useEffect(() => { dnSelectedPosesRef.current = dnSelectedPoses; }, [dnSelectedPoses]);
+
   // Linked mode: tasks sync to task manager. Default off (independent).
   const [isLinked, setIsLinked] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -324,6 +471,18 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   useEffect(() => { selectedDateRef.current = selectedDate; }, [selectedDate]);
   useEffect(() => { noteRef.current         = note;       }, [note]);
   useEffect(() => { isLinkedRef.current     = isLinked;   }, [isLinked]);
+
+  // Escape clears checklist multi-select
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && dnSelectedPosesRef.current.size > 0) {
+        setDnSelectedPoses(new Set());
+        dnAnchorPosRef.current = null;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -408,17 +567,93 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
           class: "min-h-[200px] outline-none leading-7 text-[var(--fg)]",
         },
         handleDOMEvents: {
-          // Cross-component drag: let task items carry their taskId to external targets (e.g. MiniCalendar)
-          dragstart: (_view, event) => {
+          // Shift+click range selection for checklist items
+          click: (view, event) => {
             const liEl = (event.target as HTMLElement | null)?.closest("li[data-checked]") as HTMLElement | null;
-            if (!liEl || !event.dataTransfer) return false;
-            const taskId = liEl.getAttribute("data-task-id") ?? "";
-            const title  = liEl.querySelector("div")?.textContent?.trim() ?? "";
-            if (!title) return false;
-            event.dataTransfer.setData("stride/taskId",    taskId);
-            event.dataTransfer.setData("stride/taskTitle", title);
-            event.dataTransfer.setData("text/plain",       title);
-            // Let ProseMirror's own dragstart also fire (don't stopPropagation)
+
+            if (!liEl) {
+              // Click outside any task item — clear selection
+              if (dnSelectedPosesRef.current.size > 0) {
+                setDnSelectedPoses(new Set());
+                dnAnchorPosRef.current = null;
+              }
+              return false;
+            }
+
+            // Don't intercept checkbox input clicks
+            if ((event.target as HTMLElement).tagName === "INPUT") return false;
+
+            const resolved = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (!resolved) return false;
+
+            let taskPos = -1;
+            try {
+              const $pos = view.state.doc.resolve(resolved.pos);
+              for (let d = $pos.depth; d >= 0; d--) {
+                if ($pos.node(d).type.name === "taskItem") { taskPos = $pos.before(d); break; }
+              }
+            } catch { return false; }
+            if (taskPos < 0) return false;
+
+            if (event.shiftKey && dnAnchorPosRef.current !== null) {
+              event.preventDefault();
+              const orderedPoses: number[] = [];
+              view.state.doc.nodesBetween(0, view.state.doc.nodeSize - 2, (node, pos) => {
+                if (node.type.name === "taskItem") orderedPoses.push(pos);
+              });
+              const aIdx = orderedPoses.indexOf(dnAnchorPosRef.current);
+              const bIdx = orderedPoses.indexOf(taskPos);
+              if (aIdx >= 0 && bIdx >= 0) {
+                const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+                setDnSelectedPoses(new Set(orderedPoses.slice(lo, hi + 1)));
+              }
+              return true;
+            }
+
+            // Regular click: update anchor, clear any existing selection
+            dnAnchorPosRef.current = taskPos;
+            if (dnSelectedPosesRef.current.size > 0) {
+              setDnSelectedPoses(new Set());
+            }
+            return false;
+          },
+
+          // Cross-component drag: set block-type so drop targets know what they received
+          dragstart: (_view, event) => {
+            const target = event.target as HTMLElement | null;
+            if (!event.dataTransfer) return false;
+
+            // Checklist item drag → block-type "task"
+            const taskItem = target?.closest("li[data-checked]") as HTMLElement | null;
+            if (taskItem) {
+              const taskId = taskItem.getAttribute("data-task-id") ?? "";
+              const title  = taskItem.querySelector("div")?.textContent?.trim() ?? "";
+              if (!title) return false;
+              event.dataTransfer.setData("text/block-type",  "task");
+              event.dataTransfer.setData("text/task-title",  title);
+              event.dataTransfer.setData("stride/taskTitle", title);
+              event.dataTransfer.setData("text/plain",       title);
+              if (taskId) {
+                event.dataTransfer.setData("text/task-id",  taskId);
+                event.dataTransfer.setData("stride/taskId", taskId);
+              }
+              event.dataTransfer.effectAllowed = "move";
+              return false;
+            }
+
+            // Plain block drag (paragraph, heading, bullet item) → block-type "note"
+            const plainBlock = target?.closest("p, h1, h2, h3, h4, li:not([data-checked])") as HTMLElement | null;
+            if (plainBlock) {
+              const title = plainBlock.textContent?.trim() ?? "";
+              if (!title) return false;
+              event.dataTransfer.setData("text/block-type",  "note");
+              event.dataTransfer.setData("text/task-title",  title);
+              event.dataTransfer.setData("stride/taskTitle", title);
+              event.dataTransfer.setData("text/plain",       title);
+              event.dataTransfer.effectAllowed = "move";
+              return false;
+            }
+
             return false;
           },
           contextmenu: (view, event) => {
@@ -514,6 +749,33 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   // Keep editorRef current
   useEffect(() => { editorRef.current = editor ?? null; }, [editor]);
 
+
+  // Apply/clear selection highlights directly on the ProseMirror DOM
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    let dom: HTMLElement;
+    try { dom = editor.view.dom as HTMLElement; } catch { return; }
+
+    dom.querySelectorAll("li[data-pm-selected]").forEach((el) => {
+      const h = el as HTMLElement;
+      h.removeAttribute("data-pm-selected");
+      h.style.background = "";
+      h.style.outline = "";
+      h.style.borderRadius = "";
+    });
+    if (dnSelectedPoses.size === 0) return;
+    dnSelectedPoses.forEach((pos) => {
+      try {
+        const nodeDom = editor.view.nodeDOM(pos) as HTMLElement | null;
+        if (nodeDom) {
+          nodeDom.setAttribute("data-pm-selected", "true");
+          nodeDom.style.background = "var(--accent-bg)";
+          nodeDom.style.outline = "1px solid rgba(99,102,241,0.20)";
+          nodeDom.style.borderRadius = "6px";
+        }
+      } catch { /* ignore stale pos */ }
+    });
+  }, [editor, dnSelectedPoses]);
 
   useEffect(() => {
     if (!editor || !note) return;
@@ -741,6 +1003,17 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
           onToggleChecked={() => handleToggleChecked(noteContextMenu.pos, noteContextMenu.checked, noteContextMenu.taskId)}
           onNavigateToTask={() => void handleNavigateToTask(noteContextMenu.title, noteContextMenu.taskId)}
           onClose={() => setNoteContextMenu(null)}
+        />,
+        document.body,
+      )}
+
+      {dnSelectedPoses.size >= 2 && createPortal(
+        <DnSelectionBar
+          selectedPoses={dnSelectedPoses}
+          editorRef={editorRef}
+          updateTask={updateTask}
+          deleteTask={deleteTask}
+          onClear={() => { setDnSelectedPoses(new Set()); dnAnchorPosRef.current = null; }}
         />,
         document.body,
       )}

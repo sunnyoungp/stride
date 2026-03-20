@@ -9,9 +9,8 @@ import type { Task } from "@/types/index";
 
 export function FocusSetupModal() {
   const { isSetupModalOpen, setSetupModalOpen, startFocusSession } = useFocusStore();
-  // Get all tasks from the Task Store to pass into the flattening logic
   const allTasks = useTaskStore((state) => state.tasks);
-  
+
   const [selectedMode, setSelectedMode] = useState<FocusMode>("tunnel");
   const [playlist, setPlaylist] = useState<Task[]>([]);
 
@@ -47,52 +46,84 @@ export function FocusSetupModal() {
 
   const handleStart = () => {
     if (playlist.length === 0) return;
-    // CRITICAL UPDATE: Passing allTasks as the 3rd argument
-    startFocusSession(selectedMode, playlist, allTasks, 1500); 
+    startFocusSession(selectedMode, playlist, allTasks, 1500);
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-zinc-950/20 dark:bg-black/40 backdrop-blur-lg"
       onClick={() => setSetupModalOpen(false)}
     >
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-4xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: "768px",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: "20px",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.12)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "85vh",
+          animation: "gs-scale 200ms cubic-bezier(0.16,1,0.3,1) both",
+        }}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">Setup Focus</h2>
-          <button 
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 24px",
+          borderBottom: "1px solid var(--border)",
+          flexShrink: 0,
+        }}>
+          <h2 style={{
+            fontSize: "12px", fontWeight: 700, color: "var(--fg)",
+            textTransform: "uppercase", letterSpacing: "0.06em",
+          }}>Setup Focus</h2>
+          <button
             onClick={() => setSetupModalOpen(false)}
-            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            style={{
+              padding: "6px", borderRadius: "8px", border: "none",
+              background: "transparent", color: "var(--fg-faint)",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 150ms, color 150ms",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--fg)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint)"; }}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-8 overflow-y-auto flex-1 space-y-10 min-h-0">
-          <section className="shrink-0">
-            <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mb-5 uppercase tracking-[0.1em]">Session Mode</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <ModeCard 
-                title="Tunnel" 
-                description="The pure essentials only." 
+        {/* Body */}
+        <div style={{ padding: "28px 32px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "32px" }}>
+          {/* Mode selection */}
+          <section>
+            <h3 style={{
+              fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)",
+              textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "16px",
+            }}>Session Mode</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+              <ModeCard
+                title="Tunnel"
+                description="The pure essentials only."
                 icon={<Zap className="w-5 h-5" />}
                 isSelected={selectedMode === "tunnel"}
                 onClick={() => setSelectedMode("tunnel")}
               />
-              <ModeCard 
-                title="Timer" 
-                description="Timed deep work blocks." 
+              <ModeCard
+                title="Timer"
+                description="Timed deep work blocks."
                 icon={<Timer className="w-5 h-5" />}
                 isSelected={selectedMode === "timer"}
                 onClick={() => setSelectedMode("timer")}
               />
-              <ModeCard 
-                title="Vault" 
-                description="Manage your whole list." 
+              <ModeCard
+                title="Vault"
+                description="Manage your whole list."
                 icon={<Lock className="w-5 h-5" />}
                 isSelected={selectedMode === "vault"}
                 onClick={() => setSelectedMode("vault")}
@@ -100,84 +131,92 @@ export function FocusSetupModal() {
             </div>
           </section>
 
-          <section className="flex flex-col flex-1 min-h-[350px]">
-            <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mb-5 uppercase tracking-[0.1em]">Playlist Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 min-h-0">
-              <div className="flex flex-col bg-zinc-50/20 dark:bg-zinc-800/20 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
-                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-300">TODAY</span>
-                  <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full text-zinc-500">{availableTasks.length}</span>
+          {/* Playlist */}
+          <section style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "350px" }}>
+            <h3 style={{
+              fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)",
+              textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "16px",
+            }}>Playlist Configuration</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", flex: 1, minHeight: 0 }}>
+
+              {/* Available tasks */}
+              <div style={{
+                display: "flex", flexDirection: "column",
+                background: "var(--bg-subtle)", borderRadius: "12px",
+                border: "1px solid var(--border)", overflow: "hidden",
+              }}>
+                <div style={{
+                  padding: "10px 16px",
+                  borderBottom: "1px solid var(--border)",
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg)" }}>TODAY</span>
+                  <span style={{
+                    fontSize: "10px", background: "var(--bg-subtle)", border: "1px solid var(--border)",
+                    padding: "1px 8px", borderRadius: "9999px", color: "var(--fg-faint)",
+                  }}>{availableTasks.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
                   <AnimatePresence initial={false}>
                     {availableTasks.length === 0 ? (
-                      <div className="h-full flex items-center justify-center p-6 text-zinc-400 text-xs text-center py-20 grayscale opacity-50">
+                      <div style={{
+                        height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "48px 16px", fontSize: "12px", color: "var(--fg-faint)",
+                        textAlign: "center", opacity: 0.5,
+                      }}>
                         No tasks left for today.
                       </div>
-                    ) : (
-                      availableTasks.map(task => (
-                        <motion.div 
-                          layout
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          key={task.id}
-                          onClick={() => handleAddToPlaylist(task)}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/50 cursor-pointer group transition-all"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100" strokeWidth={2.5} />
-                          <span className="flex-1 truncate text-zinc-800 dark:text-zinc-300 text-[13px] font-medium tracking-tight">
-                            {task.title}
-                          </span>
-                        </motion.div>
-                      ))
-                    )}
+                    ) : availableTasks.map(task => (
+                      <AvailableTaskRow key={task.id} task={task} onClick={() => handleAddToPlaylist(task)} />
+                    ))}
                   </AnimatePresence>
                 </div>
               </div>
 
-              <div className={`flex flex-col rounded-xl border transition-all duration-300 flex-1 min-h-0 ${
-                playlist.length === 0 
-                  ? 'border-dashed border-zinc-200 dark:border-zinc-800 opacity-60' 
-                  : 'bg-zinc-50/20 dark:bg-zinc-800/10 border-zinc-100 dark:border-zinc-800'
-              }`}>
-                <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
-                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-300">PLAYLIST</span>
-                   <span className="text-[10px] bg-zinc-200 dark:bg-zinc-800/80 px-2 py-0.5 rounded-full text-zinc-600 dark:text-zinc-400 font-bold">{playlist.length}</span>
+              {/* Playlist */}
+              <div style={{
+                display: "flex", flexDirection: "column", borderRadius: "12px",
+                border: `1px ${playlist.length === 0 ? "dashed" : "solid"} var(--border)`,
+                background: playlist.length === 0 ? "transparent" : "var(--bg-subtle)",
+                flex: 1, minHeight: 0,
+                opacity: playlist.length === 0 ? 0.6 : 1,
+                transition: "all 300ms ease",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  padding: "10px 16px",
+                  borderBottom: "1px solid var(--border)",
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg)" }}>PLAYLIST</span>
+                  <span style={{
+                    fontSize: "10px", fontWeight: 700, background: "var(--bg-subtle)", border: "1px solid var(--border)",
+                    padding: "1px 8px", borderRadius: "9999px", color: "var(--fg-faint)",
+                  }}>{playlist.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2">
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
                   <AnimatePresence initial={false}>
                     {playlist.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center p-10 text-center text-zinc-400">
-                        <p className="text-[12px] font-medium opacity-60">Ready for Focus</p>
+                      <div style={{
+                        height: "100%", display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center",
+                        padding: "40px 16px", textAlign: "center",
+                      }}>
+                        <p style={{ fontSize: "12px", fontWeight: 500, color: "var(--fg-faint)", opacity: 0.6 }}>
+                          Ready for Focus
+                        </p>
                       </div>
                     ) : (
-                      <Reorder.Group axis="y" values={playlist} onReorder={setPlaylist} className="space-y-1">
+                      <Reorder.Group axis="y" values={playlist} onReorder={setPlaylist} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                         <AnimatePresence initial={false}>
                           {playlist.map(task => (
-                            <Reorder.Item 
-                              key={task.id} 
-                              value={task}
-                              layout
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/50 shadow-sm cursor-grab active:cursor-grabbing group hover:border-[#E05252]/20 transition-all"
-                            >
-                              <GripVertical className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-500 shrink-0" strokeWidth={1.5} />
-                              <div 
-                                onClick={(e) => { e.stopPropagation(); handleRemoveFromPlaylist(task); }}
-                                className="flex-1 truncate text-zinc-900 dark:text-zinc-100 font-semibold text-[13px] tracking-tight cursor-pointer"
-                              >
-                                {task.title}
-                              </div>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleRemoveFromPlaylist(task); }}
-                                className="p-1 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-md text-zinc-300 dark:text-zinc-600 hover:text-[#E05252] dark:hover:text-red-400 transition-colors shrink-0"
-                              >
-                                <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
-                              </button>
-                            </Reorder.Item>
+                            <PlaylistItemRow
+                              key={task.id}
+                              task={task}
+                              onRemove={() => handleRemoveFromPlaylist(task)}
+                            />
                           ))}
                         </AnimatePresence>
                       </Reorder.Group>
@@ -185,17 +224,36 @@ export function FocusSetupModal() {
                   </AnimatePresence>
                 </div>
               </div>
+
             </div>
           </section>
         </div>
 
-        <div className="px-8 py-6 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
-          <button 
+        {/* Footer */}
+        <div style={{
+          padding: "20px 32px",
+          borderTop: "1px solid var(--border)",
+          background: "var(--bg-card)",
+          flexShrink: 0,
+        }}>
+          <button
             onClick={handleStart}
             disabled={playlist.length === 0}
-            className="w-full py-3.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-90 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed rounded-lg font-bold text-sm tracking-tight transition-all active:scale-[0.99]"
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: "12px",
+              border: "none",
+              background: "var(--accent)",
+              color: "#fff",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: playlist.length === 0 ? "not-allowed" : "pointer",
+              opacity: playlist.length === 0 ? 0.35 : 1,
+              transition: "opacity 150ms",
+            }}
           >
-            Start Session
+            Start Session →
           </button>
         </div>
       </motion.div>
@@ -203,32 +261,133 @@ export function FocusSetupModal() {
   );
 }
 
-function ModeCard({ title, description, icon, isSelected, onClick }: { 
-  title: string, description: string, icon: React.ReactNode, isSelected: boolean, onClick: () => void 
+function ModeCard({ title, description, icon, isSelected, onClick }: {
+  title: string; description: string; icon: React.ReactNode; isSelected: boolean; onClick: () => void;
 }) {
   return (
-    <div 
+    <div
       onClick={onClick}
-      className={`relative p-5 rounded-xl cursor-pointer border transition-all duration-200 ${
-        isSelected 
-          ? 'bg-zinc-50 dark:bg-zinc-800/40 border-zinc-900 dark:border-zinc-100' 
-          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-      }`}
+      style={{
+        position: "relative",
+        padding: "20px",
+        borderRadius: "14px",
+        cursor: "pointer",
+        border: isSelected ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+        background: isSelected ? "var(--accent-bg)" : "var(--bg-card)",
+        transition: "all 150ms ease",
+      }}
     >
-      <div className={`mb-3 transition-colors ${isSelected ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}`}>
+      <div style={{
+        marginBottom: "10px",
+        color: isSelected ? "var(--accent)" : "var(--fg-faint)",
+        transition: "color 150ms",
+      }}>
         {icon}
       </div>
-      <h4 className={`text-[13px] font-bold mb-0.5 transition-colors ${isSelected ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-800 dark:text-zinc-400'}`}>
-        {title}
-      </h4>
-      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 leading-tight font-medium">
-        {description}
-      </p>
+      <div style={{
+        fontSize: "13px",
+        fontWeight: 600,
+        color: "var(--fg)",
+        marginBottom: "3px",
+      }}>{title}</div>
+      <div style={{
+        fontSize: "11px",
+        color: "var(--fg-faint)",
+        lineHeight: 1.4,
+      }}>{description}</div>
       {isSelected && (
-        <div className="absolute top-4 right-4 text-zinc-900 dark:text-zinc-100">
-           <Check className="w-3.5 h-3.5" strokeWidth={3} />
+        <div style={{
+          position: "absolute",
+          top: "14px",
+          right: "14px",
+          color: "var(--accent)",
+        }}>
+          <Check className="w-3.5 h-3.5" strokeWidth={3} />
         </div>
       )}
     </div>
+  );
+}
+
+function AvailableTaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "10px 12px", borderRadius: "8px",
+        background: hovered ? "var(--bg-hover)" : "transparent",
+        cursor: "pointer", transition: "background 120ms ease",
+      }}
+    >
+      <Plus className="w-3.5 h-3.5 shrink-0" style={{ color: hovered ? "var(--fg)" : "var(--fg-faint)" }} strokeWidth={2.5} />
+      <span style={{
+        flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        fontSize: "13px", fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.01em",
+      }}>
+        {task.title}
+      </span>
+    </motion.div>
+  );
+}
+
+function PlaylistItemRow({ task, onRemove }: { task: Task; onRemove: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Reorder.Item
+      value={task}
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "10px 12px", borderRadius: "8px",
+        background: "var(--bg-card)",
+        border: `1px solid ${hovered ? "var(--accent)" : "var(--border)"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        cursor: "grab",
+        transition: "border-color 150ms ease",
+        listStyle: "none",
+      }}
+    >
+      <GripVertical
+        className="w-3.5 h-3.5 shrink-0"
+        style={{ color: hovered ? "var(--fg-faint)" : "var(--border)" }}
+        strokeWidth={1.5}
+      />
+      <div
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        style={{
+          flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          fontSize: "13px", fontWeight: 600, color: "var(--fg)",
+          letterSpacing: "-0.01em", cursor: "pointer",
+        }}
+      >
+        {task.title}
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        style={{
+          padding: "4px", borderRadius: "6px", border: "none",
+          background: "transparent", color: "var(--fg-faint)",
+          cursor: "pointer", display: "flex", flexShrink: 0,
+          transition: "background 120ms, color 120ms",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(224,82,82,0.08)"; e.currentTarget.style.color = "var(--accent)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint)"; }}
+      >
+        <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
+      </button>
+    </Reorder.Item>
   );
 }

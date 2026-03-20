@@ -22,6 +22,8 @@ export default function Page() {
   });
 
   const tasks             = useTaskStore((s) => s.tasks);
+  const updateTask        = useTaskStore((s) => s.updateTask);
+  const createTask        = useTaskStore((s) => s.createTask);
   const templates         = useRoutineTemplateStore((s) => s.templates);
   const isLoadingRoutines = useRoutineTemplateStore((s) => s.isLoading);
   const loadTemplates     = useRoutineTemplateStore((s) => s.loadTemplates);
@@ -78,6 +80,30 @@ export default function Page() {
     const next = !routinesExpanded;
     setRoutinesExpanded(next);
     localStorage.setItem("routines-sidebar-expanded", String(next));
+  };
+
+  const handleTaskPanelDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const blockType = e.dataTransfer.getData("text/block-type");
+    const taskId    = e.dataTransfer.getData("text/task-id")    || e.dataTransfer.getData("stride/taskId")    || "";
+    const title     = e.dataTransfer.getData("text/task-title") || e.dataTransfer.getData("stride/taskTitle") || e.dataTransfer.getData("text/plain") || "";
+
+    if (blockType === "task") {
+      if (taskId) {
+        void updateTask(taskId, { dueDate: undefined });
+      } else if (title) {
+        void createTask({ title, status: "todo" });
+      }
+    } else if (blockType === "note") {
+      if (title) void createTask({ title, status: "todo" });
+    } else {
+      // Backward compat: old drag format without block-type
+      if (taskId) {
+        void updateTask(taskId, { dueDate: undefined });
+      } else if (title) {
+        void createTask({ title, status: "todo" });
+      }
+    }
   };
 
   const [mounted, setMounted] = useState(false);
@@ -210,7 +236,14 @@ export default function Page() {
               </h3>
             </div>
 
-            <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+            <div
+              className="task-drop-zone"
+              style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnter={(e) => { e.preventDefault(); e.currentTarget.setAttribute("data-drag-over", "true"); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) e.currentTarget.removeAttribute("data-drag-over"); }}
+              onDrop={(e) => { e.currentTarget.removeAttribute("data-drag-over"); handleTaskPanelDrop(e); }}
+            >
               <div ref={taskPanelRef} style={{ padding: "10px 12px", minWidth: 0 }}>
                 {incompleteTasks.length === 0 ? (
                   <div style={{

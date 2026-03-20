@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import {
   Separator as ResizableHandle,
@@ -45,6 +45,8 @@ export default function Page() {
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
 
   const tasks        = useTaskStore((s) => s.tasks);
+  const updateTask   = useTaskStore((s) => s.updateTask);
+  const createTask   = useTaskStore((s) => s.createTask);
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   const [today, setToday] = useState<string>(() => localDateString(new Date()));
@@ -67,6 +69,30 @@ export default function Page() {
   }, [selectedDate]);
 
   const taskListRef = useRef<HTMLDivElement>(null);
+
+  const handleTaskPanelDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const blockType = e.dataTransfer.getData("text/block-type");
+    const taskId    = e.dataTransfer.getData("text/task-id")    || e.dataTransfer.getData("stride/taskId")    || "";
+    const title     = e.dataTransfer.getData("text/task-title") || e.dataTransfer.getData("stride/taskTitle") || e.dataTransfer.getData("text/plain") || "";
+
+    if (blockType === "task") {
+      if (taskId) {
+        void updateTask(taskId, { dueDate: undefined });
+      } else if (title) {
+        void createTask({ title, status: "todo" });
+      }
+    } else if (blockType === "note") {
+      if (title) void createTask({ title, status: "todo" });
+    } else {
+      // Backward compat: old drag format without block-type
+      if (taskId) {
+        void updateTask(taskId, { dueDate: undefined });
+      } else if (title) {
+        void createTask({ title, status: "todo" });
+      }
+    }
+  };
 
   useEffect(() => {
     const el = taskListRef.current;
@@ -218,7 +244,15 @@ export default function Page() {
                   <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{selectedDateTaskCount}</span>
                 )}
               </div>
-              <div ref={taskListRef} style={{ flex: 1, overflowY: "auto", opacity: contentDimmed ? 0.6 : 1, transition: "opacity 150ms ease" }}>
+              <div
+                ref={taskListRef}
+                className="task-drop-zone"
+                style={{ flex: 1, overflowY: "auto", opacity: contentDimmed ? 0.6 : 1, transition: "opacity 150ms ease" }}
+                onDragOver={(e) => e.preventDefault()}
+                onDragEnter={(e) => { e.preventDefault(); e.currentTarget.setAttribute("data-drag-over", "true"); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) e.currentTarget.removeAttribute("data-drag-over"); }}
+                onDrop={(e) => { e.currentTarget.removeAttribute("data-drag-over"); handleTaskPanelDrop(e); }}
+              >
                 <Suspense fallback={<div style={{ padding: "16px 24px", fontSize: "12px", color: "#999" }}>Loading…</div>}>
                   <TaskListView
                     filterDate={selectedDate}

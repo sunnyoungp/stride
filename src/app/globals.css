@@ -314,6 +314,14 @@ a, button, input, select, textarea {
   min-width: 0;
 }
 
+/* ── Completed checklist items ── */
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] .task-text {
+  text-decoration: line-through;
+  opacity: 0.4;
+  transition: opacity 200ms ease;
+}
+
 /* ── Drag handle ── */
 .pm-drag-handle {
   position: absolute;
@@ -335,6 +343,31 @@ a, button, input, select, textarea {
 }
 .pm-drag-handle:active {
   cursor: grabbing;
+}
+
+/* Prevent text selection on task rows during shift+click multi-select */
+[data-task-id] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Daily note drag feedback ── */
+
+/* Drag cursor on blocks draggable via the handle */
+.ProseMirror li[data-type="taskItem"][draggable="true"],
+.ProseMirror p[draggable="true"],
+.ProseMirror h1[draggable="true"],
+.ProseMirror h2[draggable="true"],
+.ProseMirror h3[draggable="true"] {
+  cursor: grab;
+}
+
+/* Task panel drop zone highlight */
+.task-drop-zone[data-drag-over="true"] {
+  background: var(--accent-bg) !important;
+  border: 1.5px dashed var(--accent) !important;
+  border-radius: 12px;
+  transition: background 100ms ease, border-color 100ms ease;
 }
 
 /* ── Placeholder (TipTap Placeholder extension) ── */

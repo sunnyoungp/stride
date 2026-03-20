@@ -1,0 +1,721 @@
+"use client";
+
+/**
+ * TaskList — unified task row, add-task input, and group card.
+ * Used by: TaskListView, inbox/page, next7/page, and anywhere else tasks are listed.
+ */
+
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { Task, TaskPriority } from "@/types/index";
+import { useTaskStore } from "@/store/taskStore";
+import { TaskContextMenu } from "@/components/TaskContextMenu";
+
+// ── Selection context ─────────────────────────────────────────────────────────
+
+type SelectionCtx = {
+  selectedIds: Set<string>;
+  orderedIds: string[];
+  handleRowClick: (taskId: string, shiftKey: boolean, pos: { x: number; y: number }, openModal: (task: Task, pos: { x: number; y: number }) => void, task: Task) => void;
+  clearSelection: () => void;
+};
+
+const SelectionContext = createContext<SelectionCtx | null>(null);
+
+export function useTaskSelection() {
+  return useContext(SelectionContext);
+}
+
+// ── SelectionActionBar ────────────────────────────────────────────────────────
+
+export function SelectionActionBar({
+  selectedIds,
+  onClear,
+}: {
+  selectedIds: Set<string>;
+  onClear: () => void;
+}) {
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const deleteTask = useTaskStore((s) => s.deleteTask);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const count = selectedIds.size;
+
+  const handleCompleteAll = async () => {
+    for (const id of selectedIds) await updateTask(id, { status: "done" });
+    onClear();
+  };
+
+  const handleDelete = async () => {
+    for (const id of selectedIds) await deleteTask(id);
+    onClear();
+  };
+
+  const handleReschedule = (date: string) => {
+    if (!date) return;
+    for (const id of selectedIds) void updateTask(id, { dueDate: date });
+    onClear();
+  };
+
+  return createPortal(
+    <div
+      data-selection-bar
+      style={{
+        position: "fixed",
+        bottom: 80,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "10px 14px",
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: 14,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        animation: "gs-scale 150ms cubic-bezier(0.16,1,0.3,1) both",
+      }}
+    >
+      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", marginRight: 4 }}>
+        {count} selected
+      </span>
+      <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+      <button
+        type="button"
+        onClick={() => void handleCompleteAll()}
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "var(--fg)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "4px 8px",
+          borderRadius: 6,
+          transition: "background 100ms ease",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        Complete all
+      </button>
+      <button
+        type="button"
+        onClick={() => dateInputRef.current?.showPicker?.()}
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "var(--fg)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "4px 8px",
+          borderRadius: 6,
+          transition: "background 100ms ease",
+          position: "relative",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        Reschedule
+        <input
+          ref={dateInputRef}
+          type="date"
+          onChange={(e) => handleReschedule(e.target.value)}
+          style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+          tabIndex={-1}
+        />
+      </button>
+      <button
+        type="button"
+        onClick={() => void handleDelete()}
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "var(--priority-high)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "4px 8px",
+          borderRadius: 6,
+          transition: "background 100ms ease",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        Delete
+      </button>
+      <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label="Clear selection"
+        style={{
+          fontSize: 14,
+          lineHeight: 1,
+          color: "var(--fg-faint)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "4px 6px",
+          borderRadius: 6,
+          transition: "background 100ms ease",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        ✕
+      </button>
+    </div>,
+    document.body
+  );
+}
+
+// ── TaskSelectionProvider ─────────────────────────────────────────────────────
+
+type TaskSelectionProviderProps = {
+  orderedTaskIds: string[];
+  children: React.ReactNode;
+};
+
+export function TaskSelectionProvider({ orderedTaskIds, children }: TaskSelectionProviderProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [anchorId, setAnchorId] = useState<string | null>(null);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setAnchorId(null);
+  }, []);
+
+  // Escape key clears selection
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clearSelection(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearSelection]);
+
+  // Click outside task rows clears selection
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      // Keep selection if click is on a task row or the action bar
+      const onTaskRow = !!target?.closest("[data-task-id]");
+      const onActionBar = !!target?.closest("[data-selection-bar]");
+      if (!onTaskRow && !onActionBar) clearSelection();
+    };
+    window.addEventListener("pointerdown", onPointer, true);
+    return () => window.removeEventListener("pointerdown", onPointer, true);
+  }, [clearSelection]);
+
+  const handleRowClick = useCallback(
+    (
+      taskId: string,
+      shiftKey: boolean,
+      pos: { x: number; y: number },
+      openModal: (task: Task, pos: { x: number; y: number }) => void,
+      task: Task
+    ) => {
+      if (shiftKey && anchorId && orderedTaskIds.includes(anchorId) && orderedTaskIds.includes(taskId)) {
+        const aIdx = orderedTaskIds.indexOf(anchorId);
+        const bIdx = orderedTaskIds.indexOf(taskId);
+        const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+        const range = new Set(orderedTaskIds.slice(lo, hi + 1));
+        setSelectedIds(range);
+        return;
+      }
+      // Regular click: if already in selection, deselect; otherwise clear and set anchor
+      if (selectedIds.has(taskId) && !shiftKey) {
+        clearSelection();
+        openModal(task, pos);
+        return;
+      }
+      clearSelection();
+      setAnchorId(taskId);
+      openModal(task, pos);
+    },
+    [anchorId, orderedTaskIds, selectedIds, clearSelection]
+  );
+
+  const ctx: SelectionCtx = {
+    selectedIds,
+    orderedIds: orderedTaskIds,
+    handleRowClick,
+    clearSelection,
+  };
+
+  return (
+    <SelectionContext.Provider value={ctx}>
+      {children}
+      {selectedIds.size >= 2 && (
+        <SelectionActionBar selectedIds={selectedIds} onClear={clearSelection} />
+      )}
+    </SelectionContext.Provider>
+  );
+}
+
+// ── Date helpers (shared across all list views) ───────────────────────────────
+
+export function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function todayStr(): string {
+  return localDateStr(new Date());
+}
+
+export function isOverdue(v: string): boolean {
+  return v < todayStr();
+}
+
+export function isToday(v: string): boolean {
+  return v === todayStr();
+}
+
+export function friendlyDate(v: string): string {
+  const diff = Math.round(
+    (new Date(v + "T00:00:00").getTime() - new Date(todayStr() + "T00:00:00").getTime()) / 86400000
+  );
+  if (diff === 0)  return "Today";
+  if (diff === 1)  return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff < -1)  return `${Math.abs(diff)}d ago`;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(
+    new Date(v + "T00:00:00")
+  );
+}
+
+export function dueDateChip(dueDate: string): { label: string; bg: string; color: string } {
+  if (isOverdue(dueDate)) {
+    return { label: friendlyDate(dueDate), bg: "rgba(239,68,68,0.10)", color: "var(--priority-high)" };
+  }
+  if (isToday(dueDate)) {
+    return { label: "Today", bg: "var(--accent-bg)", color: "var(--accent)" };
+  }
+  return { label: friendlyDate(dueDate), bg: "var(--bg-subtle)", color: "var(--fg-muted)" };
+}
+
+// ── Priority flag ─────────────────────────────────────────────────────────────
+
+const PRIORITY_COLOR: Partial<Record<TaskPriority, string>> = {
+  high:   "var(--priority-high)",
+  medium: "var(--priority-medium)",
+  low:    "var(--priority-low)",
+};
+
+export function PriorityFlag({ priority }: { priority: TaskPriority }) {
+  const color = PRIORITY_COLOR[priority];
+  if (!color) return null;
+  return (
+    <svg width="11" height="13" viewBox="0 0 11 13" fill="none" style={{ flexShrink: 0 }}>
+      <line x1="2" y1="1" x2="2" y2="12" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M2 1.5H9.5L7.5 5L9.5 8.5H2V1.5Z" fill={color} opacity=".9"/>
+    </svg>
+  );
+}
+
+// ── TaskRow ───────────────────────────────────────────────────────────────────
+
+type TaskRowProps = {
+  task: Task;
+  onClick?: (task: Task, pos: { x: number; y: number }) => void;
+  onRightClick?: (task: Task, pos: { x: number; y: number }) => void;
+  /** If true, renders without context menu (caller manages it externally) */
+  noContextMenu?: boolean;
+};
+
+export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowProps) {
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const selection = useContext(SelectionContext);
+  const isDone = task.status === "done";
+  const chip = task.dueDate ? dueDateChip(task.dueDate) : null;
+  const isSelected = selection?.selectedIds.has(task.id) ?? false;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.shiftKey) {
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+    }
+    if (selection) {
+      selection.handleRowClick(
+        task.id,
+        e.shiftKey,
+        { x: e.clientX, y: e.clientY },
+        (t, pos) => onClick?.(t, pos),
+        task
+      );
+    } else {
+      onClick?.(task, { x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const rowBg = isSelected ? "var(--accent-bg)" : "transparent";
+  const rowBorder = isSelected ? "1px solid rgba(var(--accent-rgb, 99,102,241), 0.20)" : undefined;
+
+  return (
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (onRightClick) {
+            onRightClick(task, { x: e.clientX, y: e.clientY });
+          } else if (!noContextMenu) {
+            setContextMenu({ x: e.clientX, y: e.clientY });
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") handleClick(e as unknown as React.MouseEvent);
+        }}
+        data-task-id={task.id}
+        data-task-title={task.title}
+        draggable={true}
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/task-id", task.id);
+          e.dataTransfer.setData("text/task-title", task.title);
+          e.dataTransfer.setData("stride/taskId", task.id);
+          e.dataTransfer.setData("stride/taskTitle", task.title);
+          e.dataTransfer.setData("text/plain", task.title);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "11px 16px",
+          cursor: "pointer",
+          transition: "background 120ms ease",
+          background: rowBg,
+          ...(rowBorder ? { outline: rowBorder } : {}),
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) e.currentTarget.style.background = "var(--bg-hover)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = isSelected ? "var(--accent-bg)" : "transparent";
+        }}
+      >
+        {/* Circular checkbox */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void updateTask(task.id, { status: isDone ? "todo" : "done" });
+          }}
+          style={{
+            flexShrink: 0,
+            width: 17,
+            height: 17,
+            borderRadius: "50%",
+            border: `1.5px solid ${isDone ? "var(--accent)" : "var(--border-strong)"}`,
+            background: isDone ? "var(--accent)" : "transparent",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            transition: "all 150ms ease",
+          }}
+        >
+          {isDone && (
+            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+              <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+
+        {/* Title */}
+        <span
+          style={{
+            flex: 1,
+            fontSize: 13,
+            lineHeight: 1.4,
+            color: isDone ? "var(--fg-faint)" : "var(--fg)",
+            textDecoration: isDone ? "line-through" : "none",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {task.title || "(Untitled)"}
+        </span>
+
+        {/* Right side: due chip + priority flag */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          {chip && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                padding: "2px 7px",
+                borderRadius: 6,
+                background: chip.bg,
+                color: chip.color,
+                flexShrink: 0,
+              }}
+            >
+              {chip.label}
+            </span>
+          )}
+          {task.priority !== "none" && <PriorityFlag priority={task.priority} />}
+        </div>
+      </div>
+
+      {/* Self-managed context menu (when no external handler provided) */}
+      {contextMenu && (
+        <TaskContextMenu
+          task={task}
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ── AddTaskRow ────────────────────────────────────────────────────────────────
+
+type AddTaskRowProps = {
+  sectionId?: string;
+  subsectionId?: string;
+  /** Pre-fills dueDate on the created task (used by Next 7 Days) */
+  dueDate?: string;
+};
+
+export function AddTaskRow({ sectionId, subsectionId, dueDate }: AddTaskRowProps) {
+  const createTask = useTaskStore((s) => s.createTask);
+  const [active, setActive] = useState(false);
+  const [draft, setDraft]   = useState("");
+
+  const commit = () => {
+    const title = draft.trim();
+    if (title) {
+      void createTask({
+        title,
+        sectionId,
+        subsectionId,
+        status: "todo",
+        ...(dueDate ? { dueDate } : {}),
+      });
+    }
+    setDraft("");
+    setActive(false);
+  };
+
+  if (!active) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setActive(true); }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+          padding: "10px 16px",
+          fontSize: 13,
+          color: "var(--fg-faint)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background 120ms ease",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        <span
+          style={{
+            width: 17,
+            height: 17,
+            borderRadius: "50%",
+            border: "1.5px dashed var(--border-strong)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            flexShrink: 0,
+            color: "var(--fg-faint)",
+          }}
+        >
+          +
+        </span>
+        Add task
+      </button>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 16px",
+        borderTop: "1px solid var(--border)",
+      }}
+    >
+      <span
+        style={{
+          width: 17,
+          height: 17,
+          borderRadius: "50%",
+          border: "1.5px dashed var(--border-strong)",
+          flexShrink: 0,
+        }}
+      />
+      <input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter")  commit();
+          if (e.key === "Escape") { setDraft(""); setActive(false); }
+        }}
+        onBlur={commit}
+        placeholder="Task name"
+        style={{
+          flex: 1,
+          background: "transparent",
+          border: "none",
+          outline: "none",
+          fontSize: 13,
+          color: "var(--fg)",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── TaskGroup card ─────────────────────────────────────────────────────────────
+// Shared card used by Inbox, Next 7 Days, and anywhere tasks are grouped by date/label.
+
+type TaskGroupProps = {
+  label: string;
+  tasks: Task[];
+  /** Show the count badge in the header */
+  count?: number;
+  /** Red overdue styling on the header */
+  isOverdueGroup?: boolean;
+  /** Accent dot color for section-style headers */
+  accentColor?: string;
+  /** Show inline "Add task" row at the bottom */
+  showAddTask?: boolean;
+  /** Pre-fills sectionId when creating from Add task */
+  sectionId?: string;
+  /** Pre-fills dueDate when creating from Add task (Next 7 Days) */
+  defaultDueDate?: string;
+  onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
+  onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
+};
+
+export function TaskGroup({
+  label,
+  tasks,
+  count,
+  isOverdueGroup,
+  accentColor,
+  showAddTask = true,
+  sectionId,
+  defaultDueDate,
+  onTaskClick,
+  onTaskRightClick,
+}: TaskGroupProps) {
+  const displayCount = count ?? tasks.length;
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-card)",
+        borderRadius: 16,
+        border: "1px solid var(--border)",
+        boxShadow: "var(--shadow-sm)",
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: "11px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          borderBottom: "1px solid var(--border)",
+          background: isOverdueGroup ? "rgba(239,68,68,0.06)" : "transparent",
+        }}
+      >
+        {accentColor && (
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: accentColor,
+              flexShrink: 0,
+            }}
+          />
+        )}
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: isOverdueGroup ? "var(--priority-high)" : "var(--fg)",
+            flex: 1,
+          }}
+        >
+          {label}
+        </span>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            padding: "1px 7px",
+            borderRadius: 10,
+            background: isOverdueGroup ? "rgba(239,68,68,0.12)" : "var(--bg-subtle)",
+            color: isOverdueGroup ? "var(--priority-high)" : "var(--fg-faint)",
+          }}
+        >
+          {displayCount}
+        </span>
+      </div>
+
+      {/* Rows */}
+      {tasks.length === 0 ? (
+        <div
+          style={{
+            padding: "16px",
+            fontSize: 12,
+            color: "var(--fg-faint)",
+            fontStyle: "italic",
+            textAlign: "center",
+          }}
+        >
+          No tasks
+        </div>
+      ) : (
+        tasks.map((task, idx) => (
+          <div
+            key={task.id}
+            style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
+          >
+            <TaskRow
+              task={task}
+              onClick={onTaskClick}
+              onRightClick={onTaskRightClick}
+            />
+          </div>
+        ))
+      )}
+
+      {/* Add task */}
+      {showAddTask && (
+        <div style={{ borderTop: tasks.length > 0 ? "1px solid var(--border)" : undefined }}>
+          <AddTaskRow sectionId={sectionId} dueDate={defaultDueDate} />
+        </div>
+      )}
+    </div>
+  );
+}

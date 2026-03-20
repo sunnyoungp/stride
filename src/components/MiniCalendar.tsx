@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DailyNote } from "@/types/index";
+import { useTaskStore } from "@/store/taskStore";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,9 @@ export function MiniCalendar({
   dailyNotes: DailyNote[];
   onTaskDrop?: (taskId: string, taskTitle: string, date: string) => void;
 }) {
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const createTask = useTaskStore((s) => s.createTask);
+
   const today = useMemo(() => localDateString(new Date()), []);
 
   const initParsed              = parseLocalDate(selectedDate);
@@ -77,6 +81,7 @@ export function MiniCalendar({
   const [viewMonth, setViewMonth] = useState(initParsed.getMonth());
   const [hovered, setHovered]   = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [flashDate, setFlashDate] = useState<string | null>(null);
 
   // When selectedDate changes via editor chevrons, navigate to that month
   useEffect(() => {
@@ -123,24 +128,42 @@ export function MiniCalendar({
     else setViewMonth(m => m + 1);
   };
   const handleDragOver = useCallback((e: React.DragEvent, date: string) => {
-    if (!onTaskDrop) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDragOver(date);
-  }, [onTaskDrop]);
+  }, []);
 
   const handleDragLeave = useCallback(() => {
     setDragOver(null);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent, date: string) => {
-    if (!onTaskDrop) return;
+  const handleDrop = useCallback(async (e: React.DragEvent, date: string) => {
     e.preventDefault();
     setDragOver(null);
-    const taskId    = e.dataTransfer.getData("stride/taskId")    ?? "";
-    const taskTitle = e.dataTransfer.getData("stride/taskTitle") ?? e.dataTransfer.getData("text/plain") ?? "";
-    if (taskTitle) onTaskDrop(taskId, taskTitle, date);
-  }, [onTaskDrop]);
+    const blockType = e.dataTransfer.getData("text/block-type");
+    const taskId    = e.dataTransfer.getData("text/task-id")    || e.dataTransfer.getData("stride/taskId")    || "";
+    const title     = e.dataTransfer.getData("text/task-title") || e.dataTransfer.getData("stride/taskTitle") || e.dataTransfer.getData("text/plain") || "";
+
+    if (blockType === "task") {
+      // Checklist item → reschedule or create task at that date
+      if (taskId) {
+        await updateTask(taskId, { dueDate: date });
+      } else if (title) {
+        await createTask({ title, dueDate: date, status: "todo" });
+      }
+    } else if (blockType === "note") {
+      // Plain text block → navigate to that day's note
+      onDateChange(date);
+    } else if (title) {
+      // Backward compat: old drag format without block-type (e.g. task panel rows)
+      onTaskDrop?.(taskId, title, date);
+    }
+
+    if (blockType || title) {
+      setFlashDate(date);
+      setTimeout(() => setFlashDate(null), 350);
+    }
+  }, [onTaskDrop, onDateChange, updateTask, createTask]);
 
   const goToToday = () => {
     const d = new Date();
@@ -195,8 +218,11 @@ export function MiniCalendar({
           const hasContent = !overflow && noteDates.has(date);
           const isHovered  = hovered === date && !isToday;
           const isDragOver = dragOver === date && !overflow;
+          const isFlash    = flashDate === date && !overflow;
 
-          const bg = isDragOver
+          const bg = isFlash
+            ? "var(--accent-bg)"
+            : isDragOver
             ? "color-mix(in srgb, var(--accent) 15%, transparent)"
             : isToday
             ? "var(--accent)"
