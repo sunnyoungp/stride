@@ -18,6 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useShortcutStore, DEFAULT_SHORTCUTS, normalizeKey, formatBinding, type ShortcutAction } from "@/store/shortcutStore";
 import { saveSettings } from "@/lib/settings";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -840,6 +841,71 @@ function GeneralCard() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+// ─── Account badge ────────────────────────────────────────────────────────────
+
+function AccountBadge() {
+  const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setEmail(session?.user?.email ?? null);
+      setUserId(session?.user?.id ?? null);
+    });
+  }, []);
+
+  const signOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
+
+  if (!email) return null;
+
+  return (
+    <div style={{
+      marginBottom: 24,
+      padding: "12px 16px",
+      borderRadius: 12,
+      border: "1px solid var(--border)",
+      background: "var(--bg-card)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 16,
+    }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>
+          {email}
+        </div>
+        <div style={{
+          fontSize: 11,
+          color: "var(--fg-faint)",
+          marginTop: 2,
+          fontFamily: "monospace",
+        }}>
+          {userId}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        style={{
+          fontSize: 12, padding: "5px 12px", borderRadius: 8,
+          border: "1px solid var(--border)",
+          background: "var(--bg-subtle)",
+          color: "var(--fg-muted)",
+          cursor: "pointer",
+          flexShrink: 0,
+        }}
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
 const CATEGORIES = [
   { id: "appearance",  label: "Appearance"         },
   { id: "navigation",  label: "Navigation"         },
@@ -912,6 +978,7 @@ export default function SettingsPage() {
           }
         }}
       >
+        <AccountBadge />
         <h1 style={{ fontSize: 28, fontWeight: 300, color: "var(--fg)", marginBottom: 32, letterSpacing: "-0.02em" }}>
           Settings
         </h1>

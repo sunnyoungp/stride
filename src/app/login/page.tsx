@@ -32,51 +32,6 @@ export default function LoginPage() {
           gap: 32,
         }}
       >
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: "#e8603c",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(232,96,60,0.35)",
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M3 13 L8 3 L13 13"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <line
-                x1="5"
-                y1="9.5"
-                x2="11"
-                y2="9.5"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          <span
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "var(--fg, #1a1310)",
-            }}
-          >
-            Stride
-          </span>
-        </div>
-
         {/* Card */}
         <div
           style={{

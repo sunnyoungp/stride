@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useFocusStore } from "@/store/focusStore";
 import { useAuthStore } from "@/store/authStore";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +17,8 @@ import { BottomTabBar } from "@/components/BottomTabBar";
 import { MobileFABs } from "@/components/MobileFABs";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const hideSidebar = pathname === "/login";
     const isZenMode = useFocusStore((state) => state.isZenMode);
     const focusState = useFocusStore((state) => state.focusState);
     const setUser = useAuthStore((state) => state.setUser);
@@ -50,13 +53,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
             {/* Sidebar: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
-            <aside
-                className={`h-screen flex-none border-r border-[var(--border)] transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${
-                    isZenMode ? "w-0 opacity-0 border-none" : "md:w-14 lg:w-[220px] opacity-100"
-                }`}
-            >
-                <Sidebar />
-            </aside>
+            {!hideSidebar && (
+                <aside
+                    className={`h-screen flex-none border-r border-[var(--border)] transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${
+                        isZenMode ? "w-0 opacity-0 border-none" : "md:w-14 lg:w-[220px] opacity-100"
+                    }`}
+                >
+                    <Sidebar />
+                </aside>
+            )}
 
             {/* Main content: reduce padding on mobile, add bottom clearance for tab bar */}
             <main className="h-screen flex-1 overflow-auto bg-[var(--bg)] min-w-0 p-4 pb-20 md:p-8 md:pb-8">
