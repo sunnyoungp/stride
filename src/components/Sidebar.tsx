@@ -300,6 +300,15 @@ export function Sidebar() {
 
   const pathname = usePathname();
 
+  // Detect collapsed state (md breakpoint: 768px–1023px)
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  useEffect(() => {
+    const update = () => setIsCollapsed(window.innerWidth >= 768 && window.innerWidth < 1024);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   // Read nav visibility/order config from localStorage
   const visibleNavItems = useMemo(() => {
     if (typeof window === "undefined") return NAV_ITEMS;
@@ -342,6 +351,87 @@ export function Sidebar() {
     if (title) void updateSection(id, { title });
     setRenamingId(null); setRenameDraft("");
   };
+
+  // ── Collapsed (icon-only) render for md breakpoint ───────────────────────
+  if (isCollapsed) {
+    return (
+      <div
+        className="flex h-full w-14 flex-col items-center overflow-y-auto overflow-x-hidden select-none py-4 gap-1"
+        style={{
+          background: "var(--bg-sidebar)",
+          boxShadow: "2px 0 16px rgba(30,20,10,0.06)",
+          zIndex: 10,
+          position: "relative",
+        }}
+      >
+        {/* Logo icon */}
+        <div
+          className="mb-3 flex h-8 w-8 flex-none items-center justify-center rounded-xl"
+          style={{ background: "var(--accent)", boxShadow: "0 2px 8px rgba(232,96,60,0.30)" }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 13 L8 3 L13 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="5" y1="9.5" x2="11" y2="9.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </div>
+
+        {/* Search icon */}
+        <button
+          type="button"
+          onClick={openSearch}
+          title="Search (⌘F)"
+          className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+          style={{ color: "var(--fg-faint)" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.4"/>
+            <line x1="9" y1="9" x2="13" y2="13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+        </button>
+
+        {/* Nav icons */}
+        {visibleNavItems.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+              style={{
+                background: active ? "var(--bg-active)" : "transparent",
+                color: active ? "var(--accent)" : "var(--fg-faint)",
+              }}
+            >
+              {item.icon}
+            </Link>
+          );
+        })}
+
+        <div className="flex-1" />
+
+        {/* Theme toggle */}
+        <button
+          type="button"
+          onClick={toggleDark}
+          title={isDark ? "Light mode" : "Dark mode"}
+          className="flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          {isDark ? (
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <circle cx="7.5" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1.1 1.1M9.9 9.9 11 11M3 12l1.1-1.1M9.9 5.1 11 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M12.5 9A6 6 0 015 1.5a6 6 0 100 11 6 6 0 007.5-3.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
