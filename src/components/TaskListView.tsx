@@ -360,7 +360,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5 min-w-0">
               <span
-                className="text-[13.5px] leading-snug truncate"
+                className="task-title-text leading-snug truncate"
                 style={isDone
                   ? { textDecoration: "line-through", color: "var(--fg-faint)" }
                   : { color: "var(--fg)" }

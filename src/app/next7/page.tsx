@@ -169,6 +169,7 @@ export default function Next7Page() {
           ].map((t) => t.id)}
         >
           <div
+            className="mobile-scroll-content"
             style={{
               flex: 1,
               overflowY: "auto",

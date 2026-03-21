@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   DndContext,
   PointerSensor,
@@ -919,6 +920,7 @@ const CATEGORIES = [
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
   const [active,  setActive]  = useState("appearance");
+  const isMobile = useIsMobile();
 
   useEffect(() => { setMounted(true); }, []);
   if (!mounted) return <div style={{ height: "100vh" }} />;
@@ -927,6 +929,72 @@ export default function SettingsPage() {
     setActive(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--bg)" }}>
+        {/* ── Mobile: horizontal scrollable category strip ── */}
+        <div
+          className="settings-category-strip"
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            overflowX: "auto",
+            gap: 4,
+            padding: "10px 12px",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--bg-sidebar)",
+          }}
+        >
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => scrollTo(cat.id)}
+              style={{
+                flexShrink: 0,
+                padding: "6px 14px",
+                borderRadius: 999,
+                fontSize: 13, fontWeight: active === cat.id ? 600 : 400,
+                color: active === cat.id ? "var(--accent-fg)" : "var(--fg-muted)",
+                background: active === cat.id ? "var(--accent)" : "var(--bg-subtle)",
+                border: "none", cursor: "pointer",
+                transition: "all 120ms ease",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Mobile: scrollable content ── */}
+        <div
+          className="mobile-scroll-content"
+          style={{ flex: 1, overflowY: "auto", padding: "20px 16px" }}
+          onScroll={(e) => {
+            const container = e.currentTarget;
+            for (const cat of [...CATEGORIES].reverse()) {
+              const el = document.getElementById(cat.id);
+              if (el && el.getBoundingClientRect().top <= container.getBoundingClientRect().top + 80) {
+                setActive(cat.id);
+                break;
+              }
+            }
+          }}
+        >
+          <AccountBadge />
+          <AppearanceCard />
+          <NavigationCard />
+          <ShortcutsCard />
+          <DailyNoteCard />
+          <TasksCard />
+          <CalendarCard />
+          <GeneralCard />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>

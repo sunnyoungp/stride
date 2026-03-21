@@ -197,7 +197,7 @@ export default function Page() {
         <h1 className="text-[15px] font-semibold" style={{ color: "var(--fg)" }}>Tasks</h1>
         <ViewSwitcher view={view} onChange={handleViewChange} />
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto mobile-scroll-content">
         <Suspense
           fallback={
             <div className="p-8 text-sm" style={{ color: "var(--fg-muted)" }}>

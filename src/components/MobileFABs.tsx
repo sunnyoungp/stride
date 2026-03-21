@@ -1,10 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFocusStore } from "@/store/focusStore";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 
 export function MobileFABs() {
   const isSetupModalOpen = useFocusStore((s) => s.isSetupModalOpen);
   const setSetupModalOpen = useFocusStore((s) => s.setSetupModalOpen);
+  const { height: vpHeight } = useVisualViewport();
+  const [windowHeight, setWindowHeight] = useState(
+    typeof window !== "undefined" ? window.innerHeight : 0
+  );
+
+  useEffect(() => {
+    const update = () => setWindowHeight(window.innerHeight);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const keyboardHeight = Math.max(0, windowHeight - vpHeight);
+  const TAB_BAR_H = 56;
+  const bottomOffset = keyboardHeight > 0
+    ? keyboardHeight + 16
+    : TAB_BAR_H + 16;
 
   const openNewTask = () => {
     window.dispatchEvent(new Event("stride:open-quickadd"));
@@ -18,7 +36,8 @@ export function MobileFABs() {
     <div
       className="md:hidden fixed right-4 z-40 flex flex-col items-center gap-3"
       style={{
-        bottom: "calc(56px + env(safe-area-inset-bottom) + 16px)",
+        bottom: `calc(${bottomOffset}px + env(safe-area-inset-bottom))`,
+        transition: "bottom 200ms ease",
       }}
     >
       {/* Focus Mode FAB (top) */}

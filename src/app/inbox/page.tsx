@@ -168,7 +168,7 @@ function InboxPageContent() {
         </div>
       ) : (
         <TaskSelectionProvider orderedTaskIds={[...noDateTasks, ...noSectionTasks].map((t) => t.id)}>
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="mobile-scroll-content" style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <TaskGroup
               label="No Due Date"
               tasks={noDateTasks}

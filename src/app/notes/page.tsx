@@ -5,6 +5,7 @@ import { DailyNote } from "@/components/DailyNote";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ function CalendarIcon() {
 
 export default function NotesPage() {
   const [mounted, setMounted] = useState(false);
+  const isMobile = useIsMobile();
 
   const [today] = useState(() => localDateString(new Date()));
 
@@ -124,6 +126,95 @@ export default function NotesPage() {
 
   const isOffToday = selectedDate !== today;
 
+  const calendarToggleBtn = (
+    <button
+      type="button"
+      onClick={() => setCalendarOpen(v => !v)}
+      title="Toggle calendar"
+      style={{
+        width: 32, height: 32, borderRadius: 8, border: "none",
+        background: calendarOpen ? "var(--accent-bg)" : "transparent",
+        color: calendarOpen ? "var(--accent)" : "var(--fg-faint)",
+        cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transition: "background 150ms ease, color 150ms ease",
+      }}
+      onMouseEnter={e => { if (!calendarOpen) { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--fg-muted)"; } }}
+      onMouseLeave={e => { if (!calendarOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint)"; } }}
+    >
+      <CalendarIcon />
+    </button>
+  );
+
+  const dateNav = (
+    <div style={{ flexShrink: 0, padding: "20px 40px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, paddingBottom: 16 }}>
+        <ChevronBtn dir="prev" label="Previous day" onClick={() => setSelectedDate(prev => shiftDate(prev, -1))} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 210, justifyContent: "center" }}>
+          <span style={{ fontSize: 14, fontWeight: 500, textAlign: "center", color: isOffToday ? "var(--fg-faint)" : "var(--fg)", userSelect: "none" }}>
+            {formatNoteDate(selectedDate, today)}
+          </span>
+          {isOffToday && (
+            <button type="button" onClick={() => setSelectedDate(today)} title="Return to today"
+              style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: "var(--accent)", border: "none", cursor: "pointer", padding: 0 }} />
+          )}
+        </div>
+        <ChevronBtn dir="next" label="Next day" onClick={() => setSelectedDate(prev => shiftDate(prev, 1))} />
+      </div>
+      <div style={{ height: 1, background: "var(--border)" }} />
+    </div>
+  );
+
+  /* ── Mobile layout ── */
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--bg)" }}>
+        {/* Header */}
+        <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 16px", borderBottom: "1px solid var(--border)" }}>
+          {calendarToggleBtn}
+        </div>
+
+        {/* Editor fills screen */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg-card)" }}>
+            {dateNav}
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader />
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar overlay — full-screen drop-down panel */}
+        {calendarOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setCalendarOpen(false)}
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 40 }}
+            />
+            {/* Panel */}
+            <div style={{
+              position: "fixed", top: 44, left: 0, right: 0,
+              zIndex: 41,
+              background: "var(--bg-card)",
+              borderBottom: "1px solid var(--border)",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+              maxHeight: "70vh",
+              overflowY: "auto",
+            }}>
+              <MiniCalendar
+                selectedDate={selectedDate}
+                onDateChange={(d) => { setSelectedDate(d); setCalendarOpen(false); }}
+                dailyNotes={dailyNotes}
+                onTaskDrop={handleTaskDrop}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
 
@@ -134,23 +225,7 @@ export default function NotesPage() {
         padding: "0 16px",
         borderBottom: "1px solid var(--border)",
       }}>
-        <button
-          type="button"
-          onClick={() => setCalendarOpen(v => !v)}
-          title="Toggle calendar"
-          style={{
-            width: 32, height: 32, borderRadius: 8, border: "none",
-            background: calendarOpen ? "var(--accent-bg)" : "transparent",
-            color: calendarOpen ? "var(--accent)" : "var(--fg-faint)",
-            cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "background 150ms ease, color 150ms ease",
-          }}
-          onMouseEnter={e => { if (!calendarOpen) { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--fg-muted)"; } }}
-          onMouseLeave={e => { if (!calendarOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint)"; } }}
-        >
-          <CalendarIcon />
-        </button>
+        {calendarToggleBtn}
       </div>
 
       {/* ── Content row ── */}
@@ -165,46 +240,11 @@ export default function NotesPage() {
             borderRadius: 16,
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           }}>
-
-            {/* Date navigation */}
-            <div style={{ flexShrink: 0, padding: "20px 40px 0" }}>
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                gap: 4, paddingBottom: 16,
-              }}>
-                <ChevronBtn dir="prev" label="Previous day" onClick={() => setSelectedDate(prev => shiftDate(prev, -1))} />
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 210, justifyContent: "center" }}>
-                  <span style={{
-                    fontSize: 14, fontWeight: 500, textAlign: "center",
-                    color: isOffToday ? "var(--fg-faint)" : "var(--fg)",
-                    userSelect: "none",
-                  }}>
-                    {formatNoteDate(selectedDate, today)}
-                  </span>
-                  {isOffToday && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDate(today)}
-                      title="Return to today"
-                      style={{
-                        width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
-                        background: "var(--accent)", border: "none", cursor: "pointer", padding: 0,
-                      }}
-                    />
-                  )}
-                </div>
-
-                <ChevronBtn dir="next" label="Next day" onClick={() => setSelectedDate(prev => shiftDate(prev, 1))} />
-              </div>
-              <div style={{ height: 1, background: "var(--border)" }} />
-            </div>
-
+            {dateNav}
             {/* Editor body */}
             <div style={{ flex: 1, overflow: "auto" }}>
               <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader />
             </div>
-
           </div>
         </div>
 

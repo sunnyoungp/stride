@@ -15,6 +15,7 @@ import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { useTaskStore } from "@/store/taskStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 function shiftDate(date: string, days: number): string {
   const d = new Date(date + "T00:00:00");
@@ -44,6 +45,8 @@ export default function Page() {
   const [selectedTaskId, setSelectedTaskId]     = useState<string | null>(null);
   const [clickPos, setClickPos]                 = useState({ x: 0, y: 0 });
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
+  const [mobileTab, setMobileTab]               = useState<"note" | "tasks" | "calendar">("note");
+  const isMobile = useIsMobile();
 
   const tasks             = useTaskStore((s) => s.tasks);
   const updateTask        = useTaskStore((s) => s.updateTask);
@@ -118,6 +121,97 @@ export default function Page() {
   const selectedDateTaskCount = tasks.filter(
     (t) => t.dueDate?.startsWith(selectedDate) && t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId,
   ).length;
+
+  /* ── Mobile single-column layout ── */
+  if (isMobile) {
+    const TABS = [
+      { id: "note" as const,     label: "Notes"    },
+      { id: "tasks" as const,    label: "Tasks"    },
+      { id: "calendar" as const, label: "Calendar" },
+    ];
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        {/* Date nav */}
+        <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <button type="button" onClick={() => setSelectedDate((p) => shiftDate(p, -1))} aria-label="Previous day"
+              style={{ fontSize: "18px", lineHeight: 1, color: "rgba(0,0,0,0.3)", cursor: "pointer", border: "none", background: "transparent", padding: "4px 8px", borderRadius: 6 }}>‹</button>
+            <span onDoubleClick={() => setSelectedDate(today)} style={{ fontSize: "14px", fontWeight: 500, minWidth: 180, textAlign: "center", display: "inline-block", color: selectedDate !== today ? "rgba(0,0,0,0.38)" : "var(--fg, #1a1a1a)", userSelect: "none" }}>
+              {formatDashboardDate(selectedDate, today)}
+            </span>
+            <button type="button" onClick={() => setSelectedDate((p) => shiftDate(p, 1))} aria-label="Next day"
+              style={{ fontSize: "18px", lineHeight: 1, color: "rgba(0,0,0,0.3)", cursor: "pointer", border: "none", background: "transparent", padding: "4px 8px", borderRadius: 6 }}>›</button>
+          </div>
+        </div>
+
+        {/* Tab switcher */}
+        <div style={{ flexShrink: 0, display: "flex", borderBottom: "1px solid var(--border)", background: "var(--bg)" }}>
+          {TABS.map((tab) => (
+            <button key={tab.id} type="button" onClick={() => setMobileTab(tab.id)}
+              style={{ flex: 1, padding: "8px 0", fontSize: 13, fontWeight: mobileTab === tab.id ? 600 : 400,
+                color: mobileTab === tab.id ? "var(--accent)" : "var(--fg-muted)",
+                background: "transparent", border: "none", borderBottom: mobileTab === tab.id ? "2px solid var(--accent)" : "2px solid transparent",
+                cursor: "pointer", transition: "all 120ms ease" }}>
+              {tab.label}{tab.id === "tasks" && selectedDateTaskCount > 0 ? ` (${selectedDateTaskCount})` : ""}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ flex: 1, overflow: "hidden", opacity: contentDimmed ? 0.6 : 1, transition: "opacity 150ms ease" }}>
+          {mobileTab === "note" && (
+            <div style={{ height: "100%", overflowY: "auto" }}>
+              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            </div>
+          )}
+          {mobileTab === "tasks" && (
+            <div ref={taskListRef} className="task-drop-zone mobile-scroll-content" style={{ height: "100%", overflowY: "auto" }}
+              onDragOver={(e) => e.preventDefault()}
+              onDragEnter={(e) => { e.preventDefault(); e.currentTarget.setAttribute("data-drag-over", "true"); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) e.currentTarget.removeAttribute("data-drag-over"); }}
+              onDrop={(e) => { e.currentTarget.removeAttribute("data-drag-over"); handleTaskPanelDrop(e); }}
+            >
+              <div style={{ padding: "16px 16px 0", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-faint, #999)" }}>
+                  {selectedDate === today ? "Today's Focus" : "Tasks"}
+                </h2>
+                {selectedDateTaskCount > 0 && <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{selectedDateTaskCount}</span>}
+              </div>
+              <Suspense fallback={<div style={{ padding: "16px", fontSize: "12px", color: "#999" }}>Loading…</div>}>
+                <TaskListView filterDate={selectedDate} onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }} />
+              </Suspense>
+            </div>
+          )}
+          {mobileTab === "calendar" && (
+            <div style={{ height: "100%", display: "flex", flexDirection: "column", padding: "8px" }}>
+              <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                <CalendarView dashboardMode={true} hideSidebar={true} selectedDate={selectedDate}
+                  onExternalDrop={({ date, title, taskId, blockType }) => {
+                    const startTime = date.toISOString();
+                    const endTime   = new Date(date.getTime() + 30 * 60_000).toISOString();
+                    void (async () => {
+                      if (taskId) {
+                        await createTimeBlock({ type: "task", taskId, title, startTime, endTime, color: "#f4714a" });
+                        await updateTask(taskId, { scheduledStart: startTime, scheduledEnd: endTime, dueDate: selectedDate });
+                      } else if (title) {
+                        await createTimeBlock({ type: "event", title, startTime, endTime, color: "#f4714a" });
+                        if (blockType === "note") await createTask({ title, status: "todo", dueDate: selectedDate });
+                      }
+                    })();
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {selectedTask && (
+          <TaskDetailModal task={selectedTask} position={clickPos} onClose={() => setSelectedTaskId(null)} />
+        )}
+        <RoutineTemplatePanel open={routinePanelOpen} onClose={() => setRoutinePanelOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", overflow: "hidden" }}>

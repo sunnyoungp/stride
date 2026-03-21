@@ -6,6 +6,8 @@ import { useSectionStore } from "@/store/sectionStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useProjectStore } from "@/store/projectStore";
 import type { Task, TaskPriority } from "@/types/index";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 
 type Props = {
   task: Task;
@@ -50,6 +52,17 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const sections    = useSectionStore((s) => s.sections);
   const subsections = useSectionStore((s) => s.subsections);
   const projects    = useProjectStore((s) => s.projects);
+  const isMobile    = useIsMobile();
+  const { height: vpHeight } = useVisualViewport();
+  const [windowHeight, setWindowHeight] = useState(
+    typeof window !== "undefined" ? window.innerHeight : 0
+  );
+  useEffect(() => {
+    const update = () => setWindowHeight(window.innerHeight);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  const keyboardHeight = Math.max(0, windowHeight - vpHeight);
 
   const modalRef   = useRef<HTMLDivElement>(null);
   const notesRef   = useRef<HTMLTextAreaElement>(null);
@@ -126,21 +139,46 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   };
 
   return (
-    <div
-      ref={modalRef}
-      onClick={(e) => e.stopPropagation()}
-      className="fixed z-50 flex flex-col rounded-2xl overflow-hidden"
-      style={{
-        left: pos.x,
-        top:  pos.y,
-        width: 400,
-        background: "var(--bg-card)",
-        border: "1px solid var(--border-mid)",
-        boxShadow: "var(--shadow-float)",
-        // cap height so it never overflows the viewport
-        maxHeight: "calc(100vh - 24px)",
-      }}
-    >
+    <>
+      {isMobile && (
+        <div
+          className="fixed inset-0 z-[49] backdrop-fade"
+          style={{ background: "rgba(0,0,0,0.28)" }}
+          onClick={() => { save(); onClose(); }}
+        />
+      )}
+      <div
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+        className="fixed z-50 flex flex-col overflow-hidden"
+        style={isMobile ? {
+          bottom: keyboardHeight,
+          left: 0,
+          right: 0,
+          maxHeight: "85vh",
+          background: "var(--bg-card)",
+          borderTop: "1px solid var(--border-mid)",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          boxShadow: "var(--shadow-float)",
+          transition: "bottom 200ms ease",
+        } : {
+          left: pos.x,
+          top:  pos.y,
+          width: 400,
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-mid)",
+          boxShadow: "var(--shadow-float)",
+          maxHeight: "calc(100vh - 24px)",
+          borderRadius: 16,
+        }}
+      >
+        {isMobile && (
+          <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
+          </div>
+        )}
+
       {/* ── Top chrome ── */}
       <div className="flex flex-none items-center gap-1 px-3 pt-3 pb-2 flex-wrap">
         {/* Section chip */}
@@ -593,7 +631,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           </svg>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
