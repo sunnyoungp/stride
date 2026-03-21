@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 import { useSectionStore } from "@/store/sectionStore";
 import { useProjectStore } from "@/store/projectStore";
@@ -269,6 +270,14 @@ export function Sidebar() {
   const draggingTaskId = useDragStore((s) => s.draggingTaskId);
   const openSearch     = useUIStore((s) => s.openSearch);
 
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   const [isDark, setIsDark] = useState(false);
 
   // New section creation
@@ -409,6 +418,21 @@ export function Sidebar() {
         })}
 
         <div className="flex-1" />
+
+        {/* Sign out */}
+        <button
+          type="button"
+          onClick={handleSignOut}
+          title="Sign out"
+          className="flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            <path d="M9.5 10L13 7l-3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="13" y1="7" x2="5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+        </button>
 
         {/* Theme toggle */}
         <button
@@ -745,6 +769,19 @@ export function Sidebar() {
                 <path d="M12.5 9A6 6 0 015 1.5a6 6 0 100 11 6 6 0 007.5-3.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            title="Sign out"
+            className="flex h-8 w-8 flex-none items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+            style={{ color: "var(--fg-muted)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M9.5 10L13 7l-3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="13" y1="7" x2="5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
           </button>
         </div>
       </div>

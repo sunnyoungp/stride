@@ -1,9 +1,38 @@
 "use client";
 
 import { create } from "zustand";
-
-import { db } from "@/db/index";
+import { createClient } from "@/lib/supabase/client";
 import type { DailyNote } from "@/types/index";
+
+const supabase = createClient();
+
+async function getUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+// ── Row mappers ────────────────────────────────────────────────────────────────
+
+function noteFromRow(row: Record<string, unknown>): DailyNote {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    content: row.content as string,
+    linkedTaskIds: (row.linked_task_ids as string[]) ?? [],
+  };
+}
+
+function noteToRow(n: DailyNote, userId: string) {
+  return {
+    id: n.id,
+    date: n.date,
+    content: n.content,
+    linked_task_ids: n.linkedTaskIds,
+    user_id: userId,
+  };
+}
+
+// ── Store ──────────────────────────────────────────────────────────────────────
 
 type DailyNoteStore = {
   dailyNotes: DailyNote[];
@@ -21,8 +50,9 @@ function todayDateString(): string {
 export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
   const loadDailyNotes: DailyNoteStore["loadDailyNotes"] = async () => {
     try {
-      const dailyNotes = await db.dailyNotes.toArray();
-      set({ dailyNotes });
+      const { data: rows, error } = await supabase.from("daily_notes").select("*");
+      if (error) throw error;
+      set({ dailyNotes: (rows ?? []).map(noteFromRow) });
     } catch (error) {
       console.error("Failed to load daily notes:", error);
       set({ dailyNotes: [] });
@@ -38,11 +68,20 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
       const existingInState = get().dailyNotes.find((n) => n.date === today);
       if (existingInState) return existingInState;
 
-      const existingInDb = await db.dailyNotes.where("date").equals(today).first();
-      if (existingInDb) {
-        set({ dailyNotes: [...get().dailyNotes, existingInDb] });
-        return existingInDb;
+      const { data: row } = await supabase
+        .from("daily_notes")
+        .select("*")
+        .eq("date", today)
+        .maybeSingle();
+
+      if (row) {
+        const note = noteFromRow(row);
+        set({ dailyNotes: [...get().dailyNotes, note] });
+        return note;
       }
+
+      const userId = await getUserId();
+      if (!userId) throw new Error("Not authenticated");
 
       const note: DailyNote = {
         id: crypto.randomUUID(),
@@ -50,8 +89,8 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
         content: JSON.stringify({ type: "doc", content: [] }),
         linkedTaskIds: [],
       };
-
-      await db.dailyNotes.put(note);
+      const { error } = await supabase.from("daily_notes").insert(noteToRow(note, userId));
+      if (error) throw error;
       set({ dailyNotes: [...get().dailyNotes, note] });
       return note;
     } catch (error) {
@@ -60,11 +99,12 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
     }
   };
 
-  const updateNoteContent: DailyNoteStore["updateNoteContent"] = async (
-    id,
-    content,
-  ) => {
-    await db.dailyNotes.update(id, { content });
+  const updateNoteContent: DailyNoteStore["updateNoteContent"] = async (id, content) => {
+    const { error } = await supabase
+      .from("daily_notes")
+      .update({ content })
+      .eq("id", id);
+    if (error) console.error("Failed to update note content:", error);
     set({
       dailyNotes: get().dailyNotes.map((n) => (n.id === id ? { ...n, content } : n)),
     });
@@ -78,4 +118,3 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
     updateNoteContent,
   };
 });
-

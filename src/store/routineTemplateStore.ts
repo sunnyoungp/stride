@@ -1,10 +1,51 @@
 "use client";
 
 import { create } from "zustand";
-
-import { db } from "@/db/index";
+import { createClient } from "@/lib/supabase/client";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import type { RoutineTemplate, TimeBlock } from "@/types/index";
+
+const supabase = createClient();
+
+async function getUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+// ── Row mappers ────────────────────────────────────────────────────────────────
+
+function templateFromRow(row: Record<string, unknown>): RoutineTemplate {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    durationMinutes: row.duration_minutes as number,
+    defaultStartTime: (row.default_start_time as string | null) ?? undefined,
+    color: row.color as string,
+    daysOfWeek: (row.days_of_week as number[]) ?? [],
+    isBuiltIn: (row.is_built_in as boolean) ?? false,
+    icon: (row.icon as string | null) ?? undefined,
+    pinned: (row.pinned as boolean | null) ?? undefined,
+    order: (row.order as number) ?? 0,
+  };
+}
+
+function templateToRow(t: RoutineTemplate, userId: string) {
+  return {
+    id: t.id,
+    title: t.title,
+    duration_minutes: t.durationMinutes,
+    default_start_time: t.defaultStartTime ?? null,
+    color: t.color,
+    days_of_week: t.daysOfWeek,
+    is_built_in: t.isBuiltIn,
+    icon: t.icon ?? null,
+    pinned: t.pinned ?? null,
+    order: t.order,
+    user_id: userId,
+  };
+}
+
+// ── Store ──────────────────────────────────────────────────────────────────────
 
 type RoutineTemplateStore = {
   templates: RoutineTemplate[];
@@ -35,12 +76,14 @@ function combineDateTime(date: string, timeHHmm: string): Date {
 
 export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) => {
   const loadTemplates: RoutineTemplateStore["loadTemplates"] = async () => {
-    // Guard: set synchronously before any await to prevent concurrent calls
     if (get()?.isLoaded) return;
     set({ isLoaded: true });
 
     try {
-      let templates = await db.routineTemplates.toArray();
+      const { data: rows, error } = await supabase.from("routine_templates").select("*");
+      if (error) throw error;
+
+      let templates = (rows ?? []).map(templateFromRow);
 
       // Deduplicate by title (keep first occurrence, delete extras)
       const seen = new Set<string>();
@@ -50,9 +93,14 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
         seen.add(t.title);
         return true;
       });
-      dupes.forEach((id) => void db.routineTemplates.delete(id));
+      if (dupes.length > 0) {
+        await supabase.from("routine_templates").delete().in("id", dupes);
+      }
 
       if (templates.length === 0) {
+        const userId = await getUserId();
+        if (!userId) { set({ isLoading: false }); return; }
+
         const seeded: RoutineTemplate[] = builtIns.map((t, i) => ({
           id: crypto.randomUUID(),
           title: t.title,
@@ -65,23 +113,23 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
           pinned: true,
           order: i,
         }));
-        await db.routineTemplates.bulkPut(seeded);
+        const { error: insertError } = await supabase
+          .from("routine_templates")
+          .insert(seeded.map((t) => templateToRow(t, userId)));
+        if (insertError) throw insertError;
         templates = seeded;
       }
 
-      // One-time migration: any template with pinned === undefined gets pinned: true written to DB.
-      // Without this, the strict === true filter in the strip hides them and !undefined = true
-      // means the toggle button can never unpin them (it always sets pinned: true).
-      const needsFix = templates.filter((t) => t.pinned === undefined);
+      // One-time migration: fix any templates where pinned is undefined/null
+      const needsFix = templates.filter((t) => t.pinned === undefined || t.pinned === null);
       if (needsFix.length > 0) {
-        await db.transaction("rw", db.routineTemplates, async () => {
-          for (const t of needsFix) {
-            await db.routineTemplates.update(t.id, { pinned: true });
-          }
-        });
-        const fixed = await db.routineTemplates.toArray();
-        set({ templates: fixed.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), isLoaded: true });
-        return;
+        await supabase
+          .from("routine_templates")
+          .update({ pinned: true })
+          .in("id", needsFix.map((t) => t.id));
+        templates = templates.map((t) =>
+          needsFix.some((f) => f.id === t.id) ? { ...t, pinned: true } : t,
+        );
       }
 
       set({ templates: [...templates].sort((a, b) => a.order - b.order) });
@@ -94,6 +142,8 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
   };
 
   const createTemplate: RoutineTemplateStore["createTemplate"] = async (data) => {
+    const userId = await getUserId();
+    if (!userId) throw new Error("Not authenticated");
     const maxOrder = get().templates.reduce((m, t) => Math.max(m, t.order ?? 0), -1);
     const template: RoutineTemplate = {
       id:              crypto.randomUUID(),
@@ -107,8 +157,10 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
       pinned:          data.pinned ?? true,
       order:           maxOrder + 1,
     };
-
-    await db.routineTemplates.put(template);
+    const { error } = await supabase
+      .from("routine_templates")
+      .insert(templateToRow(template, userId));
+    if (error) console.error("Failed to create template:", error);
     set({ templates: [...get().templates, template] });
     return template;
   };
@@ -116,23 +168,28 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
   const updateTemplate: RoutineTemplateStore["updateTemplate"] = async (id, changes) => {
     const before = get().templates.find((t) => t.id === id);
 
-    // Use callback form so Zustand always has the freshest state and
-    // always notifies subscribers (avoids stale-get + shallow-equality issues)
+    // Optimistic update
     set((state) => ({
-      templates: state.templates.map((t) =>
-        t.id === id ? { ...t, ...changes } : t
-      ),
+      templates: state.templates.map((t) => (t.id === id ? { ...t, ...changes } : t)),
     }));
 
-    try {
-      await db.routineTemplates.update(id, changes);
-    } catch (err) {
-      console.error("Failed to persist template update:", err);
+    const row: Record<string, unknown> = {};
+    if ("title" in changes) row.title = changes.title;
+    if ("durationMinutes" in changes) row.duration_minutes = changes.durationMinutes;
+    if ("defaultStartTime" in changes) row.default_start_time = changes.defaultStartTime ?? null;
+    if ("color" in changes) row.color = changes.color;
+    if ("daysOfWeek" in changes) row.days_of_week = changes.daysOfWeek;
+    if ("isBuiltIn" in changes) row.is_built_in = changes.isBuiltIn;
+    if ("icon" in changes) row.icon = changes.icon ?? null;
+    if ("pinned" in changes) row.pinned = changes.pinned ?? null;
+    if ("order" in changes) row.order = changes.order;
+
+    const { error } = await supabase.from("routine_templates").update(row).eq("id", id);
+    if (error) {
+      console.error("Failed to persist template update:", error);
       if (before) {
         set((state) => ({
-          templates: state.templates.map((t) =>
-            t.id === id ? { ...before } : t
-          ),
+          templates: state.templates.map((t) => (t.id === id ? { ...before } : t)),
         }));
       }
     }
@@ -140,7 +197,6 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
 
   const reorderTemplates: RoutineTemplateStore["reorderTemplates"] = async (orderedIds) => {
     const current = get().templates;
-    // Build the new ordered array with updated order values
     const reordered = orderedIds
       .map((id, i) => {
         const t = current.find((t) => t.id === id);
@@ -148,14 +204,10 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
       })
       .filter((t): t is RoutineTemplate => t !== null);
 
-    // Write all order changes atomically
-    await db.transaction("rw", db.routineTemplates, async () => {
-      for (const t of reordered) {
-        await db.routineTemplates.update(t.id, { order: t.order });
-      }
-    });
+    for (const t of reordered) {
+      await supabase.from("routine_templates").update({ order: t.order }).eq("id", t.id);
+    }
 
-    // Update store — keep any templates not in orderedIds at the end
     const reorderedIds = new Set(orderedIds);
     const rest = current.filter((t) => !reorderedIds.has(t.id));
     set({ templates: [...reordered, ...rest] });
@@ -163,11 +215,17 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
 
   const deleteTemplate: RoutineTemplateStore["deleteTemplate"] = async (id) => {
     if (!window.confirm("Delete this routine template?")) return;
-    await db.routineTemplates.delete(id);
+    const { error } = await supabase.from("routine_templates").delete().eq("id", id);
+    if (error) console.error("Failed to delete template:", error);
     set({ templates: get().templates.filter((t) => t.id !== id) });
   };
 
-  const applyTemplatesToDay: RoutineTemplateStore["applyTemplatesToDay"] = async (templateIds, date) => {
+  const applyTemplatesToDay: RoutineTemplateStore["applyTemplatesToDay"] = async (
+    templateIds,
+    date,
+  ) => {
+    const userId = await getUserId();
+    if (!userId) return;
     const selected = get().templates.filter((t) => templateIds.includes(t.id));
     if (selected.length === 0) return;
 
@@ -185,9 +243,20 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
       };
     });
 
-    await db.transaction("rw", db.timeBlocks, async () => {
-      await db.timeBlocks.bulkPut(blocks);
-    });
+    const { error } = await supabase.from("time_blocks").insert(
+      blocks.map((b) => ({
+        id: b.id,
+        title: b.title,
+        start_time: b.startTime,
+        end_time: b.endTime,
+        type: b.type,
+        task_id: b.taskId ?? null,
+        routine_template_id: b.routineTemplateId ?? null,
+        color: b.color ?? null,
+        user_id: userId,
+      })),
+    );
+    if (error) console.error("Failed to apply templates to day:", error);
 
     await useTimeBlockStore.getState().loadTimeBlocks();
   };

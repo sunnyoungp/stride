@@ -1,9 +1,46 @@
 "use client";
 
 import { create } from "zustand";
-
-import { db } from "@/db/index";
+import { createClient } from "@/lib/supabase/client";
 import type { TimeBlock } from "@/types/index";
+
+const supabase = createClient();
+
+async function getUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+// ── Row mappers ────────────────────────────────────────────────────────────────
+
+function timeBlockFromRow(row: Record<string, unknown>): TimeBlock {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    startTime: row.start_time as string,
+    endTime: row.end_time as string,
+    type: row.type as TimeBlock["type"],
+    taskId: (row.task_id as string | null) ?? undefined,
+    routineTemplateId: (row.routine_template_id as string | null) ?? undefined,
+    color: (row.color as string | null) ?? undefined,
+  };
+}
+
+function timeBlockToRow(b: TimeBlock, userId: string) {
+  return {
+    id: b.id,
+    title: b.title,
+    start_time: b.startTime,
+    end_time: b.endTime,
+    type: b.type,
+    task_id: b.taskId ?? null,
+    routine_template_id: b.routineTemplateId ?? null,
+    color: b.color ?? null,
+    user_id: userId,
+  };
+}
+
+// ── Store ──────────────────────────────────────────────────────────────────────
 
 type TimeBlockStore = {
   timeBlocks: TimeBlock[];
@@ -21,29 +58,40 @@ function addMinutes(iso: string, minutes: number): string {
 
 export const useTimeBlockStore = create<TimeBlockStore>((set, get) => {
   const loadTimeBlocks: TimeBlockStore["loadTimeBlocks"] = async () => {
-    const [timeBlocks, tasks] = await Promise.all([
-      db.timeBlocks.toArray(),
-      db.tasks.toArray(),
-    ]);
-    const taskIdSet = new Set(tasks.map((t) => t.id));
+    try {
+      const [{ data: blockRows }, { data: taskRows }] = await Promise.all([
+        supabase.from("time_blocks").select("*"),
+        supabase.from("tasks").select("id"),
+      ]);
 
-    // Clear taskId references that point to deleted/non-existent tasks
-    const cleaned: TimeBlock[] = [];
-    for (const block of timeBlocks) {
-      if (block.taskId && !taskIdSet.has(block.taskId)) {
-        await db.timeBlocks.update(block.id, { taskId: undefined });
-        cleaned.push({ ...block, taskId: undefined });
-      } else {
-        cleaned.push(block);
+      const taskIdSet = new Set((taskRows ?? []).map((t: Record<string, unknown>) => t.id as string));
+      const blocks = (blockRows ?? []).map(timeBlockFromRow);
+
+      // Clear taskId references that point to deleted/non-existent tasks
+      const cleaned: TimeBlock[] = [];
+      for (const block of blocks) {
+        if (block.taskId && !taskIdSet.has(block.taskId)) {
+          await supabase
+            .from("time_blocks")
+            .update({ task_id: null })
+            .eq("id", block.id);
+          cleaned.push({ ...block, taskId: undefined });
+        } else {
+          cleaned.push(block);
+        }
       }
+      set({ timeBlocks: cleaned });
+    } catch (error) {
+      console.error("Failed to load time blocks:", error);
+      set({ timeBlocks: [] });
     }
-    set({ timeBlocks: cleaned });
   };
 
   const createTimeBlock: TimeBlockStore["createTimeBlock"] = async (data) => {
+    const userId = await getUserId();
+    if (!userId) throw new Error("Not authenticated");
     const startTime = data.startTime ?? new Date().toISOString();
     const endTime = data.endTime ?? addMinutes(startTime, 30);
-
     const timeBlock: TimeBlock = {
       id: crypto.randomUUID(),
       title: data.title ?? "New Block",
@@ -54,21 +102,31 @@ export const useTimeBlockStore = create<TimeBlockStore>((set, get) => {
       routineTemplateId: data.routineTemplateId,
       color: data.color,
     };
-
-    await db.timeBlocks.put(timeBlock);
+    const { error } = await supabase.from("time_blocks").insert(timeBlockToRow(timeBlock, userId));
+    if (error) console.error("Failed to create time block:", error);
     set({ timeBlocks: [...get().timeBlocks, timeBlock] });
     return timeBlock;
   };
 
   const updateTimeBlock: TimeBlockStore["updateTimeBlock"] = async (id, changes) => {
-    await db.timeBlocks.update(id, changes);
+    const row: Record<string, unknown> = {};
+    if ("title" in changes) row.title = changes.title;
+    if ("startTime" in changes) row.start_time = changes.startTime;
+    if ("endTime" in changes) row.end_time = changes.endTime;
+    if ("type" in changes) row.type = changes.type;
+    if ("taskId" in changes) row.task_id = changes.taskId ?? null;
+    if ("routineTemplateId" in changes) row.routine_template_id = changes.routineTemplateId ?? null;
+    if ("color" in changes) row.color = changes.color ?? null;
+    const { error } = await supabase.from("time_blocks").update(row).eq("id", id);
+    if (error) console.error("Failed to update time block:", error);
     set({
       timeBlocks: get().timeBlocks.map((b) => (b.id === id ? { ...b, ...changes } : b)),
     });
   };
 
   const deleteTimeBlock: TimeBlockStore["deleteTimeBlock"] = async (id) => {
-    await db.timeBlocks.delete(id);
+    const { error } = await supabase.from("time_blocks").delete().eq("id", id);
+    if (error) console.error("Failed to delete time block:", error);
     set({ timeBlocks: get().timeBlocks.filter((b) => b.id !== id) });
   };
 
@@ -82,4 +140,3 @@ export const useTimeBlockStore = create<TimeBlockStore>((set, get) => {
     deleteTimeBlock,
   };
 });
-

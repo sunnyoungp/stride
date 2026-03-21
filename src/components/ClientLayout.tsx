@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFocusStore } from "@/store/focusStore";
+import { useAuthStore } from "@/store/authStore";
+import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { QuickAdd } from "@/components/QuickAdd";
@@ -14,6 +17,20 @@ import { MobileFABs } from "@/components/MobileFABs";
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const isZenMode = useFocusStore((state) => state.isZenMode);
     const focusState = useFocusStore((state) => state.focusState);
+    const setUser = useAuthStore((state) => state.setUser);
+
+    useEffect(() => {
+        const supabase = createClient();
+        // Hydrate store with current session
+        supabase.auth.getSession().then(({ data }) => {
+            setUser(data.session?.user ?? null);
+        });
+        // Keep store in sync on auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+        return () => subscription.unsubscribe();
+    }, [setUser]);
 
     if (focusState.isActive) {
         return (
