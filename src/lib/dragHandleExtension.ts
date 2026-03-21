@@ -54,59 +54,93 @@ function createDragHandlePlugin() {
         handle.style.background = "transparent";
       });
 
-      // Select the block on mousedown so ProseMirror knows what to drag
       handle.addEventListener("mousedown", (e) => {
         e.preventDefault();
         if (currentTopPos < 0) return;
         try {
           const sel = NodeSelection.create(view.state.doc, currentTopPos);
-          view.dispatch(view.state.tr.setSelection(sel));
+          const tr = view.state.tr.setSelection(sel);
+          view.dispatch(tr);
           view.focus();
-        } catch {
-          // pos might be invalid; ignore
-        }
+        } catch { /* ignore */ }
       });
 
-      // On dragstart, hand the current selection slice to ProseMirror
       handle.addEventListener("dragstart", (e) => {
         if (currentTopPos < 0 || !e.dataTransfer) return;
-        try {
-          const slice = view.state.selection.content();
-          e.dataTransfer.effectAllowed = "move";
-          // Use the node's DOM as the drag image
-          const dom = view.nodeDOM(currentTopPos) as HTMLElement | null;
-          if (dom) e.dataTransfer.setDragImage(dom, 0, 0);
-          // ProseMirror reads this on drop to know what was dragged
-          (view as unknown as Record<string, unknown>).dragging = { slice, move: true };
 
-          // Attach block-type-aware drag data for external drop targets
-          try {
-            const node = view.state.doc.nodeAt(currentTopPos);
-            if (node) {
-              // For list wrappers (taskList, bulletList, orderedList), drill into first child
-              const isListWrapper = ["taskList", "bulletList", "orderedList"].includes(node.type.name);
-              const contentNode   = isListWrapper ? node.firstChild : node;
-              const title         = node.textContent?.trim() ?? "";
-              const isTask        = node.type.name === "taskItem" ||
-                                    (isListWrapper && contentNode?.type.name === "taskItem");
-              const taskId        = isTask && contentNode
-                ? ((contentNode.attrs as Record<string, unknown>).taskId as string ?? "")
-                : "";
-              if (title) {
-                e.dataTransfer.setData("text/block-type",  isTask ? "task" : "note");
-                e.dataTransfer.setData("text/task-title",  title);
-                e.dataTransfer.setData("stride/taskTitle", title);
-                e.dataTransfer.setData("text/plain",       title);
-                if (taskId) {
-                  e.dataTransfer.setData("text/task-id",   taskId);
-                  e.dataTransfer.setData("stride/taskId",  taskId);
-                }
+        try {
+          // Re-create selection in case it was lost
+          const sel = NodeSelection.create(view.state.doc, currentTopPos);
+          view.dispatch(view.state.tr.setSelection(sel));
+
+          const slice = view.state.selection.content();
+          const dom = view.nodeDOM(currentTopPos) as HTMLElement | null;
+
+          // Set drag image to the actual block DOM
+          if (dom) {
+            e.dataTransfer.setDragImage(dom, 12, 12);
+          }
+
+          e.dataTransfer.effectAllowed = "move";
+
+          // Tell ProseMirror what is being dragged
+          (view as unknown as Record<string, unknown>).dragging = {
+            slice,
+            move: true,
+          };
+
+          // Also fire a dragstart on the editor DOM so ProseMirror's
+          // internal handler registers the drag. We pass the same
+          // dataTransfer by creating a new DragEvent with it.
+          // ProseMirror checks view.dragging first, so this just
+          // triggers its state machine without overriding our data.
+          const editorDom = dom ?? view.dom;
+          const syntheticDrag = new DragEvent("dragstart", {
+            bubbles: true,
+            cancelable: true,
+            dataTransfer: e.dataTransfer,
+            clientX: e.clientX,
+            clientY: e.clientY,
+          });
+          editorDom.dispatchEvent(syntheticDrag);
+
+          // Attach semantic data for external drop targets
+          const node = view.state.doc.nodeAt(currentTopPos);
+          if (node) {
+            const isListWrapper = ["taskList","bulletList","orderedList"]
+              .includes(node.type.name);
+            const contentNode = isListWrapper ? node.firstChild : node;
+            const title = node.textContent?.trim() ?? "";
+            const isTask = node.type.name === "taskItem" ||
+              (isListWrapper && contentNode?.type.name === "taskItem");
+            const taskId = isTask && contentNode
+              ? ((contentNode.attrs as Record<string,unknown>).taskId as string ?? "")
+              : "";
+
+            if (title) {
+              const blockType = isTask ? "task" : "note";
+              e.dataTransfer.setData("text/block-type", blockType);
+              e.dataTransfer.setData("text/task-title", title);
+              e.dataTransfer.setData("stride/taskTitle", title);
+              e.dataTransfer.setData("text/plain", title);
+              if (taskId) {
+                e.dataTransfer.setData("text/task-id", taskId);
+                e.dataTransfer.setData("stride/taskId", taskId);
+              }
+              // Dataset for FullCalendar drop targets
+              handle!.dataset.blockType = blockType;
+              handle!.dataset.taskTitle = title;
+              if (dom) {
+                dom.dataset.blockType = blockType;
+                dom.dataset.taskTitle = title;
+              }
+              if (taskId) {
+                handle!.dataset.taskId = taskId;
+                if (dom) dom.dataset.taskId = taskId;
               }
             }
-          } catch { /* ignore */ }
-        } catch {
-          // ignore
-        }
+          }
+        } catch { /* ignore */ }
       });
 
       handle.addEventListener("dragend", () => {
@@ -144,24 +178,35 @@ function createDragHandlePlugin() {
 
           try {
             const $pos = view.state.doc.resolve(pos.pos);
-            if ($pos.depth < 1) {
+
+            // Find the outermost meaningful block (depth 1 child of doc)
+            let topPos = -1;
+            for (let d = Math.min($pos.depth, 10); d >= 1; d--) {
+              try {
+                const candidate = $pos.before(d);
+                const parentDepth = view.state.doc.resolve(candidate).depth;
+                if (parentDepth === 0) {
+                  topPos = candidate;
+                  break;
+                }
+              } catch { continue; }
+            }
+
+            if (topPos < 0) {
               handle.style.opacity = "0";
               return false;
             }
 
-            const topPos  = $pos.before(1);
             const nodeDom = view.nodeDOM(topPos) as HTMLElement | null;
             if (!nodeDom) {
               handle.style.opacity = "0";
               return false;
             }
 
-            // Use viewport coords for fixed positioning
-            const nodeRect   = nodeDom.getBoundingClientRect();
-            const editorRect = view.dom.getBoundingClientRect();
-            const handleH    = 24;
+            const nodeRect = nodeDom.getBoundingClientRect();
+            const handleH  = 24;
             handle.style.top  = `${nodeRect.top + (nodeRect.height - handleH) / 2}px`;
-            handle.style.left = `${editorRect.left - 28}px`;
+            handle.style.left = `${nodeRect.left - 28}px`;
             handle.style.opacity = "0.4";
             currentTopPos = topPos;
           } catch {
