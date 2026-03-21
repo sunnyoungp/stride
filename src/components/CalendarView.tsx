@@ -34,15 +34,15 @@ function addMins(iso: string, m: number) {
 
 function viewConfig(v: ViewKey): { type: string; duration?: { days?: number; weeks?: number } } {
   switch (v) {
-    case "1d":    return { type: "timeGridDay" };
-    case "2d":    return { type: "timeGrid", duration: { days: 2 } };
-    case "3d":    return { type: "timeGrid", duration: { days: 3 } };
-    case "4d":    return { type: "timeGrid", duration: { days: 4 } };
+    case "1d": return { type: "timeGridDay" };
+    case "2d": return { type: "timeGrid", duration: { days: 2 } };
+    case "3d": return { type: "timeGrid", duration: { days: 3 } };
+    case "4d": return { type: "timeGrid", duration: { days: 4 } };
     // "week" uses a sliding 7-day window so trackpad can shift by 1 day at a time
-    case "week":  return { type: "timeGrid", duration: { days: 7 } };
+    case "week": return { type: "timeGrid", duration: { days: 7 } };
     // "month" uses a 5-week grid so vertical trackpad shifts by 1 week at a time
     case "month": return { type: "dayGrid", duration: { weeks: 5 } };
-    default:      return { type: "timeGridDay" };
+    default: return { type: "timeGridDay" };
   }
 }
 
@@ -291,7 +291,7 @@ function NewEventPopover({
 }) {
   const [title, setTitle] = useState("");
   const [color, setColor] = useState(DEFAULT_BLOCK_COLOR);
-  const inputRef  = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const titleRef = useRef(title);
@@ -333,7 +333,7 @@ function NewEventPopover({
   const confirm = () => onConfirm(title.trim() || "New Event", colorRef.current);
 
   const W = 276, H = 230;
-  const vw = typeof window !== "undefined" ? window.innerWidth  : 1200;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
   const px = Math.max(8, Math.min(pending.x + 12, vw - W - 8));
   const py = Math.max(8, Math.min(pending.y - 20, vh - H - 8));
@@ -357,7 +357,7 @@ function NewEventPopover({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter")  confirm();
+          if (e.key === "Enter") confirm();
           if (e.key === "Escape") onCancel();
         }}
         placeholder="New Event"
@@ -445,16 +445,16 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   const storedView = !dashboardMode && typeof window !== "undefined"
     ? ((localStorage.getItem("stride-calendar-view") as ViewKey) ?? initialView)
     : (dashboardMode ? "1d" : initialView);
-  const [view, setView]               = useState<ViewKey>(storedView);
-  const calendarRef                   = useRef<FullCalendar | null>(null);
+  const [view, setView] = useState<ViewKey>(storedView);
+  const calendarRef = useRef<FullCalendar | null>(null);
 
   // ── Calendar settings ────────────────────────────────────────────────────
-  const [calFirstDay,    setCalFirstDay]    = useState(() => lsStr("stride-calendar-week-start", "sunday") === "monday" ? 1 : 0);
-  const [calSlotDur,     setCalSlotDur]     = useState(() => lsStr("stride-slot-duration",       "00:30:00"));
-  const [calSlotMin,     setCalSlotMin]     = useState(() => lsStr("stride-calendar-start",      "06:00") + ":00");
-  const [calSlotMax,     setCalSlotMax]     = useState(() => lsStr("stride-calendar-end",        "23:00") + ":00");
-  const [calWeekends,    setCalWeekends]    = useState(() => lsStr("stride-show-weekends",       "true") === "true");
-  const [calTimeFormat,  setCalTimeFormat]  = useState(() => lsStr("stride-time-format",         "12hr"));
+  const [calFirstDay, setCalFirstDay] = useState(() => lsStr("stride-calendar-week-start", "sunday") === "monday" ? 1 : 0);
+  const [calSlotDur, setCalSlotDur] = useState(() => lsStr("stride-slot-duration", "00:30:00"));
+  const [calSlotMin, setCalSlotMin] = useState(() => lsStr("stride-calendar-start", "00:00") + ":00");
+  const [calSlotMax, setCalSlotMax] = useState(() => lsStr("stride-calendar-end", "24:00") + ":00");
+  const [calWeekends, setCalWeekends] = useState(() => lsStr("stride-show-weekends", "true") === "true");
+  const [calTimeFormat, setCalTimeFormat] = useState(() => lsStr("stride-time-format", "12hr"));
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
@@ -492,18 +492,18 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
 
   // ── Agenda state ─────────────────────────────────────────────────────────
   const [agendaStart, setAgendaStart] = useState(0);   // day offset from today (0 = today)
-  const [agendaEnd, setAgendaEnd]     = useState(14);  // day offset from today
-  const [showBlocks, setShowBlocks]   = useState(true);
-  const [showTasks, setShowTasks]     = useState(true);
-  const [showNotes, setShowNotes]     = useState(true);
-  const [todayPulse, setTodayPulse]   = useState(false);
-  const todayCardRef    = useRef<HTMLDivElement | null>(null);
+  const [agendaEnd, setAgendaEnd] = useState(14);  // day offset from today
+  const [showBlocks, setShowBlocks] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
+  const [showNotes, setShowNotes] = useState(true);
+  const [todayPulse, setTodayPulse] = useState(false);
+  const todayCardRef = useRef<HTMLDivElement | null>(null);
   const agendaScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarBodyRef = useRef<HTMLDivElement | null>(null);
-  const wheelAccum      = useRef(0);
-  const wheelCooldown   = useRef(false);
+  const wheelAccum = useRef(0);
+  const wheelCooldown = useRef(false);
   // Keep a live ref so the wheel handler (attached once) always sees the current view
-  const viewRef         = useRef<ViewKey>(dashboardMode ? "1d" : initialView);
+  const viewRef = useRef<ViewKey>(dashboardMode ? "1d" : initialView);
 
   const todayStr = useMemo(() => localDateStr(new Date()), []);
 
@@ -590,16 +590,16 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     calendarRef.current?.getApi().gotoDate(selectedDate);
   }, [selectedDate]);
 
-  const timeBlocks      = useTimeBlockStore((s) => s.timeBlocks);
-  const loadTimeBlocks  = useTimeBlockStore((s) => s.loadTimeBlocks);
+  const timeBlocks = useTimeBlockStore((s) => s.timeBlocks);
+  const loadTimeBlocks = useTimeBlockStore((s) => s.loadTimeBlocks);
   const createTimeBlock = useTimeBlockStore((s) => s.createTimeBlock);
   const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
 
-  const tasks      = useTaskStore((s) => s.tasks);
-  const loadTasks  = useTaskStore((s) => s.loadTasks);
+  const tasks = useTaskStore((s) => s.tasks);
+  const loadTasks = useTaskStore((s) => s.loadTasks);
   const updateTask = useTaskStore((s) => s.updateTask);
 
-  const dailyNotes     = useDailyNoteStore((s) => s.dailyNotes);
+  const dailyNotes = useDailyNoteStore((s) => s.dailyNotes);
   const loadDailyNotes = useDailyNoteStore((s) => s.loadDailyNotes);
 
   const cfg = useMemo(() => viewConfig(view), [view]);
@@ -651,7 +651,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     return () => d.destroy();
   }, []);
 
-  const [popover, setPopover]         = useState<{ timeBlockId: string; x: number; y: number } | null>(null);
+  const [popover, setPopover] = useState<{ timeBlockId: string; x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ timeBlockId: string; x: number; y: number } | null>(null);
 
   const activeBlock: TimeBlock | undefined = useMemo(() => {
@@ -676,7 +676,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     []
   );
 
-  const VIEW_LABELS: [ViewKey, string][] = [["1d","Day"],["2d","2D"],["3d","3D"],["4d","4D"],["week","Week"],["month","Month"],["agenda","Agenda"]];
+  const VIEW_LABELS: [ViewKey, string][] = [["1d", "Day"], ["2d", "2D"], ["3d", "3D"], ["4d", "4D"], ["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]];
 
   const isAgenda = view === "agenda";
 
@@ -775,7 +775,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 }}
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M7.5 2L4 6l3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7.5 2L4 6l3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
 
@@ -802,7 +802,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 }}
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M4.5 2L8 6l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4.5 2L8 6l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
 
@@ -829,8 +829,8 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
               {isAgenda ? (
                 <div style={{ display: "flex", gap: 4, alignItems: "center", marginLeft: 4, flexWrap: "wrap" }}>
                   <TogglePill label="Time Blocks" active={showBlocks} onClick={() => setShowBlocks(v => !v)} />
-                  <TogglePill label="Tasks"       active={showTasks}  onClick={() => setShowTasks(v => !v)} />
-                  <TogglePill label="Notes"       active={showNotes}  onClick={() => setShowNotes(v => !v)} />
+                  <TogglePill label="Tasks" active={showTasks} onClick={() => setShowTasks(v => !v)} />
+                  <TogglePill label="Notes" active={showNotes} onClick={() => setShowNotes(v => !v)} />
                 </div>
               ) : (
                 <span style={{
@@ -957,13 +957,13 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                   const dt = (info.jsEvent as DragEvent | null)?.dataTransfer;
                   if (!dt || !onExternalDrop) return;
                   const blockType = dt.getData("text/block-type") || "note";
-                  const title     = dt.getData("text/task-title") || dt.getData("text/plain") || "";
-                  const taskId    = dt.getData("text/task-id") || "";
+                  const title = dt.getData("text/task-title") || dt.getData("text/plain") || "";
+                  const taskId = dt.getData("text/task-id") || "";
                   if (title) onExternalDrop({ date: info.date, title, taskId, blockType });
                 }}
                 eventReceive={(info: EventReceiveArg) => {
                   const start = info.event.start?.toISOString();
-                  const end   = info.event.end?.toISOString() ?? (start ? addMins(start, 30) : undefined);
+                  const end = info.event.end?.toISOString() ?? (start ? addMins(start, 30) : undefined);
                   const { taskId, routineTemplateId, type } = info.event.extendedProps as any;
                   const title = info.event.title;
                   const color = info.event.backgroundColor;
@@ -1031,9 +1031,9 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
             setContextMenu(null);
           }}
           onSaveAsTemplate={() => {
-            const s   = new Date(activeBlock.startTime);
+            const s = new Date(activeBlock.startTime);
             const dur = Math.max(1, Math.round((new Date(activeBlock.endTime).getTime() - s.getTime()) / 60_000));
-            const hhmm = (d: Date) => `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+            const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
             setTemplatePrefill({ title: activeBlock.title, durationMinutes: dur, defaultStartTime: hhmm(s), color: activeBlock.color ?? DEFAULT_BLOCK_COLOR, icon: "⏱️", daysOfWeek: [], isBuiltIn: false, order: 0 });
             setRoutineOpen(true);
           }}
