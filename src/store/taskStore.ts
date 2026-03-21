@@ -156,7 +156,11 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       title: data.title ?? "",
       notes: data.notes ?? "",
       status: data.status ?? "todo",
-      priority: data.priority ?? "none",
+      priority: data.priority ?? (
+        typeof window !== "undefined"
+          ? (localStorage.getItem("stride-default-priority") as Task["priority"] ?? "none")
+          : "none"
+      ),
       tags: data.tags ?? [],
       sectionId: data.sectionId,
       dueDate: inheritedDueDate,
@@ -270,6 +274,11 @@ export const useTaskStore = create<TaskStore>((set, get) => {
   };
 
   const rolloverPastDueTasks: TaskStore["rolloverPastDueTasks"] = async () => {
+    const autoRollover = typeof window !== "undefined"
+      ? localStorage.getItem("stride-auto-rollover") !== "false"
+      : true;
+    if (!autoRollover) return;
+
     const today = todayDateString();
     const candidates = get().tasks.filter((t) => {
       if (!t.dueDate) return false;

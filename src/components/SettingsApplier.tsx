@@ -18,6 +18,9 @@ export function SettingsApplier() {
 
     const theme = localStorage.getItem("stride-theme") ?? "light";
     document.documentElement.setAttribute("data-theme", theme);
+
+    const noteFontSize = localStorage.getItem("stride-note-font-size") ?? "14px";
+    document.documentElement.style.setProperty("--note-font-size", noteFontSize);
   }, []);
 
   return null;

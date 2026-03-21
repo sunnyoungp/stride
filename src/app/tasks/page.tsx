@@ -173,6 +173,16 @@ export default function Page() {
     void loadTasks();
   }, [loadTasks]);
 
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "stride-tasks-view" && e.newValue) {
+        setView(e.newValue as "list" | "kanban");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const handleViewChange = (v: "list" | "kanban") => {
     setView(v);
     localStorage.setItem("stride-tasks-view", v);

@@ -433,9 +433,55 @@ type Props = {
   selectedDate?: string;
 };
 
+function lsStr(key: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  return localStorage.getItem(key) ?? fallback;
+}
+
 export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false, selectedDate }: Props) {
-  const [view, setView]               = useState<ViewKey>(dashboardMode ? "1d" : initialView);
+  const storedView = !dashboardMode && typeof window !== "undefined"
+    ? ((localStorage.getItem("stride-calendar-view") as ViewKey) ?? initialView)
+    : (dashboardMode ? "1d" : initialView);
+  const [view, setView]               = useState<ViewKey>(storedView);
   const calendarRef                   = useRef<FullCalendar | null>(null);
+
+  // ── Calendar settings ────────────────────────────────────────────────────
+  const [calFirstDay,    setCalFirstDay]    = useState(() => lsStr("stride-calendar-week-start", "sunday") === "monday" ? 1 : 0);
+  const [calSlotDur,     setCalSlotDur]     = useState(() => lsStr("stride-slot-duration",       "00:30:00"));
+  const [calSlotMin,     setCalSlotMin]     = useState(() => lsStr("stride-calendar-start",      "06:00") + ":00");
+  const [calSlotMax,     setCalSlotMax]     = useState(() => lsStr("stride-calendar-end",        "23:00") + ":00");
+  const [calWeekends,    setCalWeekends]    = useState(() => lsStr("stride-show-weekends",       "true") === "true");
+  const [calTimeFormat,  setCalTimeFormat]  = useState(() => lsStr("stride-time-format",         "12hr"));
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      switch (e.key) {
+        case "stride-calendar-view":
+          if (!dashboardMode && e.newValue) { setView(e.newValue as ViewKey); }
+          break;
+        case "stride-calendar-week-start":
+          setCalFirstDay(e.newValue === "monday" ? 1 : 0);
+          break;
+        case "stride-slot-duration":
+          if (e.newValue) setCalSlotDur(e.newValue);
+          break;
+        case "stride-calendar-start":
+          if (e.newValue) setCalSlotMin(e.newValue + ":00");
+          break;
+        case "stride-calendar-end":
+          if (e.newValue) setCalSlotMax(e.newValue + ":00");
+          break;
+        case "stride-show-weekends":
+          setCalWeekends(e.newValue === "true");
+          break;
+        case "stride-time-format":
+          if (e.newValue) setCalTimeFormat(e.newValue);
+          break;
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [dashboardMode]);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] = useState<Partial<RoutineTemplate> | null>(null);
   const [currentTitle, setCurrentTitle] = useState("");
@@ -853,15 +899,22 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 height="100%"
                 nowIndicator
                 allDaySlot={false}
-                slotMinTime="00:00:00"
-                slotMaxTime="24:00:00"
+                firstDay={calFirstDay}
+                slotDuration={calSlotDur}
+                slotMinTime={calSlotMin}
+                slotMaxTime={calSlotMax}
+                weekends={calWeekends}
+                eventTimeFormat={calTimeFormat === "24hr"
+                  ? { hour: "2-digit", minute: "2-digit", hour12: false }
+                  : { hour: "numeric", minute: "2-digit", hour12: true }
+                }
                 datesSet={(arg) => {
                   setCurrentTitle(arg.view.title);
                   const todayMidnight = new Date();
                   todayMidnight.setHours(0, 0, 0, 0);
                   setIsViewingToday(todayMidnight >= arg.start && todayMidnight < arg.end);
                 }}
-                editable droppable weekends
+                editable droppable
                 selectable
                 selectMinDistance={5}
                 unselectAuto={false}

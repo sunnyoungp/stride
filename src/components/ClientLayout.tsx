@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useFocusStore } from "@/store/focusStore";
 import { useAuthStore } from "@/store/authStore";
 import { createClient } from "@/lib/supabase/client";
+import { loadSettings } from "@/lib/settings";
 import { Sidebar } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { QuickAdd } from "@/components/QuickAdd";
@@ -24,6 +25,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         // Hydrate store with current session
         supabase.auth.getSession().then(({ data }) => {
             setUser(data.session?.user ?? null);
+            if (data.session?.user) void loadSettings();
         });
         // Keep store in sync on auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

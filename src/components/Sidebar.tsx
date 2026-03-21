@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -318,8 +318,8 @@ export function Sidebar() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Read nav visibility/order config from localStorage
-  const visibleNavItems = useMemo(() => {
+  // Read nav visibility/order config from localStorage, react to storage events
+  const parseNavConfig = (): typeof NAV_ITEMS => {
     if (typeof window === "undefined") return NAV_ITEMS;
     try {
       const raw = localStorage.getItem("stride-nav-config");
@@ -331,6 +331,17 @@ export function Sidebar() {
         .map((c) => NAV_ITEMS.find((n) => n.href === c.id))
         .filter(Boolean) as typeof NAV_ITEMS;
     } catch { return NAV_ITEMS; }
+  };
+
+  const [visibleNavItems, setVisibleNavItems] = useState<typeof NAV_ITEMS>(parseNavConfig);
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "stride-nav-config") setVisibleNavItems(parseNavConfig());
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

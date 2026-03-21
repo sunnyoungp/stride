@@ -30,6 +30,16 @@ function InboxPageContent() {
     void loadTasks();
   }, [loadTasks]);
 
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "stride-tasks-view" && e.newValue) {
+        setView(e.newValue as "list" | "kanban");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const incompleteTasks = useMemo(
     () => tasks.filter((t) => t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId),
     [tasks]

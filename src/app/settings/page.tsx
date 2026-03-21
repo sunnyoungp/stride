@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useShortcutStore, DEFAULT_SHORTCUTS, normalizeKey, formatBinding, type ShortcutAction } from "@/store/shortcutStore";
+import { saveSettings } from "@/lib/settings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,9 +38,6 @@ const DEFAULT_NAV: NavItem[] = [
 function ls(key: string, fallback: string): string {
   if (typeof window === "undefined") return fallback;
   return localStorage.getItem(key) ?? fallback;
-}
-function lsSet(key: string, value: string) {
-  if (typeof window !== "undefined") localStorage.setItem(key, value);
 }
 
 function setCSSVar(name: string, value: string) {
@@ -161,7 +159,7 @@ function AppearanceCard() {
 
   const applyTheme = (t: string) => {
     setThemeState(t);
-    lsSet("stride-theme", t);
+    void saveSettings("stride-theme", t);
     if (t === "dark")   { document.documentElement.classList.add("dark");    document.documentElement.classList.remove("light"); }
     if (t === "light")  { document.documentElement.classList.remove("dark"); document.documentElement.classList.add("light"); }
     if (t === "system") {
@@ -173,13 +171,13 @@ function AppearanceCard() {
 
   const applyAccent = (hex: string) => {
     setAccentState(hex);
-    lsSet("stride-accent", hex);
+    void saveSettings("stride-accent", hex);
     setCSSVar("--accent", hex);
   };
 
   const applyFont = (f: string) => {
     setFontState(f);
-    lsSet("stride-font", f);
+    void saveSettings("stride-font", f);
     const fontMap: Record<string, string> = {
       geist: "var(--font-geist-sans)",
       inter: "Inter, sans-serif",
@@ -191,19 +189,19 @@ function AppearanceCard() {
 
   const applyFontSize = (sz: string) => {
     setFontSize(sz);
-    lsSet("stride-font-size", sz);
+    void saveSettings("stride-font-size", sz);
     setCSSVar("--font-size-base", sz);
   };
 
   const applySidebarWidth = (w: string) => {
     setSidebarW(w);
-    lsSet("stride-sidebar-width", w + "px");
+    void saveSettings("stride-sidebar-width", w + "px");
     setCSSVar("--sidebar-width", w + "px");
   };
 
   const applyCompact = (v: boolean) => {
     setCompact(v);
-    lsSet("stride-compact", String(v));
+    void saveSettings("stride-compact", String(v));
     document.documentElement.setAttribute("data-compact", String(v));
   };
 
@@ -345,7 +343,7 @@ function NavigationCard() {
   const saveItems = (next: NavItem[]) => {
     const ordered = next.map((it, i) => ({ ...it, order: i }));
     setItems(ordered);
-    lsSet("stride-nav-config", JSON.stringify(ordered));
+    void saveSettings("stride-nav-config", JSON.stringify(ordered));
   };
 
   const handleDragEnd = (e: DragEndEvent) => {
@@ -523,26 +521,26 @@ function DailyNoteCard() {
   return (
     <SettingCard id="daily-note" title="Daily Note">
       <SettingRow label="Link checklist to Task Manager" description="New checkboxes automatically create tasks">
-        <Toggle value={linked} onChange={(v) => { setLinked(v); lsSet("stride-note-linked-mode", String(v)); }} />
+        <Toggle value={linked} onChange={(v) => { setLinked(v); void saveSettings("stride-note-linked-mode", String(v)); }} />
       </SettingRow>
       <SettingRow label="Editor font size">
         <PillGroup
           options={[{ label: "Small", value: "13px" }, { label: "Medium", value: "14px" }, { label: "Large", value: "16px" }]}
           value={noteFontSize}
-          onChange={(v) => { setNoteFontSize(v); lsSet("stride-note-font-size", v); setCSSVar("--note-font-size", v); }}
+          onChange={(v) => { setNoteFontSize(v); void saveSettings("stride-note-font-size", v); setCSSVar("--note-font-size", v); }}
         />
       </SettingRow>
       <SettingRow label="Show date heading in note">
-        <Toggle value={showHeading} onChange={(v) => { setShowHeading(v); lsSet("stride-note-show-heading", String(v)); }} />
+        <Toggle value={showHeading} onChange={(v) => { setShowHeading(v); void saveSettings("stride-note-show-heading", String(v)); }} />
       </SettingRow>
       <SettingRow label="Auto-create today's note on open">
-        <Toggle value={autoCreate} onChange={(v) => { setAutoCreate(v); lsSet("stride-note-auto-create", String(v)); }} />
+        <Toggle value={autoCreate} onChange={(v) => { setAutoCreate(v); void saveSettings("stride-note-auto-create", String(v)); }} />
       </SettingRow>
       <SettingRow label="Start of week">
         <PillGroup
           options={[{ label: "Sunday", value: "sunday" }, { label: "Monday", value: "monday" }]}
           value={weekStart}
-          onChange={(v) => { setWeekStart(v); lsSet("stride-week-start", v); }}
+          onChange={(v) => { setWeekStart(v); void saveSettings("stride-week-start", v); }}
         />
       </SettingRow>
     </SettingCard>
@@ -564,14 +562,14 @@ function TasksCard() {
         <PillGroup
           options={[{ label: "List", value: "list" }, { label: "Kanban", value: "kanban" }]}
           value={tasksView}
-          onChange={(v) => { setTasksView(v); lsSet("stride-tasks-view", v); }}
+          onChange={(v) => { setTasksView(v); void saveSettings("stride-tasks-view", v); }}
         />
       </SettingRow>
       <SettingRow label="Show completed tasks by default">
-        <Toggle value={showCompleted} onChange={(v) => { setShowCompleted(v); lsSet("stride-show-completed", String(v)); }} />
+        <Toggle value={showCompleted} onChange={(v) => { setShowCompleted(v); void saveSettings("stride-show-completed", String(v)); }} />
       </SettingRow>
       <SettingRow label="Auto-rollover overdue tasks" description="Moves past-due tasks to today on open">
-        <Toggle value={autoRollover} onChange={(v) => { setAutoRollover(v); lsSet("stride-auto-rollover", String(v)); }} />
+        <Toggle value={autoRollover} onChange={(v) => { setAutoRollover(v); void saveSettings("stride-auto-rollover", String(v)); }} />
       </SettingRow>
       <SettingRow label="Default priority">
         <PillGroup
@@ -582,14 +580,14 @@ function TasksCard() {
             { label: "High",   value: "high"   },
           ]}
           value={defaultPriority}
-          onChange={(v) => { setDefaultPriority(v); lsSet("stride-default-priority", v); }}
+          onChange={(v) => { setDefaultPriority(v); void saveSettings("stride-default-priority", v); }}
         />
       </SettingRow>
       <SettingRow label={'First day of \u201cNext Week\u201d'}>
         <PillGroup
           options={[{ label: "Monday", value: "monday" }, { label: "Sunday", value: "sunday" }]}
           value={nextWeekStart}
-          onChange={(v) => { setNextWeekStart(v); lsSet("stride-next-week-start", v); }}
+          onChange={(v) => { setNextWeekStart(v); void saveSettings("stride-next-week-start", v); }}
         />
       </SettingRow>
     </SettingCard>
@@ -618,14 +616,14 @@ function CalendarCard() {
             { label: "Agenda", value: "agenda" },
           ]}
           value={calView}
-          onChange={(v) => { setCalView(v); lsSet("stride-calendar-view", v); }}
+          onChange={(v) => { setCalView(v); void saveSettings("stride-calendar-view", v); }}
         />
       </SettingRow>
       <SettingRow label="Start of week">
         <PillGroup
           options={[{ label: "Sunday", value: "sunday" }, { label: "Monday", value: "monday" }]}
           value={weekStart}
-          onChange={(v) => { setWeekStart(v); lsSet("stride-calendar-week-start", v); }}
+          onChange={(v) => { setWeekStart(v); void saveSettings("stride-calendar-week-start", v); }}
         />
       </SettingRow>
       <SettingRow label="Slot duration">
@@ -636,14 +634,14 @@ function CalendarCard() {
             { label: "1 hr",   value: "01:00:00" },
           ]}
           value={slotDur}
-          onChange={(v) => { setSlotDur(v); lsSet("stride-slot-duration", v); }}
+          onChange={(v) => { setSlotDur(v); void saveSettings("stride-slot-duration", v); }}
         />
       </SettingRow>
       <SettingRow label="Calendar start time">
         <input
           type="time"
           value={calStart}
-          onChange={(e) => { setCalStart(e.target.value); lsSet("stride-calendar-start", e.target.value); }}
+          onChange={(e) => { setCalStart(e.target.value); void saveSettings("stride-calendar-start", e.target.value); }}
           style={{
             fontSize: 13, padding: "4px 8px", borderRadius: 8,
             border: "1px solid var(--border)", background: "var(--bg-subtle)",
@@ -655,7 +653,7 @@ function CalendarCard() {
         <input
           type="time"
           value={calEnd}
-          onChange={(e) => { setCalEnd(e.target.value); lsSet("stride-calendar-end", e.target.value); }}
+          onChange={(e) => { setCalEnd(e.target.value); void saveSettings("stride-calendar-end", e.target.value); }}
           style={{
             fontSize: 13, padding: "4px 8px", borderRadius: 8,
             border: "1px solid var(--border)", background: "var(--bg-subtle)",
@@ -664,13 +662,13 @@ function CalendarCard() {
         />
       </SettingRow>
       <SettingRow label="Show weekends">
-        <Toggle value={showWeekends} onChange={(v) => { setShowWeekends(v); lsSet("stride-show-weekends", String(v)); }} />
+        <Toggle value={showWeekends} onChange={(v) => { setShowWeekends(v); void saveSettings("stride-show-weekends", String(v)); }} />
       </SettingRow>
       <SettingRow label="Time format">
         <PillGroup
           options={[{ label: "12-hour", value: "12hr" }, { label: "24-hour", value: "24hr" }]}
           value={timeFormat}
-          onChange={(v) => { setTimeFormat(v); lsSet("stride-time-format", v); }}
+          onChange={(v) => { setTimeFormat(v); void saveSettings("stride-time-format", v); }}
         />
       </SettingRow>
     </SettingCard>
@@ -686,7 +684,7 @@ function GeneralCard() {
 
   const applyAppName = (name: string) => {
     setAppName(name);
-    lsSet("stride-app-name", name);
+    void saveSettings("stride-app-name", name);
     document.title = name;
   };
 

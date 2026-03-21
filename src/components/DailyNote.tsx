@@ -439,16 +439,39 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   const dnSelectedPosesRef  = useRef<Set<number>>(new Set());
   useEffect(() => { dnSelectedPosesRef.current = dnSelectedPoses; }, [dnSelectedPoses]);
 
-  // Linked mode: tasks sync to task manager. Default off (independent).
+  // Linked mode: tasks sync to task manager. Reads stride-note-linked-mode (authoritative),
+  // falls back to legacy dailynote-linked-mode key for backward compat.
   const [isLinked, setIsLinked] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
+    const primary = localStorage.getItem("stride-note-linked-mode");
+    if (primary !== null) return primary === "true";
     return localStorage.getItem("dailynote-linked-mode") === "true";
   });
   const toggleLinked = () => {
     const next = !isLinked;
     setIsLinked(next);
+    localStorage.setItem("stride-note-linked-mode", String(next));
     localStorage.setItem("dailynote-linked-mode", String(next));
+    window.dispatchEvent(new StorageEvent("storage", { key: "stride-note-linked-mode", newValue: String(next) }));
   };
+
+  // Note font-size and heading settings
+  const [noteFontSize,  setNoteFontSize]  = useState(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("stride-note-font-size") ?? "14px") : "14px"
+  );
+  const [showHeading, setShowHeading] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("stride-note-show-heading") !== "false" : true
+  );
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "stride-note-linked-mode") setIsLinked(e.newValue === "true");
+      if (e.key === "stride-note-font-size" && e.newValue) setNoteFontSize(e.newValue);
+      if (e.key === "stride-note-show-heading") setShowHeading(e.newValue !== "false");
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   const saveTimerRef   = useRef<number | null>(null);
   const prevTaskIdsRef = useRef<Set<string>>(new Set());
@@ -946,7 +969,14 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-8 py-8">
+    <div className="mx-auto w-full max-w-2xl px-8 py-8" style={{ fontSize: noteFontSize }}>
+      {/* Date heading (when enabled in settings) */}
+      {showHeading && !hideHeader && (
+        <h2 className="mb-4 text-[22px] font-semibold tracking-tight" style={{ color: "var(--fg)" }}>
+          {formatDateLabel(selectedDate)}
+        </h2>
+      )}
+
       {/* Section label + sync-mode toggle */}
       {!hideHeader && (
         <>

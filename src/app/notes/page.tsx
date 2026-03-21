@@ -80,6 +80,10 @@ export default function NotesPage() {
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     if (typeof window === "undefined") return localDateString(new Date());
+    // When auto-create is on, always open on today
+    if (localStorage.getItem("stride-note-auto-create") !== "false") {
+      return localDateString(new Date());
+    }
     const saved = localStorage.getItem("stride-notes-selected-date");
     if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) return saved;
     return localDateString(new Date());

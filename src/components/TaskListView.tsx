@@ -94,7 +94,9 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
   const createSection   = useSectionStore((s) => s.createSection);
 
   const [activeId, setActiveId]           = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("stride-show-completed") === "true"
+  );
   const [showLoading, setShowLoading]     = useState(true);
   const [contextMenu, setContextMenu]     = useState<{ task: Task; x: number; y: number } | null>(null);
   const [collapsed, setCollapsed]         = useState<Record<string, boolean>>({});
@@ -113,6 +115,17 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
   const clearSelection = useCallback(() => {
     setSelectedTaskIds(new Set());
     anchorTaskIdRef.current = null;
+  }, []);
+
+  // Sync stride-show-completed setting from storage events
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "stride-show-completed") {
+        setShowCompleted(e.newValue === "true");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   // Escape clears selection
