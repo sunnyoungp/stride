@@ -78,6 +78,26 @@ function writeTaskIdToNode(editor: Editor, pos: number, taskId: string, attrs: R
   );
 }
 
+/**
+ * Returns ordered selectable positions from the doc:
+ * - Individual taskItem / listItem positions (more granular than the wrapper list)
+ * - Top-level paragraph / heading positions
+ */
+function collectSelectablePositions(doc: PmNode): number[] {
+  const positions: number[] = [];
+  const listWrappers = new Set(["taskList", "bulletList", "orderedList"]);
+  doc.forEach((node, offset) => {
+    if (listWrappers.has(node.type.name)) {
+      node.forEach((child, childOffset) => {
+        positions.push(offset + 1 + childOffset);
+      });
+    } else {
+      positions.push(offset);
+    }
+  });
+  return positions;
+}
+
 /** Remove a taskItem node from the editor by title match. Returns true if found. */
 function removeNodeFromEditor(editor: Editor, title: string): boolean {
   const doc = editor.state.doc;
@@ -109,45 +129,58 @@ async function ensureDailyNote(date: string): Promise<DailyNote> {
 
 // ─── DnSelectionBar ───────────────────────────────────────────────────────────
 
+type SelectedBlock = {
+  title: string;
+  pos: number;
+  nodeType: string;
+  taskId: string | null;
+  checked: boolean;
+};
+
 function DnSelectionBar({
   selectedPoses,
   editorRef,
   updateTask,
   deleteTask,
+  createTask,
   onClear,
 }: {
   selectedPoses: Set<number>;
   editorRef: React.MutableRefObject<Editor | null>;
   updateTask: (id: string, patch: Partial<Task>) => Promise<unknown>;
   deleteTask: (id: string) => Promise<unknown>;
+  createTask: (data: Partial<Task>) => Promise<Task>;
   onClear: () => void;
 }) {
   const dateInputRef = useRef<HTMLInputElement>(null);
 
-  const getSelectedItems = (): TaskItemScan[] => {
+  const getSelectedBlocks = (): SelectedBlock[] => {
     const ed = editorRef.current;
     if (!ed) return [];
-    const result: TaskItemScan[] = [];
+    const result: SelectedBlock[] = [];
     selectedPoses.forEach((pos) => {
       try {
         const node = ed.state.doc.nodeAt(pos);
-        if (node?.type.name === "taskItem") {
-          result.push({
-            title: node.textContent.trim(),
-            checked: Boolean(node.attrs.checked),
-            taskId: (node.attrs as Record<string, unknown>).taskId as string | null ?? null,
-            pos,
-          });
-        }
+        if (!node) return;
+        result.push({
+          title:    node.textContent.trim(),
+          pos,
+          nodeType: node.type.name,
+          taskId:   (node.attrs as Record<string, unknown>).taskId as string | null ?? null,
+          checked:  Boolean((node.attrs as Record<string, unknown>).checked),
+        });
       } catch { /* ignore stale pos */ }
     });
-    return result;
+    return result.filter(b => b.title);
   };
+
+  const taskBlocks = () => getSelectedBlocks().filter(b => b.nodeType === "taskItem");
+  const noteBlocks = () => getSelectedBlocks().filter(b => b.nodeType !== "taskItem");
 
   const handleCompleteAll = () => {
     const ed = editorRef.current;
     if (!ed) return;
-    const items = getSelectedItems();
+    const items = taskBlocks();
     const tr = ed.view.state.tr;
     let modified = false;
     items.forEach(({ pos, checked, taskId }) => {
@@ -165,8 +198,15 @@ function DnSelectionBar({
 
   const handleReschedule = (date: string) => {
     if (!date) return;
-    getSelectedItems().forEach(({ taskId }) => {
+    taskBlocks().forEach(({ taskId }) => {
       if (taskId) void updateTask(taskId, { dueDate: date });
+    });
+    onClear();
+  };
+
+  const handleCreateTasks = () => {
+    noteBlocks().forEach(({ title }) => {
+      void createTask({ title, status: "todo" });
     });
     onClear();
   };
@@ -175,7 +215,7 @@ function DnSelectionBar({
     const ed = editorRef.current;
     if (!ed) return;
     // Sort descending so positions stay valid as we remove nodes
-    const items = getSelectedItems().sort((a, b) => b.pos - a.pos);
+    const items = getSelectedBlocks().sort((a, b) => b.pos - a.pos);
     const tr = ed.view.state.tr;
     items.forEach(({ pos }) => {
       try {
@@ -206,6 +246,9 @@ function DnSelectionBar({
     </button>
   );
 
+  const hasTaskItems = taskBlocks().length > 0;
+  const hasNoteItems = noteBlocks().length > 0;
+
   return (
     <div
       data-selection-bar
@@ -219,28 +262,31 @@ function DnSelectionBar({
       }}
     >
       <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", marginRight: 4 }}>
-        {selectedPoses.size} selected
+        {selectedPoses.size} blocks selected
       </span>
       <div style={{ width: 1, height: 16, background: "var(--border)" }} />
-      {btn("Complete all", handleCompleteAll)}
-      <button
-        type="button"
-        onClick={() => dateInputRef.current?.showPicker?.()}
-        style={{
-          fontSize: 12, fontWeight: 500, color: "var(--fg)",
-          background: "none", border: "none", cursor: "pointer",
-          padding: "4px 8px", borderRadius: 6, position: "relative",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-      >
-        Reschedule
-        <input
-          ref={dateInputRef} type="date" tabIndex={-1}
-          onChange={(e) => handleReschedule(e.target.value)}
-          style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-        />
-      </button>
+      {hasTaskItems && btn("Complete all", handleCompleteAll)}
+      {hasTaskItems && (
+        <button
+          type="button"
+          onClick={() => dateInputRef.current?.showPicker?.()}
+          style={{
+            fontSize: 12, fontWeight: 500, color: "var(--fg)",
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px 8px", borderRadius: 6, position: "relative",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          Reschedule
+          <input
+            ref={dateInputRef} type="date" tabIndex={-1}
+            onChange={(e) => handleReschedule(e.target.value)}
+            style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+          />
+        </button>
+      )}
+      {hasNoteItems && btn("Create tasks", handleCreateTasks)}
       {btn("Delete", handleDelete, true)}
       <div style={{ width: 1, height: 16, background: "var(--border)" }} />
       {btn("✕", onClear)}
@@ -433,11 +479,18 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   const [showLoading, setShowLoading]   = useState(true);
   const [noteContextMenu, setNoteContextMenu] = useState<NoteMenuState | null>(null);
 
-  // Multi-select state for checklist items
+  // Multi-select state for all block types
   const [dnSelectedPoses, setDnSelectedPoses] = useState<Set<number>>(new Set());
   const dnAnchorPosRef      = useRef<number | null>(null);
   const dnSelectedPosesRef  = useRef<Set<number>>(new Set());
   useEffect(() => { dnSelectedPosesRef.current = dnSelectedPoses; }, [dnSelectedPoses]);
+
+  // Lasso drag-select state
+  const editorWrapperRef    = useRef<HTMLDivElement>(null);
+  const lassoStartRef       = useRef<{ x: number; y: number } | null>(null);
+  const isDragSelectingRef  = useRef(false);
+  const lassoRectRef        = useRef<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [lassoRect, setLassoRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
 
   // Linked mode: tasks sync to task manager. Reads stride-note-linked-mode (authoritative),
   // falls back to legacy dailynote-linked-mode key for backward compat.
@@ -495,7 +548,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   useEffect(() => { noteRef.current         = note;       }, [note]);
   useEffect(() => { isLinkedRef.current     = isLinked;   }, [isLinked]);
 
-  // Escape clears checklist multi-select
+  // Escape clears multi-select
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && dnSelectedPosesRef.current.size > 0) {
@@ -506,6 +559,65 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Select all blocks whose DOM rects intersect with the lasso rectangle
+  const selectBlocksInRect = useCallback((rect: { x1: number; y1: number; x2: number; y2: number }) => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const minX = Math.min(rect.x1, rect.x2);
+    const maxX = Math.max(rect.x1, rect.x2);
+    const minY = Math.min(rect.y1, rect.y2);
+    const maxY = Math.max(rect.y1, rect.y2);
+    if (maxX - minX < 5 || maxY - minY < 5) return;
+
+    const listWrappers = new Set(["taskList", "bulletList", "orderedList"]);
+    const selected = new Set<number>();
+    ed.state.doc.forEach((node, offset) => {
+      if (listWrappers.has(node.type.name)) {
+        node.forEach((child, childOffset) => {
+          const childPos = offset + 1 + childOffset;
+          const dom = ed.view.nodeDOM(childPos) as HTMLElement | null;
+          if (!dom) return;
+          const r = dom.getBoundingClientRect();
+          if (r.left < maxX && r.right > minX && r.top < maxY && r.bottom > minY) selected.add(childPos);
+        });
+      } else {
+        const dom = ed.view.nodeDOM(offset) as HTMLElement | null;
+        if (!dom) return;
+        const r = dom.getBoundingClientRect();
+        if (r.left < maxX && r.right > minX && r.top < maxY && r.bottom > minY) selected.add(offset);
+      }
+    });
+    if (selected.size >= 2) setDnSelectedPoses(selected);
+  }, []); // stable — uses only refs
+
+  // Global mouse handlers for lasso
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!lassoStartRef.current) return;
+      const dx = e.clientX - lassoStartRef.current.x;
+      const dy = e.clientY - lassoStartRef.current.y;
+      if (!isDragSelectingRef.current && Math.hypot(dx, dy) > 5) isDragSelectingRef.current = true;
+      if (isDragSelectingRef.current) {
+        const r = { x1: lassoStartRef.current.x, y1: lassoStartRef.current.y, x2: e.clientX, y2: e.clientY };
+        lassoRectRef.current = r;
+        setLassoRect({ ...r });
+      }
+    };
+    const onMouseUp = () => {
+      if (isDragSelectingRef.current && lassoRectRef.current) selectBlocksInRect(lassoRectRef.current);
+      isDragSelectingRef.current = false;
+      lassoStartRef.current = null;
+      lassoRectRef.current = null;
+      setLassoRect(null);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [selectBlocksInRect]);
 
   useEffect(() => {
     void (async () => {
@@ -590,12 +702,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
           class: "min-h-[200px] outline-none leading-7 text-[var(--fg)]",
         },
         handleDOMEvents: {
-          // Shift+click range selection for checklist items
+          // Shift+click range selection for all block types
           click: (view, event) => {
-            const liEl = (event.target as HTMLElement | null)?.closest("li[data-checked]") as HTMLElement | null;
+            // Don't intercept checkbox input clicks
+            if ((event.target as HTMLElement).tagName === "INPUT") return false;
 
-            if (!liEl) {
-              // Click outside any task item — clear selection
+            const resolved = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (!resolved) {
               if (dnSelectedPosesRef.current.size > 0) {
                 setDnSelectedPoses(new Set());
                 dnAnchorPosRef.current = null;
@@ -603,29 +716,33 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
               return false;
             }
 
-            // Don't intercept checkbox input clicks
-            if ((event.target as HTMLElement).tagName === "INPUT") return false;
-
-            const resolved = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            if (!resolved) return false;
-
-            let taskPos = -1;
+            // Find the selectable position: list items at their own depth, other blocks at depth 1
+            let blockPos = -1;
             try {
               const $pos = view.state.doc.resolve(resolved.pos);
-              for (let d = $pos.depth; d >= 0; d--) {
-                if ($pos.node(d).type.name === "taskItem") { taskPos = $pos.before(d); break; }
+              // Prefer taskItem or listItem (more granular than the wrapper list)
+              for (let d = $pos.depth; d >= 1; d--) {
+                const name = $pos.node(d).type.name;
+                if (name === "taskItem" || name === "listItem") { blockPos = $pos.before(d); break; }
               }
+              // Fall back to depth-1 top-level block
+              if (blockPos < 0 && $pos.depth >= 1) blockPos = $pos.before(1);
             } catch { return false; }
-            if (taskPos < 0) return false;
+
+            if (blockPos < 0) {
+              if (dnSelectedPosesRef.current.size > 0) {
+                setDnSelectedPoses(new Set());
+                dnAnchorPosRef.current = null;
+              }
+              return false;
+            }
 
             if (event.shiftKey && dnAnchorPosRef.current !== null) {
               event.preventDefault();
-              const orderedPoses: number[] = [];
-              view.state.doc.nodesBetween(0, view.state.doc.nodeSize - 2, (node, pos) => {
-                if (node.type.name === "taskItem") orderedPoses.push(pos);
-              });
+              // Collect ordered selectable positions from the doc
+              const orderedPoses = collectSelectablePositions(view.state.doc);
               const aIdx = orderedPoses.indexOf(dnAnchorPosRef.current);
-              const bIdx = orderedPoses.indexOf(taskPos);
+              const bIdx = orderedPoses.indexOf(blockPos);
               if (aIdx >= 0 && bIdx >= 0) {
                 const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
                 setDnSelectedPoses(new Set(orderedPoses.slice(lo, hi + 1)));
@@ -634,7 +751,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
             }
 
             // Regular click: update anchor, clear any existing selection
-            dnAnchorPosRef.current = taskPos;
+            dnAnchorPosRef.current = blockPos;
             if (dnSelectedPosesRef.current.size > 0) {
               setDnSelectedPoses(new Set());
             }
@@ -779,7 +896,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
     let dom: HTMLElement;
     try { dom = editor.view.dom as HTMLElement; } catch { return; }
 
-    dom.querySelectorAll("li[data-pm-selected]").forEach((el) => {
+    dom.querySelectorAll("[data-pm-selected]").forEach((el) => {
       const h = el as HTMLElement;
       h.removeAttribute("data-pm-selected");
       h.style.background = "";
@@ -792,8 +909,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
         const nodeDom = editor.view.nodeDOM(pos) as HTMLElement | null;
         if (nodeDom) {
           nodeDom.setAttribute("data-pm-selected", "true");
-          nodeDom.style.background = "var(--accent-bg)";
-          nodeDom.style.outline = "1px solid rgba(99,102,241,0.20)";
+          nodeDom.style.background = "color-mix(in srgb, var(--accent) 14%, transparent)";
+          nodeDom.style.outline = "2px solid color-mix(in srgb, var(--accent) 35%, transparent)";
           nodeDom.style.borderRadius = "6px";
         }
       } catch { /* ignore stale pos */ }
@@ -1011,7 +1128,17 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
       )}
 
       {/* Editor */}
-      <div onKeyDown={handleEditorKeyDown}>
+      <div
+        ref={editorWrapperRef}
+        onKeyDown={handleEditorKeyDown}
+        onMouseDown={(e) => {
+          // Only start lasso if clicking outside the editor content (on padding/empty area)
+          if (e.button !== 0) return;
+          if (editor && editor.view.dom.contains(e.target as Node)) return;
+          lassoStartRef.current = { x: e.clientX, y: e.clientY };
+        }}
+        style={{ position: "relative" }}
+      >
         {editor ? <EditorContent editor={editor} /> : null}
       </div>
 
@@ -1022,6 +1149,24 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
           : <>Type <kbd className="rounded px-1 py-0.5 text-[10px]" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>x </kbd> to add a checklist item · Right-click to move or delete</>
         }
       </p>
+
+      {lassoRect && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            pointerEvents: "none",
+            zIndex: 9998,
+            left:   Math.min(lassoRect.x1, lassoRect.x2),
+            top:    Math.min(lassoRect.y1, lassoRect.y2),
+            width:  Math.abs(lassoRect.x2 - lassoRect.x1),
+            height: Math.abs(lassoRect.y2 - lassoRect.y1),
+            background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--accent) 40%, transparent)",
+            borderRadius: 4,
+          }}
+        />,
+        document.body,
+      )}
 
       {noteContextMenu && createPortal(
         <NoteItemContextMenu
@@ -1043,6 +1188,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
           editorRef={editorRef}
           updateTask={updateTask}
           deleteTask={deleteTask}
+          createTask={createTask}
           onClear={() => { setDnSelectedPoses(new Set()); dnAnchorPosRef.current = null; }}
         />,
         document.body,

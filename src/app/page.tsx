@@ -14,6 +14,7 @@ import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { useTaskStore } from "@/store/taskStore";
+import { useTimeBlockStore } from "@/store/timeBlockStore";
 
 function shiftDate(date: string, days: number): string {
   const d = new Date(date + "T00:00:00");
@@ -44,9 +45,10 @@ export default function Page() {
   const [clickPos, setClickPos]                 = useState({ x: 0, y: 0 });
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
 
-  const tasks        = useTaskStore((s) => s.tasks);
-  const updateTask   = useTaskStore((s) => s.updateTask);
-  const createTask   = useTaskStore((s) => s.createTask);
+  const tasks             = useTaskStore((s) => s.tasks);
+  const updateTask        = useTaskStore((s) => s.updateTask);
+  const createTask        = useTaskStore((s) => s.createTask);
+  const createTimeBlock   = useTimeBlockStore((s) => s.createTimeBlock);
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
   const [today, setToday] = useState<string>(() => localDateString(new Date()));
@@ -78,18 +80,18 @@ export default function Page() {
 
     if (blockType === "task") {
       if (taskId) {
-        void updateTask(taskId, { dueDate: undefined });
+        void updateTask(taskId, { dueDate: selectedDate });
       } else if (title) {
-        void createTask({ title, status: "todo" });
+        void createTask({ title, status: "todo", dueDate: selectedDate });
       }
     } else if (blockType === "note") {
-      if (title) void createTask({ title, status: "todo" });
+      if (title) void createTask({ title, status: "todo", dueDate: selectedDate });
     } else {
       // Backward compat: old drag format without block-type
       if (taskId) {
-        void updateTask(taskId, { dueDate: undefined });
+        void updateTask(taskId, { dueDate: selectedDate });
       } else if (title) {
-        void createTask({ title, status: "todo" });
+        void createTask({ title, status: "todo", dueDate: selectedDate });
       }
     }
   };
@@ -306,7 +308,24 @@ export default function Page() {
               border: "1px solid var(--border, rgba(0,0,0,0.08))",
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
-              <CalendarView dashboardMode={true} hideSidebar={true} selectedDate={selectedDate} />
+              <CalendarView
+                dashboardMode={true}
+                hideSidebar={true}
+                selectedDate={selectedDate}
+                onExternalDrop={({ date, title, taskId, blockType }) => {
+                  const startTime = date.toISOString();
+                  const endTime   = new Date(date.getTime() + 30 * 60_000).toISOString();
+                  void (async () => {
+                    if (taskId) {
+                      await createTimeBlock({ type: "task", taskId, title, startTime, endTime, color: "#f4714a" });
+                      await updateTask(taskId, { scheduledStart: startTime, scheduledEnd: endTime, dueDate: selectedDate });
+                    } else if (title) {
+                      await createTimeBlock({ type: "event", title, startTime, endTime, color: "#f4714a" });
+                      if (blockType === "note") await createTask({ title, status: "todo", dueDate: selectedDate });
+                    }
+                  })();
+                }}
+              />
             </div>
           </div>
 

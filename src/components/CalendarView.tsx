@@ -425,12 +425,15 @@ function NewEventPopover({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+type ExternalDropInfo = { date: Date; title: string; taskId: string; blockType: string };
+
 type Props = {
   initialView?: ViewKey;
   hideSidebar?: boolean;
   hideHeader?: boolean;
   dashboardMode?: boolean;
   selectedDate?: string;
+  onExternalDrop?: (info: ExternalDropInfo) => void;
 };
 
 function lsStr(key: string, fallback: string): string {
@@ -438,7 +441,7 @@ function lsStr(key: string, fallback: string): string {
   return localStorage.getItem(key) ?? fallback;
 }
 
-export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false, selectedDate }: Props) {
+export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false, selectedDate, onExternalDrop }: Props) {
   const storedView = !dashboardMode && typeof window !== "undefined"
     ? ((localStorage.getItem("stride-calendar-view") as ViewKey) ?? initialView)
     : (dashboardMode ? "1d" : initialView);
@@ -949,6 +952,14 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 eventResize={(arg) => {
                   const e = arg.event.end?.toISOString();
                   if (e) void updateTimeBlock(arg.event.id, { endTime: e });
+                }}
+                drop={(info) => {
+                  const dt = (info.jsEvent as DragEvent | null)?.dataTransfer;
+                  if (!dt || !onExternalDrop) return;
+                  const blockType = dt.getData("text/block-type") || "note";
+                  const title     = dt.getData("text/task-title") || dt.getData("text/plain") || "";
+                  const taskId    = dt.getData("text/task-id") || "";
+                  if (title) onExternalDrop({ date: info.date, title, taskId, blockType });
                 }}
                 eventReceive={(info: EventReceiveArg) => {
                   const start = info.event.start?.toISOString();

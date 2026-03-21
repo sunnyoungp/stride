@@ -17,9 +17,9 @@ function createDragHandlePlugin() {
       handle.contentEditable = "false";
       handle.setAttribute("aria-hidden", "true");
       handle.style.cssText = [
-        "position:absolute",
-        "left:-20px",
+        "position:fixed",
         "top:0",
+        "left:0",
         "width:16px",
         "height:24px",
         "opacity:0",
@@ -31,7 +31,8 @@ function createDragHandlePlugin() {
         "justify-content:center",
         "transition:opacity 100ms ease,background 100ms ease",
         "user-select:none",
-        "z-index:50",
+        "z-index:9999",
+        "pointer-events:auto",
       ].join(";");
 
       // Six-dot grid icon
@@ -82,10 +83,14 @@ function createDragHandlePlugin() {
           try {
             const node = view.state.doc.nodeAt(currentTopPos);
             if (node) {
-              const title  = node.textContent?.trim() ?? "";
-              const isTask = node.type.name === "taskItem";
-              const taskId = isTask
-                ? ((node.attrs as Record<string, unknown>).taskId as string ?? "")
+              // For list wrappers (taskList, bulletList, orderedList), drill into first child
+              const isListWrapper = ["taskList", "bulletList", "orderedList"].includes(node.type.name);
+              const contentNode   = isListWrapper ? node.firstChild : node;
+              const title         = node.textContent?.trim() ?? "";
+              const isTask        = node.type.name === "taskItem" ||
+                                    (isListWrapper && contentNode?.type.name === "taskItem");
+              const taskId        = isTask && contentNode
+                ? ((contentNode.attrs as Record<string, unknown>).taskId as string ?? "")
                 : "";
               if (title) {
                 e.dataTransfer.setData("text/block-type",  isTask ? "task" : "note");
@@ -109,12 +114,8 @@ function createDragHandlePlugin() {
         if (handle) handle.style.opacity = "0";
       });
 
-      // Attach to the EditorContent wrapper so it can be absolutely positioned
-      const parent = view.dom.parentElement;
-      if (parent) {
-        parent.style.position = "relative";
-        parent.appendChild(handle);
-      }
+      // Attach to document.body so fixed positioning is never clipped by overflow:hidden parents
+      document.body.appendChild(handle);
 
       return {
         destroy() {
@@ -148,18 +149,19 @@ function createDragHandlePlugin() {
               return false;
             }
 
-            const topPos = $pos.before(1);
+            const topPos  = $pos.before(1);
             const nodeDom = view.nodeDOM(topPos) as HTMLElement | null;
             if (!nodeDom) {
               handle.style.opacity = "0";
               return false;
             }
 
-            const parentRect = view.dom.parentElement!.getBoundingClientRect();
+            // Use viewport coords for fixed positioning
             const nodeRect   = nodeDom.getBoundingClientRect();
+            const editorRect = view.dom.getBoundingClientRect();
             const handleH    = 24;
-            // Centre handle vertically on the block
-            handle.style.top     = `${nodeRect.top - parentRect.top + (nodeRect.height - handleH) / 2}px`;
+            handle.style.top  = `${nodeRect.top + (nodeRect.height - handleH) / 2}px`;
+            handle.style.left = `${editorRect.left - 28}px`;
             handle.style.opacity = "0.4";
             currentTopPos = topPos;
           } catch {

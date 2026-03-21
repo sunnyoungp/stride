@@ -324,8 +324,7 @@ a, button, input, select, textarea {
 
 /* ── Drag handle ── */
 .pm-drag-handle {
-  position: absolute;
-  left: -20px;
+  position: fixed;
   opacity: 0;
   cursor: grab;
   border-radius: 4px;
