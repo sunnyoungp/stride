@@ -122,7 +122,7 @@ function KanbanCardVisual({
         border: "1px solid var(--border)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
         padding: "12px 14px",
-        borderLeft: `3px solid ${accentColor}`,
+        borderLeft: `0px solid ${accentColor}`,
         transition: "all 150ms ease",
         cursor: "grab",
         userSelect: "none",
@@ -349,13 +349,13 @@ function KanbanColumnView({
     <div
       ref={setNodeRef}
       style={{
-        minWidth: 280,
+        minWidth: 320,
         maxWidth: 320,
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         borderRadius: 14,
-        background: "var(--bg-subtle)",
+        background: "var(--bg-card)",
         border: isOver ? `2px solid var(--accent)` : "1px solid var(--border)",
         transition: "border 150ms ease",
       }}
@@ -363,7 +363,7 @@ function KanbanColumnView({
       {/* Header */}
       <div
         style={{
-          borderTop: `3px solid ${color}`,
+          borderTop: `0px solid ${color}`,
           background: `${color}14`,
           padding: "12px 16px",
           borderRadius: "12px 12px 0 0",
