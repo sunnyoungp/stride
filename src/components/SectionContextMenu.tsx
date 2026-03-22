@@ -100,23 +100,10 @@ function MenuItem({ children, onClick, danger }: {
   return (
     <button
       type="button"
-      onPointerDown={(e) => e.stopPropagation()} // prevent outside-click listener from firing on menu items
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={onClick}
-      style={{
-        display: "block",
-        width: "100%",
-        padding: "8px 12px",
-        borderRadius: 8,
-        textAlign: "left",
-        fontSize: 14,
-        cursor: "pointer",
-        background: "transparent",
-        border: "none",
-        color: danger ? "#ef4444" : "var(--fg)",
-        transition: "background 0.1s",
-      }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = danger ? "rgba(239,68,68,0.08)" : "var(--bg-hover)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 ${danger ? "hover:bg-red-500/10" : "hover:bg-[var(--bg-hover)]"}`}
+      style={{ color: danger ? "#ef4444" : "var(--fg)" }}
     >
       {children}
     </button>

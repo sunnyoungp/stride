@@ -63,8 +63,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </aside>
             )}
 
-            {/* Main content: reduce padding on mobile, add bottom clearance for tab bar */}
-            <main className="h-screen flex-1 overflow-auto bg-[var(--bg)] min-w-0 p-4 pb-20 md:p-8 md:pb-8">
+            {/* Main content: flex-1, overflow hidden — each page handles its own scroll */}
+            <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)] min-w-0 flex flex-col">
                 {children}
             </main>
 

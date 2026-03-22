@@ -265,10 +265,12 @@ function IconPicker({
   value,
   onChange,
   onClose,
+  position,
 }: {
   value: string;
   onChange: (icon: string) => void;
   onClose: () => void;
+  position: { x: number; y: number };
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [custom, setCustom] = useState(value);
@@ -284,15 +286,22 @@ function IconPicker({
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       ref={ref}
-      className="absolute left-0 top-10 z-50 rounded-xl p-2"
       style={{
+        position: "fixed",
+        left: Math.min(position.x, window.innerWidth - 212),
+        top: position.y + 4,
+        zIndex: 9999,
         width: 196,
         background: "var(--bg-card)",
         border: "1px solid var(--border-mid)",
         boxShadow: "var(--shadow-lg)",
+        borderRadius: 12,
+        padding: 8,
       }}
     >
       <div className="flex flex-wrap gap-1 mb-2">
@@ -335,7 +344,8 @@ function IconPicker({
           OK
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -432,13 +442,14 @@ export function Sidebar() {
   const [draft, setDraft]         = useState("");
   const [draftIcon, setDraftIcon] = useState("");
   const [showNewIconPicker, setShowNewIconPicker] = useState(false);
+  const [newIconPickerPos, setNewIconPickerPos] = useState({ x: 0, y: 0 });
 
   // Inline rename
   const [renamingId, setRenamingId]   = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
-  // Inline icon edit
-  const [iconEditId, setIconEditId] = useState<string | null>(null);
+  // Inline icon edit (with anchor position for portal)
+  const [iconEditState, setIconEditState] = useState<{ id: string; x: number; y: number } | null>(null);
 
   // Drag-to-section
   const [hoverSectionId, setHoverSectionId] = useState<string | null>(null);
@@ -730,7 +741,7 @@ export function Sidebar() {
             const c = getSectionColor(s);
             const isDropTarget = draggingTaskId !== null && hoverSectionId === s.id;
             const isRenaming   = renamingId === s.id;
-            const isEditingIcon = iconEditId === s.id;
+            const isEditingIcon = iconEditState?.id === s.id;
 
             if (isRenaming) {
               return (
@@ -788,12 +799,13 @@ export function Sidebar() {
                   <span>{s.title}</span>
                 </Link>
 
-                {/* Icon picker anchored to this pill */}
-                {isEditingIcon && (
+                {/* Icon picker portal */}
+                {isEditingIcon && iconEditState && (
                   <IconPicker
                     value={s.icon ?? ""}
                     onChange={(icon) => void updateSection(s.id, { icon: icon || undefined })}
-                    onClose={() => setIconEditId(null)}
+                    onClose={() => setIconEditState(null)}
+                    position={{ x: iconEditState.x, y: iconEditState.y }}
                   />
                 )}
               </div>
@@ -814,10 +826,14 @@ export function Sidebar() {
 
         {/* New section row: icon button + text input */}
         {creating && (
-          <div className="mt-2 relative flex items-center gap-1.5">
+          <div className="mt-2 flex w-full min-w-0 items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setShowNewIconPicker((v) => !v)}
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setNewIconPickerPos({ x: r.left, y: r.bottom });
+                setShowNewIconPicker((v) => !v);
+              }}
               className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-sm transition-colors hover:bg-[var(--bg-hover)]"
               style={{ border: "1px solid var(--border-mid)", background: "var(--bg-card)" }}
               title="Pick icon"
@@ -835,7 +851,7 @@ export function Sidebar() {
               }}
               onBlur={() => { if (!draft.trim()) { setDraft(""); setDraftIcon(""); setCreating(false); } }}
               placeholder="Section name…"
-              className="flex-1 h-8 rounded-xl px-3 outline-none"
+              className="min-w-0 flex-1 h-8 rounded-xl px-3 outline-none"
               style={{ border: "1px solid var(--border-mid)", background: "var(--bg-card)", color: "var(--fg)", fontSize: "16px" }}
             />
 
@@ -844,6 +860,7 @@ export function Sidebar() {
                 value={draftIcon}
                 onChange={(icon) => setDraftIcon(icon)}
                 onClose={() => setShowNewIconPicker(false)}
+                position={newIconPickerPos}
               />
             )}
           </div>
@@ -1012,7 +1029,7 @@ export function Sidebar() {
             setRenameDraft(sectionMenu.section.title);
           }}
           onEditIcon={() => {
-            setIconEditId(sectionMenu.section.id);
+            setIconEditState({ id: sectionMenu.section.id, x: sectionMenu.x, y: sectionMenu.y });
           }}
           onDelete={() => {
             // Capture before onClose() runs (MenuItem calls onClose after this returns)

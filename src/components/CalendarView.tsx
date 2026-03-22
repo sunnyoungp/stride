@@ -692,6 +692,9 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     api.changeView(type, duration ? ({ duration } as any) : undefined);
     // Always snap to today's default position when switching views
     api.gotoDate(defaultStart(key));
+    // Scroll to current time so the indicator is always visible
+    const now = new Date();
+    setTimeout(() => api.scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 }), 80);
   };
 
   const todayLabel = useMemo(() =>

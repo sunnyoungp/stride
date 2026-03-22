@@ -149,7 +149,12 @@ export function MiniCalendar({
       if (taskId) {
         await updateTask(taskId, { dueDate: date });
       } else if (title) {
-        await createTask({ title, dueDate: date, status: "todo" });
+        // Delegate to onTaskDrop for title-based lookup; fall back to creating
+        if (onTaskDrop) {
+          onTaskDrop("", title, date);
+        } else {
+          await createTask({ title, dueDate: date, status: "todo" });
+        }
       }
     } else if (blockType === "note") {
       // Plain text block → navigate to that day's note

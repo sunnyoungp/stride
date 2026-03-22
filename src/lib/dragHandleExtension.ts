@@ -54,7 +54,7 @@ function createDragHandlePlugin() {
         handle.style.background = "transparent";
       });
 
-      handle.addEventListener("mousedown", (e) => {
+      handle.addEventListener("mousedown", () => {
         if (currentTopPos < 0) return;
         try {
           const sel = NodeSelection.create(view.state.doc, currentTopPos);
@@ -178,17 +178,27 @@ function createDragHandlePlugin() {
           try {
             const $pos = view.state.doc.resolve(pos.pos);
 
-            // Find the outermost meaningful block (depth 1 child of doc)
+            // Priority 1: individual taskItem / listItem (per-row handles)
             let topPos = -1;
-            for (let d = Math.min($pos.depth, 10); d >= 1; d--) {
-              try {
-                const candidate = $pos.before(d);
-                const parentDepth = view.state.doc.resolve(candidate).depth;
-                if (parentDepth === 0) {
-                  topPos = candidate;
-                  break;
-                }
-              } catch { continue; }
+            for (let d = $pos.depth; d >= 1; d--) {
+              const name = $pos.node(d).type.name;
+              if (name === "taskItem" || name === "listItem") {
+                topPos = $pos.before(d);
+                break;
+              }
+            }
+
+            // Priority 2: depth-1 block (paragraph, heading, etc.)
+            if (topPos < 0) {
+              for (let d = Math.min($pos.depth, 10); d >= 1; d--) {
+                try {
+                  const candidate = $pos.before(d);
+                  if (view.state.doc.resolve(candidate).depth === 0) {
+                    topPos = candidate;
+                    break;
+                  }
+                } catch { continue; }
+              }
             }
 
             if (topPos < 0) {

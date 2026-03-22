@@ -55,7 +55,7 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
   }, [onClose]);
 
   const reschedule = async (dueDate: string) => {
-    const ids = selectedIds && selectedIds.size > 1 ? selectedIds : new Set([task.id]);
+    const ids = [...(selectedIds && selectedIds.size > 1 ? selectedIds : [task.id])];
     for (const id of ids) await updateTask(id, { dueDate });
     onClose();
   };

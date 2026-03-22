@@ -516,7 +516,6 @@ function ShortcutsCard() {
 function DailyNoteCard() {
   const [linked,       setLinked]       = useState(() => ls("stride-note-linked-mode", "true") === "true");
   const [noteFontSize, setNoteFontSize] = useState(() => ls("stride-note-font-size",   "14px"));
-  const [showHeading,  setShowHeading]  = useState(() => ls("stride-note-show-heading","true") === "true");
   const [autoCreate,   setAutoCreate]   = useState(() => ls("stride-note-auto-create", "true") === "true");
   const [weekStart,    setWeekStart]    = useState(() => ls("stride-week-start",        "sunday"));
 
@@ -531,9 +530,6 @@ function DailyNoteCard() {
           value={noteFontSize}
           onChange={(v) => { setNoteFontSize(v); void saveSettings("stride-note-font-size", v); setCSSVar("--note-font-size", v); }}
         />
-      </SettingRow>
-      <SettingRow label="Show date heading in note">
-        <Toggle value={showHeading} onChange={(v) => { setShowHeading(v); void saveSettings("stride-note-show-heading", String(v)); }} />
       </SettingRow>
       <SettingRow label="Auto-create today's note on open">
         <Toggle value={autoCreate} onChange={(v) => { setAutoCreate(v); void saveSettings("stride-note-auto-create", String(v)); }} />
@@ -997,7 +993,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden", background: "var(--bg)" }}>
 
       {/* ── Left category sidebar ── */}
       <div style={{

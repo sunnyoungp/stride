@@ -52,7 +52,8 @@ export function SelectionActionBar({
 
   const handleReschedule = (date: string) => {
     if (!date) return;
-    for (const id of selectedIds) void updateTask(id, { dueDate: date });
+    const ids = [...selectedIds]; // snapshot before onClear can change the set
+    for (const id of ids) void updateTask(id, { dueDate: date });
     onClear();
   };
 
@@ -61,7 +62,7 @@ export function SelectionActionBar({
       data-selection-bar
       style={{
         position: "fixed",
-        bottom: 80,
+        bottom: 24,
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 9999,
@@ -589,6 +590,48 @@ export function AddTaskRow({ sectionId, subsectionId, dueDate }: AddTaskRowProps
   );
 }
 
+// ── TaskRowsWithSubtasks ──────────────────────────────────────────────────────
+// Renders task rows with their incomplete subtasks nested underneath.
+
+function TaskRowsWithSubtasks({
+  tasks,
+  onTaskClick,
+  onTaskRightClick,
+}: {
+  tasks: Task[];
+  onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
+  onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
+}) {
+  const allTasks = useTaskStore((s) => s.tasks);
+
+  return (
+    <>
+      {tasks.map((task, idx) => {
+        const subtasks = task.subtaskIds?.length
+          ? allTasks.filter(
+              (t) => t.parentTaskId === task.id && t.status !== "done" && t.status !== "cancelled"
+            )
+          : [];
+        return (
+          <React.Fragment key={task.id}>
+            <div style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}>
+              <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+            </div>
+            {subtasks.map((subtask) => (
+              <div
+                key={subtask.id}
+                style={{ borderTop: "1px solid var(--border)", paddingLeft: 24 }}
+              >
+                <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+              </div>
+            ))}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+}
+
 // ── TaskGroup card ─────────────────────────────────────────────────────────────
 // Shared card used by Inbox, Next 7 Days, and anywhere tasks are grouped by date/label.
 
@@ -696,18 +739,11 @@ export function TaskGroup({
           No tasks
         </div>
       ) : (
-        tasks.map((task, idx) => (
-          <div
-            key={task.id}
-            style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
-          >
-            <TaskRow
-              task={task}
-              onClick={onTaskClick}
-              onRightClick={onTaskRightClick}
-            />
-          </div>
-        ))
+        <TaskRowsWithSubtasks
+          tasks={tasks}
+          onTaskClick={onTaskClick}
+          onTaskRightClick={onTaskRightClick}
+        />
       )}
 
       {/* Add task */}

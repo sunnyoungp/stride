@@ -114,7 +114,7 @@ export default function Page() {
 
   if (!mounted) {
     return (
-      <div style={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      <div style={{ display: "flex", height: "100%", width: "100%", overflow: "hidden" }}>
         <div style={{ width: "28%", borderRight: "1px solid rgba(0,0,0,0.08)", height: "100%" }} />
         <div style={{ flex: 1, height: "100%" }} />
       </div>
@@ -277,7 +277,7 @@ export default function Page() {
   }
 
   return (
-    <div style={{ height: "100vh", width: "100%", overflow: "hidden" }}>
+    <div style={{ height: "100%", width: "100%", overflow: "hidden" }}>
       <ResizablePanelGroup
         orientation="horizontal"
         id="calendar-main-group"

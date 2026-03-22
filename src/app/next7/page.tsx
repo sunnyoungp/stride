@@ -2,12 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  useDroppable,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
-import { TaskGroup, TaskSelectionProvider, localDateStr } from "@/components/TaskList";
+import { TaskGroup, TaskSelectionProvider, localDateStr, TaskRow, AddTaskRow } from "@/components/TaskList";
 import type { Task } from "@/types/index";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -22,6 +39,125 @@ function dayLabel(dateStr: string, today: string): string {
   if (diff === 1) return "Tomorrow";
   return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(
     new Date(dateStr + "T00:00:00")
+  );
+}
+
+// ── DnD list components ───────────────────────────────────────────────────────
+
+function SortableTaskRow({
+  task,
+  onTaskClick,
+  onTaskRightClick,
+}: {
+  task: Task;
+  onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
+  onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0 : 1,
+        position: "relative",
+      }}
+    >
+      {/* Grip handle — only this element initiates drag */}
+      <div
+        {...listeners}
+        {...attributes}
+        style={{
+          position: "absolute",
+          left: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: 20,
+          height: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "grab",
+          color: "var(--fg-faint)",
+          opacity: 0,
+          zIndex: 1,
+        }}
+        className="task-drag-grip"
+      >
+        <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+          <circle cx="3" cy="2.5" r="1.1"/><circle cx="7" cy="2.5" r="1.1"/>
+          <circle cx="3" cy="7" r="1.1"/><circle cx="7" cy="7" r="1.1"/>
+          <circle cx="3" cy="11.5" r="1.1"/><circle cx="7" cy="11.5" r="1.1"/>
+        </svg>
+      </div>
+      <div style={{ paddingLeft: 0 }}>
+        <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+      </div>
+    </div>
+  );
+}
+
+function DroppableDateGroup({
+  date,
+  label,
+  tasks,
+  onTaskClick,
+  onTaskRightClick,
+}: {
+  date: string;
+  label: string;
+  tasks: Task[];
+  onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
+  onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: date });
+  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        background: "var(--bg-card)",
+        borderRadius: 16,
+        border: isOver ? "1px solid var(--accent)" : "1px solid var(--border)",
+        boxShadow: isOver ? "0 0 0 2px var(--accent-bg-strong)" : "var(--shadow-sm)",
+        overflow: "hidden",
+        flexShrink: 0,
+        transition: "border 120ms ease, box-shadow 120ms ease",
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: "11px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border)" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", flex: 1 }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 10, background: "var(--bg-subtle)", color: "var(--fg-faint)" }}>
+          {tasks.length}
+        </span>
+      </div>
+
+      {/* Rows */}
+      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+        {tasks.length === 0 ? (
+          <div style={{ padding: "16px", fontSize: 12, color: "var(--fg-faint)", fontStyle: "italic", textAlign: "center" }}>
+            No tasks
+          </div>
+        ) : (
+          tasks.map((task, idx) => (
+            <div key={task.id} style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
+              className="[&:hover_.task-drag-grip]:opacity-40">
+              <SortableTaskRow task={task} onTaskClick={onTaskClick} onTaskRightClick={onTaskRightClick} />
+            </div>
+          ))
+        )}
+      </SortableContext>
+
+      {/* Add task */}
+      <div style={{ borderTop: tasks.length > 0 ? "1px solid var(--border)" : undefined }}>
+        <AddTaskRow dueDate={date} />
+      </div>
+    </div>
   );
 }
 
@@ -130,6 +266,39 @@ export default function Next7Page() {
     }
   };
 
+  // @dnd-kit sensors for list drag-to-reschedule
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) ?? null : null;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveTaskId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // over.id is either a date string (dropped on group) or a task.id (dropped on row)
+    let targetDate = over.id as string;
+    if (!next7.includes(targetDate)) {
+      // Dropped on another task row — find its date group
+      const overTask = tasks.find((t) => t.id === targetDate);
+      targetDate = overTask?.dueDate?.slice(0, 10) ?? "";
+    }
+
+    if (targetDate && next7.includes(targetDate) && task.dueDate?.slice(0, 10) !== targetDate) {
+      void updateTask(taskId, { dueDate: targetDate });
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Header */}
@@ -168,41 +337,67 @@ export default function Next7Page() {
             ...next7.flatMap((d) => tasksByDate.get(d) ?? []),
           ].map((t) => t.id)}
         >
-          <div
-            className="mobile-scroll-content"
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "20px 24px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-            }}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           >
-            {/* Overdue group */}
-            {overdueTasks.length > 0 && (
-              <TaskGroup
-                label="Overdue"
-                tasks={overdueTasks}
-                isOverdueGroup
-                showAddTask={false}
-                onTaskClick={handleTaskClick}
-                onTaskRightClick={handleTaskRightClick}
-              />
-            )}
+            <div
+              className="mobile-scroll-content"
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "20px 24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              {/* Overdue group — not droppable */}
+              {overdueTasks.length > 0 && (
+                <TaskGroup
+                  label="Overdue"
+                  tasks={overdueTasks}
+                  isOverdueGroup
+                  showAddTask={false}
+                  onTaskClick={handleTaskClick}
+                  onTaskRightClick={handleTaskRightClick}
+                />
+              )}
 
-            {/* 7 day groups */}
-            {next7.map((date) => (
-              <TaskGroup
-                key={date}
-                label={dayLabel(date, today)}
-                tasks={tasksByDate.get(date) ?? []}
-                defaultDueDate={date}
-                onTaskClick={handleTaskClick}
-                onTaskRightClick={handleTaskRightClick}
-              />
-            ))}
-          </div>
+              {/* 7 day droppable groups */}
+              {next7.map((date) => (
+                <DroppableDateGroup
+                  key={date}
+                  date={date}
+                  label={dayLabel(date, today)}
+                  tasks={tasksByDate.get(date) ?? []}
+                  onTaskClick={handleTaskClick}
+                  onTaskRightClick={handleTaskRightClick}
+                />
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeTask ? (
+                <div
+                  style={{
+                    padding: "10px 16px",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-mid)",
+                    borderRadius: 10,
+                    boxShadow: "var(--shadow-float)",
+                    fontSize: 13,
+                    color: "var(--fg)",
+                    cursor: "grabbing",
+                  }}
+                >
+                  {activeTask.title || "(Untitled)"}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </TaskSelectionProvider>
       )}
 
