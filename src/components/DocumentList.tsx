@@ -9,7 +9,7 @@ import type { StrideDocument } from "@/types/index";
 function formatUpdatedAt(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

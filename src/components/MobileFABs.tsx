@@ -8,11 +8,10 @@ export function MobileFABs() {
   const isSetupModalOpen = useFocusStore((s) => s.isSetupModalOpen);
   const setSetupModalOpen = useFocusStore((s) => s.setSetupModalOpen);
   const { height: vpHeight } = useVisualViewport();
-  const [windowHeight, setWindowHeight] = useState(
-    typeof window !== "undefined" ? window.innerHeight : 0
-  );
+  const [windowHeight, setWindowHeight] = useState(0);
 
   useEffect(() => {
+    setWindowHeight(window.innerHeight);
     const update = () => setWindowHeight(window.innerHeight);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);

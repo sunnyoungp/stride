@@ -280,148 +280,298 @@ function AgendaDayCard({
   );
 }
 
-// ─── New Event Creation Popover ───────────────────────────────────────────────
+// ─── New Event Modal (full-featured) ─────────────────────────────────────────
 
-function NewEventPopover({
+type EventFormData = {
+  title: string;
+  color: string;
+  allDay: boolean;
+  startTime: string; // "HH:MM"
+  endTime: string;   // "HH:MM"
+  date: string;      // "YYYY-MM-DD"
+  repeat: "none" | "daily" | "weekly" | "monthly";
+  location: string;
+  description: string;
+};
+
+function toTimeInput(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function toDateInput(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+
+function calcDuration(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return ((eh ?? 0) * 60 + (em ?? 0)) - ((sh ?? 0) * 60 + (sm ?? 0));
+}
+
+function fmtDateLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(
+    new Date(y ?? 2024, (m ?? 1) - 1, d ?? 1)
+  );
+}
+
+function NewEventModal({
   pending,
   onConfirm,
   onCancel,
 }: {
   pending: PendingBlock;
-  onConfirm: (title: string, color: string) => void;
+  onConfirm: (data: { title: string; color: string; allDay: boolean }) => void;
   onCancel: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [color, setColor] = useState(DEFAULT_BLOCK_COLOR);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
-  const titleRef = useRef(title);
-  const colorRef = useRef(color);
-  titleRef.current = title;
-  colorRef.current = color;
+  const [form, setForm] = useState<EventFormData>({
+    title: "",
+    color: DEFAULT_BLOCK_COLOR,
+    allDay: false,
+    startTime: toTimeInput(pending.startTime),
+    endTime: toTimeInput(pending.endTime),
+    date: toDateInput(pending.startTime),
+    repeat: "none",
+    location: "",
+    description: "",
+  });
 
-  useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(t);
-  }, []);
+  const titleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { setTimeout(() => titleRef.current?.focus(), 60); }, []);
 
-  useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        if (titleRef.current.trim()) {
-          onConfirm(titleRef.current.trim(), colorRef.current);
-        } else {
-          onCancel();
-        }
-      }
-    };
-    const t = setTimeout(() => document.addEventListener("mousedown", handleMouseDown), 150);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("mousedown", handleMouseDown);
-    };
-  }, [onConfirm, onCancel]);
+  const set = <K extends keyof EventFormData>(key: K, val: EventFormData[K]) =>
+    setForm(f => ({ ...f, [key]: val }));
 
-  const fmtTime = (iso: string) =>
-    new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
-  const fmtDate = (iso: string) =>
-    new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date(iso));
+  const durMins = calcDuration(form.startTime, form.endTime);
 
-  const mins = Math.round(
-    (new Date(pending.endTime).getTime() - new Date(pending.startTime).getTime()) / 60000
-  );
+  const confirm = () => {
+    onConfirm({ title: form.title.trim() || "New Event", color: form.color, allDay: form.allDay });
+  };
 
-  const confirm = () => onConfirm(title.trim() || "New Event", colorRef.current);
+  const inputStyle: React.CSSProperties = {
+    width: "100%", boxSizing: "border-box",
+    background: "var(--bg-subtle)",
+    border: "1px solid var(--border)",
+    borderRadius: 10, padding: "8px 12px",
+    fontSize: "16px", color: "var(--fg)", outline: "none",
+  };
 
-  const W = 276, H = 230;
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const px = Math.max(8, Math.min(pending.x + 12, vw - W - 8));
-  const py = Math.max(8, Math.min(pending.y - 20, vh - H - 8));
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+    letterSpacing: "0.1em", color: "var(--fg-faint)",
+    display: "block", marginBottom: 5,
+  };
 
-  return (
-    <div
-      ref={popoverRef}
-      onMouseDown={(e) => e.stopPropagation()}
-      style={{
-        position: "fixed", left: px, top: py, width: W,
-        zIndex: 50,
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2)",
-        padding: "14px 14px 12px",
-      }}
-    >
-      <input
-        ref={inputRef}
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") confirm();
-          if (e.key === "Escape") onCancel();
-        }}
-        placeholder="New Event"
-        style={{
-          width: "100%", boxSizing: "border-box",
-          background: "var(--bg-subtle)",
-          border: "1px solid var(--border)",
-          borderRadius: 8, padding: "6px 10px",
-          fontSize: "16px", fontWeight: 600,
-          color: "var(--fg)", outline: "none",
-          marginBottom: 10,
-        }}
-      />
-      <div style={{
-        fontSize: "0.75rem", marginBottom: 10,
-        display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap",
-      }}>
-        <span style={{ color: "var(--fg)", fontWeight: 500 }}>{fmtTime(pending.startTime)}</span>
-        <span style={{ color: "var(--fg-faint)" }}>→</span>
-        <span style={{ color: "var(--fg)", fontWeight: 500 }}>{fmtTime(pending.endTime)}</span>
-        <span style={{ color: "var(--fg-faint)" }}>{mins}min</span>
-        <span style={{ color: "var(--fg-faint)", marginLeft: 2 }}>{fmtDate(pending.startTime)}</span>
+  const content = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: isMobile ? "0 16px 16px" : "20px" }}>
+
+      {/* Title */}
+      <div>
+        <input
+          ref={titleRef}
+          value={form.title}
+          onChange={e => set("title", e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") onCancel(); }}
+          placeholder="Event title"
+          style={{ ...inputStyle, fontSize: "16px", fontWeight: 600 }}
+        />
       </div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
-        {PRESET_COLORS.map((c) => (
-          <button
-            key={c} type="button"
-            onClick={() => setColor(c)}
-            style={{
-              width: 14, height: 14, borderRadius: "50%",
-              background: c,
-              border: color === c ? `2px solid var(--fg)` : "2px solid transparent",
-              outline: color === c ? "1px solid var(--bg-card)" : "none",
-              outlineOffset: "-3px",
-              cursor: "pointer", padding: 0, flexShrink: 0,
-            }}
+
+      {/* Time row */}
+      {!form.allDay && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <input
+            type="time" value={form.startTime}
+            onChange={e => set("startTime", e.target.value)}
+            style={{ ...inputStyle, width: "auto", flex: 1, minWidth: 100, fontSize: 14 }}
           />
-        ))}
+          <span style={{ color: "var(--fg-faint)", fontSize: 13 }}>→</span>
+          <input
+            type="time" value={form.endTime}
+            onChange={e => set("endTime", e.target.value)}
+            style={{ ...inputStyle, width: "auto", flex: 1, minWidth: 100, fontSize: 14 }}
+          />
+          {durMins > 0 && (
+            <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0 }}>
+              {durMins >= 60
+                ? `${Math.floor(durMins / 60)}h${durMins % 60 > 0 ? `${durMins % 60}m` : ""}`
+                : `${durMins}min`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Date */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <input
+          type="date" value={form.date}
+          onChange={e => set("date", e.target.value)}
+          style={{ ...inputStyle, width: "auto", flex: 1, fontSize: 14 }}
+        />
+        <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0 }}>
+          {fmtDateLabel(form.date)}
+        </span>
       </div>
-      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+
+      {/* All-day toggle */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 13, color: "var(--fg)" }}>All day</span>
+        <button
+          type="button"
+          onClick={() => set("allDay", !form.allDay)}
+          style={{
+            width: 40, height: 22, borderRadius: 9999, border: "none", cursor: "pointer",
+            background: form.allDay ? "var(--accent)" : "var(--border-strong)",
+            position: "relative", transition: "background 150ms ease",
+          }}
+        >
+          <span style={{
+            position: "absolute", top: 2,
+            left: form.allDay ? 20 : 2,
+            width: 18, height: 18, borderRadius: "50%",
+            background: "white", transition: "left 150ms ease",
+          }} />
+        </button>
+      </div>
+
+      {/* Repeat */}
+      <div>
+        <label style={labelStyle}>Repeat</label>
+        <select
+          value={form.repeat}
+          onChange={e => set("repeat", e.target.value as EventFormData["repeat"])}
+          style={{ ...inputStyle, fontSize: 14, cursor: "pointer" }}
+        >
+          <option value="none">None</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+
+      {/* Location */}
+      <div>
+        <label style={labelStyle}>Location</label>
+        <input
+          type="text" value={form.location}
+          onChange={e => set("location", e.target.value)}
+          placeholder="Add location"
+          style={{ ...inputStyle, fontSize: 14 }}
+        />
+      </div>
+
+      {/* Description */}
+      <div>
+        <label style={labelStyle}>Description</label>
+        <textarea
+          value={form.description}
+          onChange={e => set("description", e.target.value)}
+          placeholder="Add description"
+          rows={3}
+          style={{
+            ...inputStyle, fontSize: 14,
+            resize: "vertical", minHeight: 72,
+          }}
+        />
+      </div>
+
+      {/* Color picker */}
+      <div>
+        <label style={labelStyle}>Color</label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {PRESET_COLORS.map(c => (
+            <button key={c} type="button" onClick={() => set("color", c)}
+              style={{
+                width: 20, height: 20, borderRadius: "50%", background: c,
+                border: form.color === c ? "2.5px solid var(--fg)" : "2.5px solid transparent",
+                outline: form.color === c ? "2px solid var(--bg-card)" : "none",
+                outlineOffset: "-3px",
+                cursor: "pointer", padding: 0, flexShrink: 0, transition: "border 120ms ease",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 }}>
         <button
           type="button" onClick={onCancel}
-          style={{
-            padding: "5px 12px", borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "transparent",
-            color: "var(--fg-muted)",
-            fontSize: "0.75rem", cursor: "pointer",
-          }}
+          className="rounded-xl px-4 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+          style={{ color: "var(--fg)", background: "none", border: "1px solid var(--border)", cursor: "pointer" }}
         >Cancel</button>
         <button
           type="button" onClick={confirm}
-          style={{
-            padding: "5px 12px", borderRadius: 8,
-            border: "none",
-            background: color, color: "#fff",
-            fontSize: "0.75rem", fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150"
+          style={{ background: "var(--accent)", color: "white", border: "none", cursor: "pointer" }}
         >Create</button>
       </div>
     </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }}
+          onClick={onCancel}
+        />
+        <div style={{
+          position: "fixed", left: 0, right: 0, bottom: 0,
+          paddingBottom: "env(safe-area-inset-bottom)",
+          background: "var(--bg-card)",
+          borderTop: "1px solid var(--border-mid)",
+          borderRadius: "16px 16px 0 0",
+          boxShadow: "var(--shadow-float)",
+          zIndex: 50,
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}>
+          <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
+          </div>
+          <div style={{ padding: "0 0 8px", textAlign: "center" }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)" }}>New Event</span>
+          </div>
+          {content}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }}
+        onClick={onCancel}
+      />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "100%", maxWidth: 560,
+        margin: "0 16px",
+        background: "var(--bg-card)",
+        border: "1px solid var(--border-mid)",
+        borderRadius: 16,
+        boxShadow: "var(--shadow-float)",
+        zIndex: 50,
+        maxHeight: "90vh",
+        overflowY: "auto",
+      }}>
+        <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)" }}>New Event</span>
+          <button type="button" onClick={onCancel}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--fg-faint)", lineHeight: 1 }}
+          >✕</button>
+        </div>
+        {content}
+      </div>
+    </>
   );
 }
 
@@ -443,22 +593,32 @@ function lsStr(key: string, fallback: string): string {
   return localStorage.getItem(key) ?? fallback;
 }
 
-export function CalendarView({ initialView = "week", hideSidebar = false, hideHeader = false, dashboardMode = false, selectedDate, onExternalDrop }: Props) {
-  const storedView = !dashboardMode && typeof window !== "undefined"
-    ? ((localStorage.getItem("stride-calendar-view") as ViewKey) ?? initialView)
-    : (dashboardMode ? "1d" : initialView);
-  const [view, setView] = useState<ViewKey>(storedView);
+export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar = false, hideHeader = false, dashboardMode = false, selectedDate, onExternalDrop }: Props) {
+  const [view, setView] = useState<ViewKey>(dashboardMode ? "1d" : initialView);
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  // ── Calendar settings ────────────────────────────────────────────────────
-  const [calFirstDay, setCalFirstDay] = useState(() => lsStr("stride-calendar-week-start", "sunday") === "monday" ? 1 : 0);
-  const [calSlotDur, setCalSlotDur] = useState(() => lsStr("stride-slot-duration", "00:30:00"));
-  const [calSlotMin, setCalSlotMin] = useState(() => lsStr("stride-calendar-start", "00:00") + ":00");
-  const [calSlotMax, setCalSlotMax] = useState(() => lsStr("stride-calendar-end", "24:00") + ":00");
-  const [calWeekends, setCalWeekends] = useState(() => lsStr("stride-show-weekends", "true") === "true");
-  const [calTimeFormat, setCalTimeFormat] = useState(() => lsStr("stride-time-format", "12hr"));
+  // ── Calendar settings — initialised with safe server defaults, read from
+  //    localStorage in useEffect to avoid SSR/client hydration mismatches.
+  const [calFirstDay, setCalFirstDay] = useState(0);
+  const [calSlotDur, setCalSlotDur] = useState("00:30:00");
+  const [calSlotMin, setCalSlotMin] = useState("00:00:00");
+  const [calSlotMax, setCalSlotMax] = useState("24:00:00");
+  const [calWeekends, setCalWeekends] = useState(true);
+  const [calTimeFormat, setCalTimeFormat] = useState("12hr");
 
   useEffect(() => {
+    // Apply persisted settings on mount (client-only)
+    if (!dashboardMode) {
+      const saved = localStorage.getItem("stride-calendar-view") as ViewKey | null;
+      if (saved) setView(saved);
+    }
+    setCalFirstDay(lsStr("stride-calendar-week-start", "sunday") === "monday" ? 1 : 0);
+    setCalSlotDur(lsStr("stride-slot-duration", "00:30:00"));
+    setCalSlotMin(lsStr("stride-calendar-start", "00:00") + ":00");
+    setCalSlotMax(lsStr("stride-calendar-end", "24:00") + ":00");
+    setCalWeekends(lsStr("stride-show-weekends", "true") === "true");
+    setCalTimeFormat(lsStr("stride-time-format", "12hr"));
+
     const handleStorage = (e: StorageEvent) => {
       switch (e.key) {
         case "stride-calendar-view":
@@ -486,13 +646,14 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dashboardMode]);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] = useState<Partial<RoutineTemplate> | null>(null);
 
-  // Sidebar section collapse toggles
-  const [tasksExpanded, setTasksExpanded] = useState(true);
-  const [routinesExpanded, setRoutinesExpanded] = useState(true);
+  // Right-sidebar toggle state
+  const [showRoutinesSidebar, setShowRoutinesSidebar] = useState(false);
+  const [showTasksSidebar, setShowTasksSidebar] = useState(false);
 
   // Mobile routine time-picker state
   const [mobileRoutinePick, setMobileRoutinePick] = useState<RoutineTemplate | null>(null);
@@ -516,9 +677,11 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   // Keep a live ref so the wheel handler (attached once) always sees the current view
   const viewRef = useRef<ViewKey>(dashboardMode ? "1d" : initialView);
 
-  const todayStr = useMemo(() => localDateStr(new Date()), []);
+  const [todayStr, setTodayStr] = useState("");
+  useEffect(() => { setTodayStr(localDateStr(new Date())); }, []);
 
   const agendaDays = useMemo(() => {
+    if (!todayStr) return [];
     const base = new Date(todayStr + "T00:00:00");
     const days: string[] = [];
     for (let i = agendaStart; i < agendaEnd; i++) {
@@ -697,10 +860,10 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
     setTimeout(() => api.scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 }), 80);
   };
 
-  const todayLabel = useMemo(() =>
-    new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date()),
-    []
-  );
+  const [todayLabel, setTodayLabel] = useState("");
+  useEffect(() => {
+    setTodayLabel(new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date()));
+  }, []);
 
   const VIEW_LABELS: [ViewKey, string][] = [["1d", "Day"], ["2d", "2D"], ["3d", "3D"], ["4d", "4D"], ["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]];
 
@@ -721,103 +884,87 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
           </div>
 
           {!dashboardMode && (
-            <div
-              className="flex items-center gap-0.5 rounded-xl p-1"
-              style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
-            >
-              {VIEW_LABELS.map(([key, label]) => (
-                <button key={key} type="button" onClick={() => switchView(key)}
-                  className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all duration-150 ease-out"
-                  style={view === key
-                    ? { background: "var(--bg-card)", color: "var(--fg)", boxShadow: "var(--shadow-sm)" }
-                    : { color: "var(--fg-faint)" }
-                  }
-                >{label}</button>
-              ))}
+            <div className="flex items-center gap-2">
+              {/* Right sidebar toggles */}
+              <div className="hidden md:flex items-center gap-1">
+                <button
+                  type="button"
+                  title="Toggle Routines"
+                  onClick={() => setShowRoutinesSidebar(v => !v)}
+                  style={{
+                    width: 28, height: 28, borderRadius: 8, border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: showRoutinesSidebar ? "var(--accent-bg)" : "var(--bg-subtle)",
+                    color: showRoutinesSidebar ? "var(--accent)" : "var(--fg-faint)",
+                    transition: "background 150ms ease, color 150ms ease",
+                  }}
+                >
+                  {/* Loop/routine icon */}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7a5 5 0 0 1 5-5h2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M12 7a5 5 0 0 1-5 5H4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M9.5 2l1.5 1.5L9.5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4.5 12l-1.5-1.5L4.5 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Toggle Unscheduled Tasks"
+                  onClick={() => setShowTasksSidebar(v => !v)}
+                  style={{
+                    width: 28, height: 28, borderRadius: 8, border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: showTasksSidebar ? "var(--accent-bg)" : "var(--bg-subtle)",
+                    color: showTasksSidebar ? "var(--accent)" : "var(--fg-faint)",
+                    transition: "background 150ms ease, color 150ms ease",
+                  }}
+                >
+                  {/* Unscheduled tasks list icon */}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1" y="2" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="8.5" y1="4" x2="13" y2="4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    <rect x="1" y="8" width="5" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="8.5" y1="10" x2="13" y2="10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div
+                className="flex items-center gap-0.5 rounded-xl p-1"
+                style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
+              >
+                {VIEW_LABELS.map(([key, label]) => (
+                  <button key={key} type="button" onClick={() => switchView(key)}
+                    className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all duration-150 ease-out"
+                    style={view === key
+                      ? { background: "var(--bg-card)", color: "var(--fg)", boxShadow: "var(--shadow-sm)" }
+                      : { color: "var(--fg-faint)" }
+                    }
+                  >{label}</button>
+                ))}
+              </div>
             </div>
           )}
         </div>
       )}
 
+      {/* Mobile routine time-picker (hidden input) */}
+      <input
+        ref={mobileTimeRef}
+        type="time"
+        style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+        tabIndex={-1}
+        onChange={(e) => {
+          if (!mobileRoutinePick || !e.target.value) return;
+          const [h, m] = e.target.value.split(":").map(Number);
+          const today = new Date();
+          today.setHours(h ?? 0, m ?? 0, 0, 0);
+          void applyTemplatesToDay([mobileRoutinePick.id], today.toISOString().split("T")[0]!);
+          setMobileRoutinePick(null);
+        }}
+      />
+
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar — Routines + Tasks, hidden in agenda mode */}
-        {!hideSidebar && !isAgenda && (
-          <div className="hidden md:flex w-64 flex-none flex-col overflow-y-auto" style={{ borderRight: "1px solid var(--border)" }}>
-
-            {/* ── Routines section ── */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setRoutinesExpanded(v => !v)}
-                className="flex w-full items-center justify-between px-4 py-2.5 text-left"
-                style={{ background: "none", border: "none", cursor: "pointer" }}
-              >
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
-                  Routines
-                </span>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: "var(--fg-faint)", transition: "transform 150ms", transform: routinesExpanded ? "rotate(0deg)" : "rotate(-90deg)" }}>
-                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              {routinesExpanded && (
-                <RoutineTemplateStrip onManageTemplates={() => setRoutineOpen(true)} />
-              )}
-            </div>
-
-            <div className="h-px flex-none" style={{ background: "var(--border)" }} />
-
-            {/* ── Unscheduled tasks section ── */}
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setTasksExpanded(v => !v)}
-                className="flex w-full items-center justify-between px-4 py-2.5 text-left flex-none"
-                style={{ background: "none", border: "none", cursor: "pointer" }}
-              >
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
-                  Unscheduled
-                </span>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: "var(--fg-faint)", transition: "transform 150ms", transform: tasksExpanded ? "rotate(0deg)" : "rotate(-90deg)" }}>
-                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              {tasksExpanded && (
-                <div ref={taskPanelRef} className="flex-1 overflow-y-auto px-2 pb-4">
-                  {incompleteTasks.length === 0
-                    ? (
-                      <div className="px-3 py-6 text-xs text-center" style={{ color: "var(--fg-faint)" }}>
-                        No incomplete tasks
-                      </div>
-                    )
-                    : incompleteTasks.map((t) => (
-                      <div key={t.id} data-task-id={t.id} data-task-title={t.title}
-                        className="cursor-grab mb-1 rounded-xl px-3 py-2 text-sm transition-all duration-150 ease-out active:cursor-grabbing hover:bg-[var(--bg-hover)]"
-                        style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg-muted)" }}
-                      >{t.title || "(Untitled)"}</div>
-                    ))
-                  }
-                </div>
-              )}
-            </div>
-
-            {/* Mobile routine time-picker (hidden input) */}
-            <input
-              ref={mobileTimeRef}
-              type="time"
-              style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-              tabIndex={-1}
-              onChange={(e) => {
-                if (!mobileRoutinePick || !e.target.value) return;
-                const [h, m] = e.target.value.split(":").map(Number);
-                const today = new Date();
-                today.setHours(h ?? 0, m ?? 0, 0, 0);
-                void applyTemplatesToDay([mobileRoutinePick.id], today.toISOString().split("T")[0]!);
-                setMobileRoutinePick(null);
-              }}
-            />
-          </div>
-        )}
-
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Navigation bar — hidden in dashboard mode */}
           {!dashboardMode && (
@@ -1072,17 +1219,84 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
             </div>
           </div>
         </div>
+
+        {/* ── Right sidebar: Routines ── desktop only, slides in from right */}
+        {!isAgenda && (
+          <div
+            className="hidden md:flex flex-col flex-none overflow-hidden"
+            style={{
+              width: showRoutinesSidebar ? 260 : 0,
+              transition: "width 250ms cubic-bezier(0.4,0,0.2,1)",
+              borderLeft: showRoutinesSidebar ? "1px solid var(--border)" : "none",
+            }}
+          >
+            <div style={{ width: 260, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+              <div style={{ padding: "10px 16px 6px", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                  Routines
+                </span>
+              </div>
+              <div style={{ flex: 1, overflow: "auto" }}>
+                <RoutineTemplateStrip onManageTemplates={() => setRoutineOpen(true)} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Right sidebar: Unscheduled Tasks ── desktop only, slides in from right */}
+        {!isAgenda && (
+          <div
+            className="hidden md:flex flex-col flex-none overflow-hidden"
+            style={{
+              width: showTasksSidebar ? 260 : 0,
+              transition: "width 250ms cubic-bezier(0.4,0,0.2,1)",
+              borderLeft: showTasksSidebar ? "1px solid var(--border)" : "none",
+            }}
+          >
+            <div ref={taskPanelRef} style={{ width: 260, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+              <div style={{ padding: "10px 16px 6px", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                  Unscheduled
+                </span>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px 16px" }}>
+                {incompleteTasks.length === 0 ? (
+                  <div style={{ padding: "24px 12px", fontSize: 12, color: "var(--fg-faint)", textAlign: "center" }}>
+                    No incomplete tasks
+                  </div>
+                ) : incompleteTasks.map((t) => (
+                  <div
+                    key={t.id}
+                    data-task-id={t.id}
+                    data-task-title={t.title}
+                    style={{
+                      marginBottom: 4, padding: "8px 12px", borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-card)",
+                      color: "var(--fg-muted)",
+                      fontSize: 13, cursor: "grab",
+                      transition: "background 120ms ease",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "var(--bg-card)")}
+                  >{t.title || "(Untitled)"}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {pendingBlock && (
-        <NewEventPopover
+        <NewEventModal
           pending={pendingBlock}
-          onConfirm={(title, color) => {
+          onConfirm={({ title, color, allDay }) => {
             void createTimeBlock({
               type: "event", title,
               startTime: pendingBlock.startTime,
               endTime: pendingBlock.endTime,
               color,
+              allDay,
             });
             setPendingBlock(null);
           }}

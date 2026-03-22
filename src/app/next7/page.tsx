@@ -172,10 +172,11 @@ export default function Next7Page() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ task: Task; x: number; y: number } | null>(null);
-  const [view, setView] = useState<"list" | "kanban">(() => {
-    if (typeof window === "undefined") return "list";
-    return (localStorage.getItem("stride-tasks-view") as "list" | "kanban") ?? "list";
-  });
+  const [view, setView] = useState<"list" | "kanban">("list");
+  useEffect(() => {
+    const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
+    if (saved === "kanban") setView("kanban");
+  }, []);
 
   useEffect(() => {
     void loadTasks();

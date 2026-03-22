@@ -19,10 +19,10 @@ export default function Page() {
   const [routinePanelOpen, setRoutinePanelOpen] = useState(false);
   const [sidebarSheetOpen, setSidebarSheetOpen] = useState(false);
   const isMobile = useIsMobile();
-  const [routinesExpanded, setRoutinesExpanded] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("routines-sidebar-expanded") === "true";
-  });
+  const [routinesExpanded, setRoutinesExpanded] = useState(false);
+  useEffect(() => {
+    if (localStorage.getItem("routines-sidebar-expanded") === "true") setRoutinesExpanded(true);
+  }, []);
 
   const tasks             = useTaskStore((s) => s.tasks);
   const updateTask        = useTaskStore((s) => s.updateTask);

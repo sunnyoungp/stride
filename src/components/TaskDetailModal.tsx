@@ -54,10 +54,9 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const projects    = useProjectStore((s) => s.projects);
   const isMobile    = useIsMobile();
   const { height: vpHeight } = useVisualViewport();
-  const [windowHeight, setWindowHeight] = useState(
-    typeof window !== "undefined" ? window.innerHeight : 0
-  );
+  const [windowHeight, setWindowHeight] = useState(0);
   useEffect(() => {
+    setWindowHeight(window.innerHeight);
     const update = () => setWindowHeight(window.innerHeight);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);

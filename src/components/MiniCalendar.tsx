@@ -65,16 +65,19 @@ export function MiniCalendar({
   onDateChange,
   dailyNotes,
   onTaskDrop,
+  onBlockDrop,
 }: {
   selectedDate: string;
   onDateChange: (date: string) => void;
   dailyNotes: DailyNote[];
   onTaskDrop?: (taskId: string, taskTitle: string, date: string) => void;
+  onBlockDrop?: (blockType: "task" | "note", title: string, taskId: string | null, date: string) => void;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const createTask = useTaskStore((s) => s.createTask);
 
-  const today = useMemo(() => localDateString(new Date()), []);
+  const [today, setToday] = useState("");
+  useEffect(() => { setToday(localDateString(new Date())); }, []);
 
   const initParsed              = parseLocalDate(selectedDate);
   const [viewYear, setViewYear] = useState(initParsed.getFullYear());
@@ -145,20 +148,23 @@ export function MiniCalendar({
     const title     = e.dataTransfer.getData("text/task-title") || e.dataTransfer.getData("stride/taskTitle") || e.dataTransfer.getData("text/plain") || "";
 
     if (blockType === "task") {
-      // Checklist item → reschedule or create task at that date
-      if (taskId) {
+      // Checklist item drag — move block to target note + reschedule task
+      if (onBlockDrop) {
+        onBlockDrop("task", title, taskId || null, date);
+      } else if (taskId) {
+        // Fallback: just reschedule the task
         await updateTask(taskId, { dueDate: date });
       } else if (title) {
-        // Delegate to onTaskDrop for title-based lookup; fall back to creating
-        if (onTaskDrop) {
-          onTaskDrop("", title, date);
-        } else {
-          await createTask({ title, dueDate: date, status: "todo" });
-        }
+        onTaskDrop ? onTaskDrop("", title, date) : await createTask({ title, dueDate: date, status: "todo" });
       }
     } else if (blockType === "note") {
-      // Plain text block → navigate to that day's note
-      onDateChange(date);
+      // Plain text block drag — move block to target note
+      if (onBlockDrop) {
+        onBlockDrop("note", title, null, date);
+      } else {
+        // Fallback: navigate to that day's note
+        onDateChange(date);
+      }
     } else if (title) {
       // Backward compat: old drag format without block-type (e.g. task panel rows)
       onTaskDrop?.(taskId, title, date);
@@ -168,7 +174,7 @@ export function MiniCalendar({
       setFlashDate(date);
       setTimeout(() => setFlashDate(null), 350);
     }
-  }, [onTaskDrop, onDateChange, updateTask, createTask]);
+  }, [onTaskDrop, onBlockDrop, onDateChange, updateTask, createTask]);
 
   const goToToday = () => {
     const d = new Date();

@@ -462,7 +462,7 @@ function UnlinkIcon() {
 
 // ─── DailyNote component ──────────────────────────────────────────────────────
 
-export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean }) {
+export function DailyNote({ selectedDate, onDateChange, hideHeader = false, moveItemRef }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean; moveItemRef?: React.MutableRefObject<((title: string, taskId: string | null, targetDate: string) => Promise<void>) | null> }) {
   const dailyNotes        = useDailyNoteStore((s) => s.dailyNotes);
   const loadDailyNotes    = useDailyNoteStore((s) => s.loadDailyNotes);
   const getTodayNote      = useDailyNoteStore((s) => s.getTodayNote);
@@ -494,12 +494,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
 
   // Linked mode: tasks sync to task manager. Reads stride-note-linked-mode (authoritative),
   // falls back to legacy dailynote-linked-mode key for backward compat.
-  const [isLinked, setIsLinked] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const primary = localStorage.getItem("stride-note-linked-mode");
-    if (primary !== null) return primary === "true";
-    return localStorage.getItem("dailynote-linked-mode") === "true";
-  });
+  const [isLinked, setIsLinked] = useState(true); // default true; corrected after mount
   const toggleLinked = () => {
     const next = !isLinked;
     setIsLinked(next);
@@ -509,10 +504,18 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
   };
 
   // Note font-size and heading settings
-  const [noteFontSize,  setNoteFontSize]  = useState(() =>
-    typeof window !== "undefined" ? (localStorage.getItem("stride-note-font-size") ?? "14px") : "14px"
-  );
+  const [noteFontSize,  setNoteFontSize]  = useState("14px");
   useEffect(() => {
+    // Read persisted settings on mount (client-only, avoids SSR mismatch)
+    const primary = localStorage.getItem("stride-note-linked-mode");
+    if (primary !== null) {
+      setIsLinked(primary === "true");
+    } else {
+      setIsLinked(localStorage.getItem("dailynote-linked-mode") === "true");
+    }
+    const savedSize = localStorage.getItem("stride-note-font-size");
+    if (savedSize) setNoteFontSize(savedSize);
+
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-note-linked-mode") setIsLinked(e.newValue === "true");
       if (e.key === "stride-note-font-size" && e.newValue) setNoteFontSize(e.newValue);
@@ -983,12 +986,14 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false }: { 
     }
     await updateNoteContent(targetNote.id, JSON.stringify({ ...targetDoc, content: contentArr }));
 
-    // Update linked task dueDate and remove from pending set
-    if (taskId) {
-      await updateTaskRef.current(taskId, { dueDate: targetDate });
-      pendingMoveRef.current.delete(taskId);
-    }
+    // Move only — do not reschedule the task's dueDate here.
+    // Callers that want to also reschedule (e.g. drag-to-mini-calendar) handle it separately.
   }, [updateNoteContent]);
+
+  // Expose handleMoveItem to parent via ref so external drop targets can trigger it
+  useEffect(() => {
+    if (moveItemRef) moveItemRef.current = handleMoveItem;
+  }, [handleMoveItem, moveItemRef]);
 
   /**
    * Delete a checklist item from the editor.

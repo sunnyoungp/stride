@@ -28,6 +28,7 @@ function localDateString(d: Date): string {
 }
 
 function formatDashboardDate(date: string, today: string): string {
+  if (!date || !today) return "";
   const d = new Date(date + "T00:00:00");
   const dayStr = new Intl.DateTimeFormat("en-US", {
     weekday: "short", month: "short", day: "numeric",
@@ -54,17 +55,22 @@ export default function Page() {
   const createTimeBlock   = useTimeBlockStore((s) => s.createTimeBlock);
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
-  const [today, setToday] = useState<string>(() => localDateString(new Date()));
+  const [today, setToday] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+
   useEffect(() => {
+    const now = localDateString(new Date());
+    setToday(now);
+    setSelectedDate(now);
     const id = setInterval(() => {
-      const now = localDateString(new Date());
-      setToday((prev) => (prev !== now ? now : prev));
+      const d = localDateString(new Date());
+      setToday((prev) => {
+        if (prev !== d) setSelectedDate(d); // reset view to new day at midnight
+        return prev !== d ? d : prev;
+      });
     }, 60_000);
     return () => clearInterval(id);
   }, []);
-
-  const [selectedDate, setSelectedDate] = useState<string>(today);
-  useEffect(() => { setSelectedDate(today); }, [today]);
 
   const [contentDimmed, setContentDimmed] = useState(false);
   useEffect(() => {

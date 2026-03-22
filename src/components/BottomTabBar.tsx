@@ -139,9 +139,12 @@ function computeFromConfig(): { tabs: NavItem[]; more: (NavItem | typeof SETTING
 export function BottomTabBar() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [{ tabs, more }, setNav] = useState(computeFromConfig);
+  const [{ tabs, more }, setNav] = useState<{ tabs: NavItem[]; more: (NavItem | typeof SETTINGS_ITEM)[] }>(
+    () => ({ tabs: DEFAULT_TABS, more: DEFAULT_MORE })
+  );
 
   useEffect(() => {
+    setNav(computeFromConfig());
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-nav-config") setNav(computeFromConfig());
     };

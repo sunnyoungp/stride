@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DailyNote } from "@/components/DailyNote";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
@@ -103,6 +103,9 @@ export default function NotesPage() {
   const createTask = useTaskStore(s => s.createTask);
   const tasks      = useTaskStore(s => s.tasks);
 
+  // Ref to DailyNote's internal handleMoveItem so MiniCalendar drops can trigger it
+  const dailyNoteMoveRef = useRef<((title: string, taskId: string | null, targetDate: string) => Promise<void>) | null>(null);
+
   const handleTaskDrop = (taskId: string, taskTitle: string, date: string) => {
     if (taskId) {
       void updateTask(taskId, { dueDate: date });
@@ -114,6 +117,16 @@ export default function NotesPage() {
       } else {
         void createTask({ title: taskTitle, status: "todo", dueDate: date });
       }
+    }
+  };
+
+  const handleBlockDrop = (blockType: "task" | "note", title: string, taskId: string | null, date: string) => {
+    if (!title) return;
+    // Move the block from current note to target date's note
+    void dailyNoteMoveRef.current?.(title, taskId, date);
+    // For task blocks, also reschedule the linked task's due date
+    if (blockType === "task" && taskId) {
+      void updateTask(taskId, { dueDate: date });
     }
   };
 
@@ -181,7 +194,7 @@ export default function NotesPage() {
             flex: 1, overflow: "auto",
             paddingBottom: calendarOpen ? 0 : "calc(56px + env(safe-area-inset-bottom))",
           }}>
-            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader />
+            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader moveItemRef={dailyNoteMoveRef} />
           </div>
         </div>
 
@@ -204,6 +217,7 @@ export default function NotesPage() {
               onDateChange={setSelectedDate}
               dailyNotes={dailyNotes}
               onTaskDrop={handleTaskDrop}
+              onBlockDrop={handleBlockDrop}
             />
           </div>
         )}
@@ -239,7 +253,7 @@ export default function NotesPage() {
             {dateNav}
             {/* Editor body */}
             <div style={{ flex: 1, overflow: "auto" }}>
-              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader />
+              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader moveItemRef={dailyNoteMoveRef} />
             </div>
           </div>
         </div>
@@ -266,6 +280,7 @@ export default function NotesPage() {
                 onDateChange={setSelectedDate}
                 dailyNotes={dailyNotes}
                 onTaskDrop={handleTaskDrop}
+                onBlockDrop={handleBlockDrop}
               />
             </div>
           </div>

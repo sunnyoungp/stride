@@ -37,7 +37,8 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [clampedPos, setClampedPos] = useState(position);
-  const [isPinned, setIsPinned] = useState(() => getPinnedDocIds().has(doc.id));
+  const [isPinned, setIsPinned] = useState(false);
+  useEffect(() => { setIsPinned(getPinnedDocIds().has(doc.id)); }, [doc.id]);
 
   useEffect(() => {
     const el = menuRef.current;

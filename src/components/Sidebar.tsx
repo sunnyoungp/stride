@@ -421,7 +421,7 @@ export function Sidebar() {
   const documents     = useDocumentStore((s) => s.documents);
   const loadDocuments = useDocumentStore((s) => s.loadDocuments);
 
-  const [pinnedDocIds, setPinnedDocIds] = useState<Set<string>>(getPinnedDocIds);
+  const [pinnedDocIds, setPinnedDocIds] = useState<Set<string>>(new Set());
 
   const updateTask     = useTaskStore((s) => s.updateTask);
   const draggingTaskId = useDragStore((s) => s.draggingTaskId);
@@ -467,7 +467,7 @@ export function Sidebar() {
 
   // Manage sections modal
   const [showManage, setShowManage] = useState(false);
-  const [hiddenSectionIds, setHiddenSectionIdsState] = useState<Set<string>>(getHiddenSectionIds);
+  const [hiddenSectionIds, setHiddenSectionIdsState] = useState<Set<string>>(new Set());
 
   const pathname = usePathname();
 
@@ -495,12 +495,18 @@ export function Sidebar() {
     } catch { return NAV_ITEMS; }
   };
 
-  const [visibleNavItems, setVisibleNavItems] = useState<typeof NAV_ITEMS>(parseNavConfig);
+  const [visibleNavItems, setVisibleNavItems] = useState<typeof NAV_ITEMS>(NAV_ITEMS);
 
   useEffect(() => {
+    // Read persisted state on mount (client-only, avoids SSR mismatch)
+    setVisibleNavItems(parseNavConfig());
+    setPinnedDocIds(getPinnedDocIds());
+    setHiddenSectionIdsState(getHiddenSectionIds());
+
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-nav-config") setVisibleNavItems(parseNavConfig());
       if (e.key === PINNED_DOCS_KEY) setPinnedDocIds(getPinnedDocIds());
+      if (e.key === HIDDEN_SECTIONS_KEY) setHiddenSectionIdsState(getHiddenSectionIds());
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);

@@ -94,9 +94,10 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
   const createSection   = useSectionStore((s) => s.createSection);
 
   const [activeId, setActiveId]           = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem("stride-show-completed") === "true"
-  );
+  const [showCompleted, setShowCompleted] = useState(false);
+  useEffect(() => {
+    if (localStorage.getItem("stride-show-completed") === "true") setShowCompleted(true);
+  }, []);
   const [showLoading, setShowLoading]     = useState(true);
   const [contextMenu, setContextMenu]     = useState<{ task: Task; x: number; y: number } | null>(null);
   const [collapsed, setCollapsed]         = useState<Record<string, boolean>>({});

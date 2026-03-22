@@ -50,10 +50,11 @@ export function SelectionActionBar({
     onClear();
   };
 
-  const handleReschedule = (date: string) => {
+  const handleReschedule = async (date: string) => {
     if (!date) return;
     const ids = [...selectedIds]; // snapshot before onClear can change the set
-    for (const id of ids) void updateTask(id, { dueDate: date });
+    console.log(`[bulk reschedule] processing ${ids.length} tasks to ${date}`);
+    for (const id of ids) await updateTask(id, { dueDate: date });
     onClear();
   };
 
@@ -122,7 +123,7 @@ export function SelectionActionBar({
         <input
           ref={dateInputRef}
           type="date"
-          onChange={(e) => handleReschedule(e.target.value)}
+          onChange={(e) => void handleReschedule(e.target.value)}
           style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
           tabIndex={-1}
         />

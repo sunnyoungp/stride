@@ -2,10 +2,7 @@
 import { useEffect, useState } from "react";
 
 export function useVisualViewport() {
-  const [viewport, setViewport] = useState({
-    height: typeof window !== "undefined" ? window.innerHeight : 0,
-    offsetTop: 0,
-  });
+  const [viewport, setViewport] = useState({ height: 0, offsetTop: 0 });
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
