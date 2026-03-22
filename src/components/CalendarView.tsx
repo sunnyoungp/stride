@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
+import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
+import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
 import { TimeBlockContextMenu } from "@/components/TimeBlockContextMenu";
 import { TimeBlockPopover } from "@/components/TimeBlockPopover";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
@@ -487,6 +489,15 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   }, [dashboardMode]);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] = useState<Partial<RoutineTemplate> | null>(null);
+
+  // Sidebar section collapse toggles
+  const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [routinesExpanded, setRoutinesExpanded] = useState(true);
+
+  // Mobile routine time-picker state
+  const [mobileRoutinePick, setMobileRoutinePick] = useState<RoutineTemplate | null>(null);
+  const mobileTimeRef = useRef<HTMLInputElement | null>(null);
+  const applyTemplatesToDay = useRoutineTemplateStore((s) => s.applyTemplatesToDay);
   const [currentTitle, setCurrentTitle] = useState("");
   const [isViewingToday, setIsViewingToday] = useState(true);
 
@@ -611,6 +622,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
       const color = b.color ?? DEFAULT_BLOCK_COLOR;
       return {
         id: b.id, title: b.title, start: b.startTime, end: b.endTime,
+        allDay: b.allDay ?? false,
         backgroundColor: hexToRgba(color, 0.15),
         borderColor: hexToRgba(color, 0.4),
         textColor: color,
@@ -623,6 +635,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
         title: "New Event",
         start: pendingBlock.startTime,
         end: pendingBlock.endTime,
+        allDay: false,
         backgroundColor: hexToRgba(DEFAULT_BLOCK_COLOR, 0.08),
         borderColor: hexToRgba(DEFAULT_BLOCK_COLOR, 0.35),
         textColor: DEFAULT_BLOCK_COLOR,
@@ -633,6 +646,16 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
   }, [timeBlocks, pendingBlock]);
 
   useEffect(() => { void loadTimeBlocks(); void loadTasks(); void loadDailyNotes(); }, [loadTasks, loadTimeBlocks, loadDailyNotes]);
+
+  // Scroll calendar to current time on initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const now = new Date();
+      calendarRef.current?.getApi().scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 });
+    }, 120);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const incompleteTasks = useMemo(() => tasks.filter((t) => t.status !== "done" && t.status !== "cancelled"), [tasks]);
 
@@ -714,34 +737,81 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Tasks sidebar — hidden in agenda mode */}
+        {/* Sidebar — Routines + Tasks, hidden in agenda mode */}
         {!hideSidebar && !isAgenda && (
-          <div className="w-64 flex-none overflow-y-auto" style={{ borderRight: "1px solid var(--border)" }}>
-            <div
-              className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest"
-              style={{ color: "var(--fg-faint)" }}
-            >
-              Tasks
+          <div className="hidden md:flex w-64 flex-none flex-col overflow-y-auto" style={{ borderRight: "1px solid var(--border)" }}>
+
+            {/* ── Routines section ── */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setRoutinesExpanded(v => !v)}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left"
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                  Routines
+                </span>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: "var(--fg-faint)", transition: "transform 150ms", transform: routinesExpanded ? "rotate(0deg)" : "rotate(-90deg)" }}>
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {routinesExpanded && (
+                <RoutineTemplateStrip onManageTemplates={() => setRoutineOpen(true)} />
+              )}
             </div>
-            <div ref={taskPanelRef} className="px-2 pb-4">
-              {incompleteTasks.length === 0
-                ? (
-                  <div className="px-3 py-6 text-xs text-center" style={{ color: "var(--fg-faint)" }}>
-                    No incomplete tasks
-                  </div>
-                )
-                : incompleteTasks.map((t) => (
-                  <div key={t.id} data-task-id={t.id} data-task-title={t.title}
-                    className="cursor-grab mb-1 rounded-xl px-3 py-2 text-sm transition-all duration-150 ease-out active:cursor-grabbing hover:bg-[var(--bg-hover)]"
-                    style={{
-                      border: "1px solid var(--border)",
-                      background: "var(--bg-subtle)",
-                      color: "var(--fg-muted)",
-                    }}
-                  >{t.title || "(Untitled)"}</div>
-                ))
-              }
+
+            <div className="h-px flex-none" style={{ background: "var(--border)" }} />
+
+            {/* ── Unscheduled tasks section ── */}
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setTasksExpanded(v => !v)}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left flex-none"
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                  Unscheduled
+                </span>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: "var(--fg-faint)", transition: "transform 150ms", transform: tasksExpanded ? "rotate(0deg)" : "rotate(-90deg)" }}>
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {tasksExpanded && (
+                <div ref={taskPanelRef} className="flex-1 overflow-y-auto px-2 pb-4">
+                  {incompleteTasks.length === 0
+                    ? (
+                      <div className="px-3 py-6 text-xs text-center" style={{ color: "var(--fg-faint)" }}>
+                        No incomplete tasks
+                      </div>
+                    )
+                    : incompleteTasks.map((t) => (
+                      <div key={t.id} data-task-id={t.id} data-task-title={t.title}
+                        className="cursor-grab mb-1 rounded-xl px-3 py-2 text-sm transition-all duration-150 ease-out active:cursor-grabbing hover:bg-[var(--bg-hover)]"
+                        style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg-muted)" }}
+                      >{t.title || "(Untitled)"}</div>
+                    ))
+                  }
+                </div>
+              )}
             </div>
+
+            {/* Mobile routine time-picker (hidden input) */}
+            <input
+              ref={mobileTimeRef}
+              type="time"
+              style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+              tabIndex={-1}
+              onChange={(e) => {
+                if (!mobileRoutinePick || !e.target.value) return;
+                const [h, m] = e.target.value.split(":").map(Number);
+                const today = new Date();
+                today.setHours(h ?? 0, m ?? 0, 0, 0);
+                void applyTemplatesToDay([mobileRoutinePick.id], today.toISOString().split("T")[0]!);
+                setMobileRoutinePick(null);
+              }}
+            />
           </div>
         )}
 
@@ -811,7 +881,11 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 type="button"
                 onClick={() => {
                   if (isAgenda) { scrollToToday(); return; }
-                  calendarRef.current?.getApi().gotoDate(defaultStart(view));
+                  const api = calendarRef.current?.getApi();
+                  if (!api) return;
+                  api.gotoDate(defaultStart(view));
+                  const now = new Date();
+                  setTimeout(() => api.scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 }), 50);
                 }}
                 style={{
                   padding: "3px 10px", borderRadius: 9999,
@@ -901,7 +975,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 headerToolbar={false}
                 height="100%"
                 nowIndicator
-                allDaySlot={false}
+                allDaySlot
                 firstDay={calFirstDay}
                 slotDuration={calSlotDur}
                 slotMinTime={calSlotMin}

@@ -8,6 +8,7 @@ type Props = {
   task: Task;
   position: { x: number; y: number };
   onClose: () => void;
+  selectedIds?: Set<string>;
 };
 
 function localDateString(d: Date) {
@@ -29,7 +30,7 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; style: React.CSSPr
   { value: "high",   label: "High",   style: { background: "var(--priority-high)" } },
 ];
 
-export function TaskContextMenu({ task, position, onClose }: Props) {
+export function TaskContextMenu({ task, position, onClose, selectedIds }: Props) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const menuRef    = useRef<HTMLDivElement | null>(null);
@@ -53,15 +54,19 @@ export function TaskContextMenu({ task, position, onClose }: Props) {
     return () => window.removeEventListener("pointerdown", h);
   }, [onClose]);
 
-  const reschedule = async (dueDate: string) => { await updateTask(task.id, { dueDate }); onClose(); };
+  const reschedule = async (dueDate: string) => {
+    const ids = selectedIds && selectedIds.size > 1 ? selectedIds : new Set([task.id]);
+    for (const id of ids) await updateTask(id, { dueDate });
+    onClose();
+  };
   const markComplete = async () => { await updateTask(task.id, { status: "done" }); onClose(); };
   const onDelete = async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } };
 
   return (
     <div
       ref={menuRef}
-      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-lg)" }}
-      className="fixed z-50 w-[240px] select-none rounded-2xl p-1"
+      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-lg)", zIndex: 9999 }}
+      className="fixed w-[240px] select-none rounded-2xl p-1"
       role="menu"
     >
       {/* Task label */}

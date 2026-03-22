@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +13,147 @@ import { useDragStore } from "@/store/dragStore";
 import { useUIStore } from "@/store/uiStore";
 import { SectionContextMenu } from "@/components/SectionContextMenu";
 import { ProjectContextMenu } from "@/components/ProjectContextMenu";
+import { useDocumentStore } from "@/store/documentStore";
 import type { TaskSection, Project } from "@/types/index";
+
+const PINNED_DOCS_KEY = "stride-pinned-docs";
+function getPinnedDocIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try { return new Set(JSON.parse(localStorage.getItem(PINNED_DOCS_KEY) ?? "[]") as string[]); }
+  catch { return new Set(); }
+}
+
+const HIDDEN_SECTIONS_KEY = "stride-hidden-sections";
+
+function getHiddenSectionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_SECTIONS_KEY) ?? "[]") as string[]); }
+  catch { return new Set(); }
+}
+
+function setHiddenSectionIds(ids: Set<string>) {
+  localStorage.setItem(HIDDEN_SECTIONS_KEY, JSON.stringify([...ids]));
+}
+
+// ── ManageSectionsModal ────────────────────────────────────────────────────────
+
+function ManageSectionsModal({
+  sections,
+  onClose,
+  onSave,
+}: {
+  sections: TaskSection[];
+  onClose: () => void;
+  onSave: (orderedIds: string[], hiddenIds: Set<string>) => void;
+}) {
+  const [order, setOrder] = useState(() => sections.map((s) => s.id));
+  const [hidden, setHidden] = useState<Set<string>>(getHiddenSectionIds);
+  const dragIdx = useRef<number | null>(null);
+
+  const sectionMap = new Map(sections.map((s) => [s.id, s]));
+
+  const move = (from: number, to: number) => {
+    setOrder((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item!);
+      return next;
+    });
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.3)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm rounded-2xl mx-4 overflow-hidden"
+        style={{ background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-float)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h2 className="text-sm font-semibold" style={{ color: "var(--fg)" }}>Manage Sections</h2>
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xs hover:bg-[var(--bg-hover)] transition-colors" style={{ color: "var(--fg-faint)" }}>✕</button>
+        </div>
+
+        <p className="px-5 pb-3 text-xs" style={{ color: "var(--fg-faint)" }}>
+          Drag to reorder · Toggle eye to hide
+        </p>
+
+        {/* Section list */}
+        <div className="px-3 pb-3 flex flex-col gap-1">
+          {order.map((id, idx) => {
+            const s = sectionMap.get(id);
+            if (!s) return null;
+            const isHidden = hidden.has(id);
+            return (
+              <div
+                key={id}
+                draggable
+                onDragStart={() => { dragIdx.current = idx; }}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={() => {
+                  if (dragIdx.current !== null && dragIdx.current !== idx) {
+                    move(dragIdx.current, idx);
+                  }
+                  dragIdx.current = null;
+                }}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--bg-hover)]"
+                style={{ cursor: "grab", background: "var(--bg-subtle)", opacity: isHidden ? 0.5 : 1 }}
+              >
+                {/* Grip */}
+                <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" style={{ color: "var(--fg-faint)", flexShrink: 0 }}>
+                  <circle cx="3" cy="3" r="1.3"/><circle cx="9" cy="3" r="1.3"/>
+                  <circle cx="3" cy="8" r="1.3"/><circle cx="9" cy="8" r="1.3"/>
+                  <circle cx="3" cy="13" r="1.3"/><circle cx="9" cy="13" r="1.3"/>
+                </svg>
+
+                {/* Icon + title */}
+                <span className="flex-1 flex items-center gap-2 text-sm" style={{ color: "var(--fg)" }}>
+                  {s.icon && <span className="text-base">{s.icon}</span>}
+                  {s.title}
+                </span>
+
+                {/* Visibility toggle */}
+                <button
+                  type="button"
+                  onClick={() => setHidden((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id); else next.add(id);
+                    return next;
+                  })}
+                  className="rounded-lg p-1 transition-colors hover:bg-[var(--bg-hover)]"
+                  style={{ color: isHidden ? "var(--fg-faint)" : "var(--fg-muted)" }}
+                  title={isHidden ? "Show" : "Hide"}
+                >
+                  {isHidden
+                    ? <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M5.3 5.4A2.5 2.5 0 009.5 9M2 4.5C3.3 3 5 2 7 2c2 0 3.7 1 5 2.5M12 9.5C10.7 11 9 12 7 12c-2 0-3.7-1-5-2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    : <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><ellipse cx="7" cy="7" rx="5.5" ry="3.5" stroke="currentColor" strokeWidth="1.3"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>
+                  }
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 px-5 py-4" style={{ borderTop: "1px solid var(--border)" }}>
+          <button type="button" onClick={onClose}
+            className="rounded-xl px-3 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+            style={{ color: "var(--fg)" }}
+          >Cancel</button>
+          <button type="button" onClick={() => { onSave(order, hidden); onClose(); }}
+            className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150"
+            style={{ background: "var(--accent)", color: "white" }}
+          >Save</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 const NAV_ITEMS = [
   {
@@ -267,6 +408,11 @@ export function Sidebar() {
   const projects     = useProjectStore((s) => s.projects);
   const loadProjects = useProjectStore((s) => s.loadProjects);
 
+  const documents     = useDocumentStore((s) => s.documents);
+  const loadDocuments = useDocumentStore((s) => s.loadDocuments);
+
+  const [pinnedDocIds, setPinnedDocIds] = useState<Set<string>>(getPinnedDocIds);
+
   const updateTask     = useTaskStore((s) => s.updateTask);
   const draggingTaskId = useDragStore((s) => s.draggingTaskId);
   const openSearch     = useUIStore((s) => s.openSearch);
@@ -308,6 +454,10 @@ export function Sidebar() {
   // Recently deleted popover
   const [showDeleted, setShowDeleted] = useState(false);
 
+  // Manage sections modal
+  const [showManage, setShowManage] = useState(false);
+  const [hiddenSectionIds, setHiddenSectionIdsState] = useState<Set<string>>(getHiddenSectionIds);
+
   const pathname = usePathname();
 
   // Detect collapsed state (md breakpoint: 768px–1023px)
@@ -339,6 +489,7 @@ export function Sidebar() {
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-nav-config") setVisibleNavItems(parseNavConfig());
+      if (e.key === PINNED_DOCS_KEY) setPinnedDocIds(getPinnedDocIds());
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -347,8 +498,9 @@ export function Sidebar() {
 
   useEffect(() => {
     void loadProjects();
+    void loadDocuments();
     setIsDark(document.documentElement.classList.contains("dark"));
-  }, [loadProjects]);
+  }, [loadProjects, loadDocuments]);
 
   const toggleDark = () => {
     const next = !isDark;
@@ -547,20 +699,34 @@ export function Sidebar() {
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--fg-faint)" }}>
             Sections
           </span>
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="flex h-4 w-4 items-center justify-center rounded-full text-xs transition-all duration-150 hover:opacity-80"
-            style={{ color: "var(--fg-faint)" }}
-            title="New section"
-          >
-            +
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowManage(true)}
+              className="flex h-4 w-4 items-center justify-center rounded transition-all duration-150 hover:opacity-80"
+              style={{ color: "var(--fg-faint)" }}
+              title="Manage sections"
+            >
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.9 2.9l1.1 1.1M10 10l1.1 1.1M2.9 11.1L4 10M10 4l1.1-1.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="flex h-4 w-4 items-center justify-center rounded-full text-xs transition-all duration-150 hover:opacity-80"
+              style={{ color: "var(--fg-faint)" }}
+              title="New section"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* Pill grid */}
         <div className="flex flex-wrap gap-1.5">
-          {sections.map((s) => {
+          {sections.filter((s) => !hiddenSectionIds.has(s.id)).map((s) => {
             const c = getSectionColor(s);
             const isDropTarget = draggingTaskId !== null && hoverSectionId === s.id;
             const isRenaming   = renamingId === s.id;
@@ -747,6 +913,39 @@ export function Sidebar() {
         </div>
       )}
 
+      {/* ── Pinned documents ── */}
+      {pinnedDocIds.size > 0 && (() => {
+        const pinned = documents.filter((d) => pinnedDocIds.has(d.id));
+        if (pinned.length === 0) return null;
+        return (
+          <div className="mt-5 flex-none px-4">
+            <div className="mb-2.5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--fg-faint)" }}>
+                Pinned
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {pinned.map((d) => (
+                <Link
+                  key={d.id}
+                  href={`/documents/${d.id}`}
+                  className="flex h-8 items-center gap-2 rounded-lg px-2 text-[13px] transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+                  style={{ color: "var(--fg-muted)" }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, color: "var(--fg-faint)" }}>
+                    <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                    <line x1="3" y1="4" x2="9" y2="4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity=".7"/>
+                    <line x1="3" y1="6" x2="7.5" y2="6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity=".7"/>
+                    <line x1="3" y1="8" x2="6.5" y2="8" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity=".7"/>
+                  </svg>
+                  <span className="truncate">{d.title || "Untitled"}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Spacer ── */}
       <div className="flex-1" />
 
@@ -830,6 +1029,21 @@ export function Sidebar() {
           project={projectMenu.project}
           position={{ x: projectMenu.x, y: projectMenu.y }}
           onClose={() => setProjectMenu(null)}
+        />
+      )}
+
+      {showManage && (
+        <ManageSectionsModal
+          sections={[...sections].sort((a, b) => a.order - b.order)}
+          onClose={() => setShowManage(false)}
+          onSave={(orderedIds, hiddenIds) => {
+            orderedIds.forEach((id, idx) => {
+              const s = sections.find((sec) => sec.id === id);
+              if (s && s.order !== idx) void updateSection(id, { order: idx });
+            });
+            setHiddenSectionIds(hiddenIds);
+            setHiddenSectionIdsState(new Set(hiddenIds));
+          }}
         />
       )}
     </div>

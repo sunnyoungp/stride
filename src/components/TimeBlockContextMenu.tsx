@@ -39,8 +39,8 @@ export function TimeBlockContextMenu({ timeBlock, position, onClose, onEdit, onD
   return (
     <div
       ref={menuRef}
-      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-lg)" }}
-      className="fixed z-50 w-[220px] select-none rounded-xl p-1"
+      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-lg)", zIndex: 9999 }}
+      className="fixed w-[220px] select-none rounded-xl p-1"
       role="menu"
     >
       {/* Label */}

@@ -174,42 +174,38 @@ export default function NotesPage() {
           {calendarToggleBtn}
         </div>
 
-        {/* Editor fills screen */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg-card)" }}>
-            {dateNav}
-            <div style={{ flex: 1, overflow: "auto" }}>
-              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader />
-            </div>
+        {/* Editor — scrollable above the calendar sheet */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", background: "var(--bg-card)" }}>
+          {dateNav}
+          <div style={{
+            flex: 1, overflow: "auto",
+            paddingBottom: calendarOpen ? 0 : "calc(56px + env(safe-area-inset-bottom))",
+          }}>
+            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader />
           </div>
         </div>
 
-        {/* Calendar overlay — full-screen drop-down panel */}
+        {/* Persistent bottom sheet calendar */}
         {calendarOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              onClick={() => setCalendarOpen(false)}
-              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 40 }}
-            />
-            {/* Panel */}
-            <div style={{
-              position: "fixed", top: 44, left: 0, right: 0,
-              zIndex: 41,
-              background: "var(--bg-card)",
-              borderBottom: "1px solid var(--border)",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-              maxHeight: "70vh",
-              overflowY: "auto",
-            }}>
-              <MiniCalendar
-                selectedDate={selectedDate}
-                onDateChange={(d) => { setSelectedDate(d); setCalendarOpen(false); }}
-                dailyNotes={dailyNotes}
-                onTaskDrop={handleTaskDrop}
-              />
+          <div style={{
+            flexShrink: 0,
+            height: "42vh",
+            background: "var(--bg-card)",
+            borderTop: "1px solid var(--border-mid)",
+            overflowY: "auto",
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}>
+            {/* Drag handle */}
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+              <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
             </div>
-          </>
+            <MiniCalendar
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              dailyNotes={dailyNotes}
+              onTaskDrop={handleTaskDrop}
+            />
+          </div>
         )}
       </div>
     );

@@ -78,10 +78,12 @@ function KanbanCardVisual({
   task,
   accentColor,
   style,
+  onSubtaskClick,
 }: {
   task: Task;
   accentColor: string;
   style?: CSSProperties;
+  onSubtaskClick?: (t: Task, pos: { x: number; y: number }) => void;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const allTasks = useTaskStore((s) => s.tasks);
@@ -89,6 +91,7 @@ function KanbanCardVisual({
   const isDone = task.status === "done";
   const subtasks = allTasks.filter((t) => t.parentTaskId === task.id);
   const doneSubs = subtasks.filter((t) => t.status === "done").length;
+  const [subsExpanded, setSubsExpanded] = useState(true);
 
   const pColor = priorityColor(task.priority);
 
@@ -113,7 +116,6 @@ function KanbanCardVisual({
 
   return (
     <div
-      onClick={(e) => e.stopPropagation()}
       style={{
         background: "var(--bg-card)",
         borderRadius: 12,
@@ -172,10 +174,66 @@ function KanbanCardVisual({
         </button>
       </div>
 
-      {/* Subtasks badge */}
+      {/* Subtasks — collapsible */}
       {subtasks.length > 0 && (
-        <div style={{ marginTop: 6, fontSize: 11, color: "var(--fg-faint)" }}>
-          {doneSubs}/{subtasks.length} subtasks
+        <div style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setSubsExpanded(v => !v); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              background: "none", border: "none", padding: 0,
+              cursor: "pointer", color: "var(--fg-faint)", fontSize: 11,
+            }}
+          >
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ transition: "transform 150ms", transform: subsExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+              <path d="M2 1.5L5.5 4L2 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {doneSubs}/{subtasks.length} subtasks
+          </button>
+          {subsExpanded && (
+            <div style={{ marginTop: 5, display: "flex", flexDirection: "column", gap: 3 }}>
+              {subtasks.map((st) => {
+                const stDone = st.status === "done";
+                return (
+                  <div
+                    key={st.id}
+                    onClick={(e) => { e.stopPropagation(); onSubtaskClick?.(st, { x: e.clientX, y: e.clientY }); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "3px 4px", borderRadius: 6,
+                      cursor: "pointer", transition: "background 100ms",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void updateTask(st.id, { status: stDone ? "todo" : "done" });
+                      }}
+                      style={{
+                        flexShrink: 0, width: 14, height: 14, borderRadius: "50%",
+                        border: `1.5px solid ${stDone ? accentColor : "var(--border-mid)"}`,
+                        background: stDone ? accentColor : "transparent",
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+                      }}
+                    >
+                      {stDone && (
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                          <path d="M1.5 4l2 2L6.5 2" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                    <span style={{ fontSize: 12, color: stDone ? "var(--fg-faint)" : "var(--fg-muted)", textDecoration: stDone ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                      {st.title || "(Untitled)"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -265,7 +323,7 @@ function KanbanCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <KanbanCardVisual task={task} accentColor={accentColor} style={cardStyle} />
+      <KanbanCardVisual task={task} accentColor={accentColor} style={cardStyle} onSubtaskClick={onTaskClick} />
     </div>
   );
 }

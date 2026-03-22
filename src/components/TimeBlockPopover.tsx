@@ -19,7 +19,21 @@ function toLocalInputValue(iso: string) {
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+function toDateInputValue(iso: string) {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
 function fromLocalInputValue(v: string) { return new Date(v).toISOString(); }
+
+function allDayTimes(dateStr: string): { startTime: string; endTime: string } {
+  const d = new Date(dateStr + "T00:00:00");
+  const startTime = d.toISOString();
+  d.setDate(d.getDate() + 1);
+  const endTime = d.toISOString();
+  return { startTime, endTime };
+}
 
 export function TimeBlockPopover({ timeBlock, position, onClose }: Props) {
   const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
@@ -78,20 +92,67 @@ export function TimeBlockPopover({ timeBlock, position, onClose }: Props) {
         <button onClick={onClose} className="rounded-lg px-2 py-1 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]" style={{ color: "var(--fg-faint)" }}>✕</button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>Start</div>
-          <input type="datetime-local" value={toLocalInputValue(timeBlock.startTime)}
-            onChange={(e) => void updateTimeBlock(timeBlock.id, { startTime: fromLocalInputValue(e.target.value) })}
-            className={inputClass} style={inputStyle} />
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>End</div>
-          <input type="datetime-local" value={toLocalInputValue(timeBlock.endTime)}
-            onChange={(e) => void updateTimeBlock(timeBlock.id, { endTime: fromLocalInputValue(e.target.value) })}
-            className={inputClass} style={inputStyle} />
-        </div>
+      {/* All day toggle */}
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (!timeBlock.allDay) {
+              const times = allDayTimes(toDateInputValue(timeBlock.startTime));
+              void updateTimeBlock(timeBlock.id, { ...times, allDay: true });
+            } else {
+              // Revert to a 1-hour slot at noon on the same day
+              const d = new Date(timeBlock.startTime);
+              d.setHours(12, 0, 0, 0);
+              const startTime = d.toISOString();
+              d.setHours(13);
+              void updateTimeBlock(timeBlock.id, { startTime, endTime: d.toISOString(), allDay: false });
+            }
+          }}
+          className="flex items-center gap-1.5 text-xs transition-all duration-150"
+          style={{ color: timeBlock.allDay ? "var(--accent)" : "var(--fg-muted)", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+        >
+          <div style={{
+            width: 28, height: 16, borderRadius: 8, transition: "background 150ms",
+            background: timeBlock.allDay ? "var(--accent)" : "var(--bg-subtle)",
+            border: "1px solid var(--border-mid)",
+            position: "relative", flexShrink: 0,
+          }}>
+            <div style={{
+              position: "absolute", top: 2, left: timeBlock.allDay ? 14 : 2,
+              width: 10, height: 10, borderRadius: "50%",
+              background: timeBlock.allDay ? "#fff" : "var(--fg-faint)",
+              transition: "left 150ms",
+            }} />
+          </div>
+          All day
+        </button>
       </div>
+
+      {!timeBlock.allDay && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>Start</div>
+            <input type="datetime-local" value={toLocalInputValue(timeBlock.startTime)}
+              onChange={(e) => void updateTimeBlock(timeBlock.id, { startTime: fromLocalInputValue(e.target.value) })}
+              className={inputClass} style={inputStyle} />
+          </div>
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>End</div>
+            <input type="datetime-local" value={toLocalInputValue(timeBlock.endTime)}
+              onChange={(e) => void updateTimeBlock(timeBlock.id, { endTime: fromLocalInputValue(e.target.value) })}
+              className={inputClass} style={inputStyle} />
+          </div>
+        </div>
+      )}
+      {timeBlock.allDay && (
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>Date</div>
+          <input type="date" value={toDateInputValue(timeBlock.startTime)}
+            onChange={(e) => { if (e.target.value) void updateTimeBlock(timeBlock.id, allDayTimes(e.target.value)); }}
+            className={inputClass} style={inputStyle} />
+        </div>
+      )}
 
       {linkedTask && (
         <div className="mt-3 text-xs" style={{ color: "var(--fg-muted)" }}>

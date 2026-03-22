@@ -44,6 +44,7 @@ export interface TaskSection {
   color?: string;
   icon?: string;
   order: number;
+  hidden?: boolean;
 }
 
 export interface TimeBlock {
@@ -55,6 +56,7 @@ export interface TimeBlock {
   taskId?: string;
   routineTemplateId?: string;
   color?: string;
+  allDay?: boolean;
 }
 
 export interface DailyNote {

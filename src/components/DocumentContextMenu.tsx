@@ -5,6 +5,22 @@ import { useRouter } from "next/navigation";
 import { useDocumentStore } from "@/store/documentStore";
 import type { StrideDocument } from "@/types/index";
 
+const PINNED_DOCS_KEY = "stride-pinned-docs";
+
+function getPinnedDocIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try { return new Set(JSON.parse(localStorage.getItem(PINNED_DOCS_KEY) ?? "[]") as string[]); }
+  catch { return new Set(); }
+}
+
+export function togglePinnedDoc(docId: string): boolean {
+  const ids = getPinnedDocIds();
+  if (ids.has(docId)) { ids.delete(docId); } else { ids.add(docId); }
+  localStorage.setItem(PINNED_DOCS_KEY, JSON.stringify([...ids]));
+  window.dispatchEvent(new StorageEvent("storage", { key: PINNED_DOCS_KEY }));
+  return ids.has(docId);
+}
+
 type Props = {
   document: StrideDocument;
   position: { x: number; y: number };
@@ -21,6 +37,7 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [clampedPos, setClampedPos] = useState(position);
+  const [isPinned, setIsPinned] = useState(() => getPinnedDocIds().has(doc.id));
 
   useEffect(() => {
     const el = menuRef.current;
@@ -69,6 +86,14 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
         style={{ color: "var(--fg)" }}
       >
         Open
+      </button>
+      <button
+        type="button"
+        onClick={() => { setIsPinned(togglePinnedDoc(doc.id)); onClose(); }}
+        className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+        style={{ color: "var(--fg)" }}
+      >
+        {isPinned ? "Unpin from sidebar" : "Pin to sidebar"}
       </button>
       <div className="my-1 h-px" style={{ background: "var(--border)" }} />
       <button

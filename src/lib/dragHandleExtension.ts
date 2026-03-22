@@ -55,7 +55,6 @@ function createDragHandlePlugin() {
       });
 
       handle.addEventListener("mousedown", (e) => {
-        e.preventDefault();
         if (currentTopPos < 0) return;
         try {
           const sel = NodeSelection.create(view.state.doc, currentTopPos);

@@ -229,7 +229,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
           totalCount: sTasks.length,
         };
       })
-      .filter((g) => g.totalCount >= 0);
+      .filter((g) => sectionIdFilter ? g.key === sectionIdFilter : g.totalCount >= 0);
     return { groups: builtGroups, unsorted: unsortedTasks };
   }, [filteredTasks, sectionIdFilter, sections, subsections]);
 
@@ -781,6 +781,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
           task={contextMenu.task}
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onClose={() => setContextMenu(null)}
+          selectedIds={selectedTaskIds.size > 1 ? selectedTaskIds : undefined}
         />
       )}
 

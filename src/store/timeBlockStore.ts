@@ -13,16 +13,27 @@ async function getUserId(): Promise<string | null> {
 
 // ── Row mappers ────────────────────────────────────────────────────────────────
 
+function isAllDay(startTime: string, endTime: string): boolean {
+  const s = new Date(startTime);
+  const e = new Date(endTime);
+  if (s.getHours() !== 0 || s.getMinutes() !== 0 || s.getSeconds() !== 0) return false;
+  if (e.getHours() !== 0 || e.getMinutes() !== 0 || e.getSeconds() !== 0) return false;
+  return (e.getTime() - s.getTime()) % (24 * 60 * 60 * 1000) === 0 && e.getTime() > s.getTime();
+}
+
 function timeBlockFromRow(row: Record<string, unknown>): TimeBlock {
+  const startTime = row.start_time as string;
+  const endTime = row.end_time as string;
   return {
     id: row.id as string,
     title: row.title as string,
-    startTime: row.start_time as string,
-    endTime: row.end_time as string,
+    startTime,
+    endTime,
     type: row.type as TimeBlock["type"],
     taskId: (row.task_id as string | null) ?? undefined,
     routineTemplateId: (row.routine_template_id as string | null) ?? undefined,
     color: (row.color as string | null) ?? undefined,
+    allDay: isAllDay(startTime, endTime),
   };
 }
 

@@ -46,8 +46,8 @@ export function ProjectContextMenu({ project, position, onClose }: Props) {
   return (
     <div
       ref={menuRef}
-      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-lg)" }}
-      className="fixed z-50 w-[200px] select-none rounded-xl p-1"
+      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-lg)", zIndex: 9999 }}
+      className="fixed w-[200px] select-none rounded-xl p-1"
     >
       <button type="button" onClick={onRename}
         className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
