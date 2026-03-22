@@ -64,7 +64,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
 
             {/* Main content: flex-1, overflow hidden — each page handles its own scroll */}
-            <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)] min-w-0 flex flex-col">
+            <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)] min-w-0 flex flex-col md:pb-0" style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom))" }}>
                 {children}
             </main>
 

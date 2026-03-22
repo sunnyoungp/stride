@@ -24,6 +24,7 @@ import { AddTaskRow, friendlyDate, isOverdue, PriorityFlag, SelectionActionBar }
 type Props = {
   onTaskClick: (task: Task, position: { x: number; y: number }) => void;
   filterDate?: string;
+  filterDates?: string[];
 };
 
 // ── Color palette for sections ────────────────────────────────────────────────
@@ -79,7 +80,7 @@ function DroppableSection({ id, children }: { id: string; children: React.ReactN
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function TaskListView({ onTaskClick, filterDate }: Props) {
+export function TaskListView({ onTaskClick, filterDate, filterDates }: Props) {
   const searchParams    = useSearchParams();
   const sectionIdFilter = searchParams?.get("sectionId") ?? null;
 
@@ -175,7 +176,9 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
 
   const filteredTasks = useMemo(() => {
     let base = rootIncompleteTasks;
-    if (filterDate) {
+    if (filterDates) {
+      base = base.filter((t) => !t.dueDate || filterDates.includes(dateOnly(t.dueDate)));
+    } else if (filterDate) {
       base = base.filter((t) => t.dueDate && dateOnly(t.dueDate) === filterDate);
     } else if (sectionIdFilter) {
       base = sectionIdFilter === "unsorted"
@@ -183,18 +186,19 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
         : base.filter((t) => t.sectionId === sectionIdFilter);
     }
     return base.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  }, [filterDate, sectionIdFilter, rootIncompleteTasks]);
+  }, [filterDate, filterDates, sectionIdFilter, rootIncompleteTasks]);
 
   const filteredCompleted = useMemo(() => {
     let base = rootCompletedTasks;
-    if (filterDate) base = base.filter((t) => t.dueDate && dateOnly(t.dueDate) === filterDate);
+    if (filterDates) base = base.filter((t) => !t.dueDate || filterDates.includes(dateOnly(t.dueDate ?? "")));
+    else if (filterDate) base = base.filter((t) => t.dueDate && dateOnly(t.dueDate) === filterDate);
     else if (sectionIdFilter) {
       base = sectionIdFilter === "unsorted"
         ? base.filter((t) => !t.sectionId)
         : base.filter((t) => t.sectionId === sectionIdFilter);
     }
     return base.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [filterDate, sectionIdFilter, rootCompletedTasks]);
+  }, [filterDate, filterDates, sectionIdFilter, rootCompletedTasks]);
 
   const { groups, unsorted } = useMemo(() => {
     const bySection = new Map<string, Task[]>();

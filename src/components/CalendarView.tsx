@@ -9,6 +9,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
@@ -523,7 +524,7 @@ function NewEventModal({
         />
         <div style={{
           position: "fixed", left: 0, right: 0, bottom: 0,
-          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingBottom: "calc(32px + env(safe-area-inset-bottom))",
           background: "var(--bg-card)",
           borderTop: "1px solid var(--border-mid)",
           borderRadius: "16px 16px 0 0",
@@ -651,7 +652,8 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   const [routineOpen, setRoutineOpen] = useState(false);
   const [templatePrefill, setTemplatePrefill] = useState<Partial<RoutineTemplate> | null>(null);
 
-  // Right-sidebar toggle state
+  // Right-sidebar / mobile bottom-sheet toggle state
+  const isMobile = useIsMobile();
   const [showRoutinesSidebar, setShowRoutinesSidebar] = useState(false);
   const [showTasksSidebar, setShowTasksSidebar] = useState(false);
 
@@ -848,6 +850,9 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   const switchView = (key: ViewKey) => {
     viewRef.current = key;
     setView(key);
+    if (!dashboardMode) {
+      localStorage.setItem("stride-calendar-view", key);
+    }
     if (key === "agenda") return;
     const api = calendarRef.current?.getApi();
     if (!api) return;
@@ -864,6 +869,24 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   useEffect(() => {
     setTodayLabel(new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date()));
   }, []);
+
+  // Scroll calendar to keep current time visible when the bottom dock opens/closes
+  useEffect(() => {
+    if (!isMobile) return;
+    const isOpen = showRoutinesSidebar || showTasksSidebar;
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const now = new Date();
+    const targetHour = Math.max(0, now.getHours() - 1);
+    const timer = setTimeout(() => {
+      if (isOpen) {
+        api.scrollToTime({ hours: Math.min(23, now.getHours() + 1), minutes: 0 });
+      } else {
+        api.scrollToTime({ hours: targetHour, minutes: 0 });
+      }
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [showRoutinesSidebar, showTasksSidebar, isMobile]);
 
   const VIEW_LABELS: [ViewKey, string][] = [["1d", "Day"], ["2d", "2D"], ["3d", "3D"], ["4d", "4D"], ["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]];
 
@@ -885,8 +908,8 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
 
           {!dashboardMode && (
             <div className="flex items-center gap-2">
-              {/* Right sidebar toggles */}
-              <div className="hidden md:flex items-center gap-1">
+              {/* Right sidebar / bottom-sheet toggles */}
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   title="Toggle Routines"
@@ -1114,7 +1137,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
           <div
             ref={calendarBodyRef}
             className="flex-1 p-2 overflow-hidden"
-            style={{ display: isAgenda ? "none" : undefined, overscrollBehaviorX: "none" }}
+            style={{ display: isAgenda ? "none" : undefined, overscrollBehaviorX: "none", paddingBottom: isMobile ? "calc(8px + env(safe-area-inset-bottom))" : undefined }}
           >
             <div className="h-full rounded-xl overflow-hidden">
               <FullCalendar
@@ -1330,7 +1353,84 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
           }}
         />
       )}
+      {/* ── Mobile bottom sheet: Routines ── */}
+      {/* ── Mobile bottom dock: pushes calendar up ── */}
+      {isMobile && (
+        <>
+        
+          {/* Routines dock */}
+          <div style={{
+            flexShrink: 0,
+            height: (showRoutinesSidebar || showTasksSidebar) ? "40%" : 0,
+            overflow: "hidden",
+            transition: "height 280ms cubic-bezier(0.32, 0.72, 0, 1)",
+            background: "var(--bg-card)",
+            borderTop: (showRoutinesSidebar || showTasksSidebar) ? "1px solid var(--border-mid)" : "none",
+            display: "flex",
+            flexDirection: "column",
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}>
+            {/* Drag handle */}
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px", flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
+            </div>
+
+            {/* Routines panel */}
+            <div style={{
+              display: showRoutinesSidebar ? "flex" : "none",
+              flexDirection: "column",
+              flex: 1,
+              overflow: "hidden",
+            }}>
+              <div style={{ padding: "4px 16px 10px", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                  Routines
+                </span>
+              </div>
+              <div style={{ flex: 1, overflow: "auto" }}>
+                <RoutineTemplateStrip onManageTemplates={() => setRoutineOpen(true)} />
+              </div>
+            </div>
+
+            {/* Unscheduled tasks panel */}
+            <div style={{
+              display: showTasksSidebar ? "flex" : "none",
+              flexDirection: "column",
+              flex: 1,
+              overflow: "hidden",
+            }}>
+              <div style={{ padding: "4px 16px 10px", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                  Unscheduled Tasks
+                </span>
+              </div>
+              <div ref={taskPanelRef} style={{ flex: 1, overflowY: "auto", padding: "0 8px 16px" }}>
+                {incompleteTasks.length === 0 ? (
+                  <div style={{ padding: "24px 12px", fontSize: 12, color: "var(--fg-faint)", textAlign: "center" }}>
+                    No incomplete tasks
+                  </div>
+                ) : incompleteTasks.map((t) => (
+                  <div
+                    key={t.id}
+                    data-task-id={t.id}
+                    data-task-title={t.title}
+                    style={{
+                      marginBottom: 4, padding: "10px 12px", borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-card)",
+                      color: "var(--fg-muted)",
+                      fontSize: 14, cursor: "grab",
+                    }}
+                  >{t.title || "(Untitled)"}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <RoutineTemplatePanel open={routineOpen} onClose={() => { setRoutineOpen(false); setTemplatePrefill(null); }} prefill={templatePrefill} />
+
     </div>
   );
 }

@@ -250,10 +250,10 @@ export function QuickAdd() {
 
         {/* Sheet */}
         <div
-          className="cmd-palette absolute left-0 right-0 overflow-auto"
+          className="cmd-palette fixed left-0 right-0 overflow-auto"
           style={{
             bottom: keyboardHeight,
-            maxHeight: "80vh",
+            maxHeight: `calc(100vh - ${keyboardHeight}px - 40px)`,
             background: "var(--bg-card)",
             borderTop: "1px solid var(--border-mid)",
             borderTopLeftRadius: 20,

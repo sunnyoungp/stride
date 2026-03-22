@@ -164,8 +164,8 @@ export function BottomTabBar() {
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center border-t border-[var(--border)]"
         style={{
           background: "var(--bg-sidebar)",
-          height: "calc(56px + env(safe-area-inset-bottom))",
-          paddingBottom: "env(safe-area-inset-bottom)",
+          height: "calc(72px + env(safe-area-inset-bottom))",
+          paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
         }}
       >
         {tabs.map((tab) => {
@@ -204,28 +204,21 @@ export function BottomTabBar() {
         <>
           {/* Backdrop */}
           <div
-            className="md:hidden fixed inset-0 z-50 backdrop-fade"
+            className="md:hidden fixed inset-0 z-48 backdrop-fade"
             style={{ background: "rgba(0,0,0,0.3)" }}
             onClick={() => setMoreOpen(false)}
           />
 
           {/* Sheet panel */}
           <div
-            className="md:hidden fixed left-0 right-0 z-50 rounded-t-2xl py-2"
+            className="md:hidden fixed left-0 right-0 z-49 rounded-t-2xl py-2"
             style={{
-              bottom: "calc(56px + env(safe-area-inset-bottom))",
+              bottom: "calc(72px + env(safe-area-inset-bottom))",
               background: "var(--bg-card)",
               border: "1px solid var(--border-mid)",
               boxShadow: "var(--shadow-lg)",
             }}
           >
-            {/* Handle */}
-            <div className="flex justify-center mb-2">
-              <div
-                className="w-10 h-1 rounded-full"
-                style={{ background: "var(--border-strong)" }}
-              />
-            </div>
 
             {more.map((item) => {
               const active = isActive(item.href);

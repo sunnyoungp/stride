@@ -18,7 +18,7 @@ export function MobileFABs() {
   }, []);
 
   const keyboardHeight = Math.max(0, windowHeight - vpHeight);
-  const TAB_BAR_H = 56;
+  const TAB_BAR_H = 72;
   const bottomOffset = keyboardHeight > 0
     ? keyboardHeight + 16
     : TAB_BAR_H + 16;

@@ -11,6 +11,33 @@ import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
 import type { Task, TaskSection } from "@/types/index";
 
+// ── Date filter helpers ────────────────────────────────────────────────────────
+
+type DateFilter = "all" | "today" | "today+tomorrow" | "week";
+
+function localDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getFilterDates(filter: DateFilter): string[] | undefined {
+  if (filter === "all") return undefined;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (filter === "today") return [localDate(today)];
+  if (filter === "today+tomorrow") {
+    const tom = new Date(today); tom.setDate(tom.getDate() + 1);
+    return [localDate(today), localDate(tom)];
+  }
+  // "week" = current Sun-Sat week
+  const dates: string[] = [];
+  const sun = new Date(today); sun.setDate(sun.getDate() - sun.getDay());
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sun); d.setDate(sun.getDate() + i);
+    dates.push(localDate(d));
+  }
+  return dates;
+}
+
 const PALETTE = [
   "#6366f1", "#22c55e", "#f59e0b", "#3b82f6", "#8b5cf6",
   "#ec4899", "#14b8a6", "#f97316", "#ef4444",
@@ -28,9 +55,11 @@ function getSectionAccent(s: TaskSection): string {
 function TasksPageInner({
   view,
   onTaskClick,
+  filterDates,
 }: {
   view: "list" | "kanban";
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
+  filterDates?: string[];
 }) {
   const searchParams = useSearchParams();
   const sectionIdFilter = searchParams?.get("sectionId") ?? null;
@@ -46,8 +75,9 @@ function TasksPageInner({
     () =>
       tasks
         .filter((t) => !t.parentTaskId && t.status !== "done" && t.status !== "cancelled")
+        .filter((t) => !filterDates || !t.dueDate || filterDates.includes(t.dueDate.slice(0, 10)))
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [tasks]
+    [tasks, filterDates]
   );
 
   // Build kanban columns
@@ -152,15 +182,23 @@ function TasksPageInner({
     );
   }
 
-  return <TaskListView onTaskClick={onTaskClick} />;
+  return <TaskListView onTaskClick={onTaskClick} filterDates={filterDates} />;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+
+const DATE_FILTER_CHIPS: { key: DateFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "today", label: "Today" },
+  { key: "today+tomorrow", label: "Today + Tomorrow" },
+  { key: "week", label: "This Week" },
+];
 
 export default function Page() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
   const [view, setView] = useState<"list" | "kanban">("list");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   useEffect(() => {
     const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
     if (saved === "kanban") setView("kanban");
@@ -189,6 +227,8 @@ export default function Page() {
     localStorage.setItem("stride-tasks-view", v);
   };
 
+  const filterDates = getFilterDates(dateFilter);
+
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
       <div
@@ -198,6 +238,31 @@ export default function Page() {
         <h1 className="text-[15px] font-semibold" style={{ color: "var(--fg)" }}>Tasks</h1>
         <ViewSwitcher view={view} onChange={handleViewChange} />
       </div>
+
+      {/* Date filter chips */}
+      <div
+        className="flex-none flex items-center gap-2 px-6 py-2.5"
+        style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}
+      >
+        {DATE_FILTER_CHIPS.map(({ key, label }) => {
+          const active = dateFilter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setDateFilter(key)}
+              className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150"
+              style={active
+                ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
+                : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
+              }
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex-1 overflow-auto mobile-scroll-content">
         <Suspense
           fallback={
@@ -208,6 +273,7 @@ export default function Page() {
         >
           <TasksPageInner
             view={view}
+            filterDates={filterDates}
             onTaskClick={(task, pos) => {
               setSelectedTaskId(task.id);
               setClickPos(pos);

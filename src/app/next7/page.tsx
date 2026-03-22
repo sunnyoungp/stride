@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import {
   DndContext,
@@ -114,6 +114,7 @@ function DroppableDateGroup({
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: date });
+  const allTasks = useTaskStore((s) => s.tasks);
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
 
   return (
@@ -144,12 +145,24 @@ function DroppableDateGroup({
             No tasks
           </div>
         ) : (
-          tasks.map((task, idx) => (
-            <div key={task.id} style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
-              className="[&:hover_.task-drag-grip]:opacity-40">
-              <SortableTaskRow task={task} onTaskClick={onTaskClick} onTaskRightClick={onTaskRightClick} />
-            </div>
-          ))
+          tasks.map((task, idx) => {
+            const subtasks = allTasks.filter(
+              (t) => t.parentTaskId === task.id && t.status !== "done" && t.status !== "cancelled"
+            );
+            return (
+              <React.Fragment key={task.id}>
+                <div style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
+                  className="[&:hover_.task-drag-grip]:opacity-40">
+                  <SortableTaskRow task={task} onTaskClick={onTaskClick} onTaskRightClick={onTaskRightClick} />
+                </div>
+                {subtasks.map((sub) => (
+                  <div key={sub.id} style={{ borderTop: "1px solid var(--border)", paddingLeft: 32, opacity: 0.9 }}>
+                    <TaskRow task={sub} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                  </div>
+                ))}
+              </React.Fragment>
+            );
+          })
         )}
       </SortableContext>
 
