@@ -62,7 +62,7 @@ function DurationSelector({ value, onChange }: { value: number; onChange: (m: nu
             type="button"
             onClick={() => onChange(p.value)}
             style={{
-              fontSize: 11.5, padding: "3px 9px", borderRadius: 6, height: 26,
+              fontSize: 12, padding: "3px 9px", borderRadius: 6, height: 26,
               border: `1px solid ${value === p.value ? "var(--accent)" : "var(--border)"}`,
               background: value === p.value ? "var(--accent-bg)" : "transparent",
               color: value === p.value ? "var(--accent)" : "var(--fg-muted)",
@@ -88,13 +88,13 @@ function DurationSelector({ value, onChange }: { value: number; onChange: (m: nu
           <input
             type="number" min={0} max={23} value={custH}
             onChange={(e) => { const h = Math.max(0, Number(e.target.value)); setCustH(h); applyCustom(h, custM); }}
-            style={{ width: 48, textAlign: "center", padding: "4px 6px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg)", fontSize: 13, outline: "none" }}
+            style={{ width: 48, textAlign: "center", padding: "4px 6px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg)", fontSize: 16, outline: "none" }}
           />
           <span style={{ fontSize: 12, color: "var(--fg-faint)" }}>h</span>
           <input
             type="number" min={0} max={59} value={custM}
             onChange={(e) => { const m = Math.max(0, Number(e.target.value)); setCustM(m); applyCustom(custH, m); }}
-            style={{ width: 48, textAlign: "center", padding: "4px 6px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg)", fontSize: 13, outline: "none" }}
+            style={{ width: 48, textAlign: "center", padding: "4px 6px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg)", fontSize: 16, outline: "none" }}
           />
           <span style={{ fontSize: 12, color: "var(--fg-faint)" }}>min</span>
         </div>
@@ -156,7 +156,7 @@ function ColorRow({ value, onChange }: { value: string; onChange: (c: string) =>
 const fieldStyle: React.CSSProperties = {
   background: "var(--bg-subtle)", border: "1px solid var(--border)",
   color: "var(--fg)", borderRadius: 8, padding: "6px 10px",
-  fontSize: 13, outline: "none", boxSizing: "border-box",
+  fontSize: 16, outline: "none", boxSizing: "border-box",
 };
 
 // ─── Inline edit form ─────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ function EditForm({
         <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0 }}>Usually starts at</span>
         <input
           type="time" value={defStart} onChange={(e) => setDefStart(e.target.value)}
-          style={{ ...fieldStyle, fontSize: 12, padding: "4px 8px" }}
+          style={{ ...fieldStyle, fontSize: 16, padding: "4px 8px" }}
         />
       </div>
 
@@ -239,13 +239,13 @@ function EditForm({
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button
           type="button" onClick={onCancel}
-          style={{ padding: "5px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--fg-muted)", fontSize: 12.5, cursor: "pointer" }}
+          style={{ padding: "5px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--fg-muted)", fontSize: 12, cursor: "pointer" }}
         >Cancel</button>
         <button
           type="button"
           onClick={() => onSave({ title: title.trim() || template.title, icon: icon.trim() || undefined, durationMinutes: durMins, defaultStartTime: defStart, color, daysOfWeek: dow })}
           disabled={!title.trim()}
-          style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: "var(--accent)", color: "#fff", fontSize: 12.5, fontWeight: 500, cursor: "pointer", opacity: title.trim() ? 1 : 0.4 }}
+          style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: "var(--accent)", color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer", opacity: title.trim() ? 1 : 0.4 }}
         >Save</button>
       </div>
     </div>
@@ -403,7 +403,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
           <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0 }}>Usually starts at</span>
           <input
             type="time" value={defStart} onChange={(e) => setDefStart(e.target.value)}
-            style={{ ...fieldStyle, fontSize: 12, padding: "4px 8px" }}
+            style={{ ...fieldStyle, fontSize: 16, padding: "4px 8px" }}
           />
         </div>
 
@@ -532,7 +532,7 @@ export function RoutineTemplatePanel({ open, onClose, prefill }: Props) {
           display: "flex",
           flexDirection: "column",
           background: "var(--bg-card)",
-          borderRadius: 20,
+          borderRadius: 16,
           boxShadow: "0 24px 80px rgba(0,0,0,0.18), 0 8px 32px rgba(0,0,0,0.10)",
           animation: "gs-scale 200ms cubic-bezier(0.16, 1, 0.3, 1) both",
           overflow: "hidden",
@@ -563,16 +563,16 @@ export function RoutineTemplatePanel({ open, onClose, prefill }: Props) {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void handleDragEnd(e)}>
               <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
                 {ordered.map((t) => (
-                <SortableRow
-                  key={t.id}
-                  templateId={t.id}
-                  isEditing={editingId === t.id}
-                  onEditOpen={() => setEditingId(t.id)}
-                  onEditCancel={() => setEditingId(null)}
-                  onEditSave={async (changes) => { await updateTemplate(t.id, changes); setEditingId(null); }}
-                  onDelete={() => void deleteTemplate(t.id)}
-                />
-              ))}
+                  <SortableRow
+                    key={t.id}
+                    templateId={t.id}
+                    isEditing={editingId === t.id}
+                    onEditOpen={() => setEditingId(t.id)}
+                    onEditCancel={() => setEditingId(null)}
+                    onEditSave={async (changes) => { await updateTemplate(t.id, changes); setEditingId(null); }}
+                    onDelete={() => void deleteTemplate(t.id)}
+                  />
+                ))}
               </SortableContext>
             </DndContext>
           )}

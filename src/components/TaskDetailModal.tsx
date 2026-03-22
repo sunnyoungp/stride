@@ -142,7 +142,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
     <>
       {isMobile && (
         <div
-          className="fixed inset-0 z-[49] backdrop-fade"
+          className="fixed inset-0 z-50 backdrop-fade"
           style={{ background: "rgba(0,0,0,0.28)" }}
           onClick={() => { save(); onClose(); }}
         />
@@ -223,7 +223,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
         <button
           onClick={() => void updateTask(task.id, { status: isDone ? "todo" : "done" })}
           title={isDone ? "Mark incomplete" : "Mark complete"}
-          className="flex h-[20px] w-[20px] flex-none items-center justify-center rounded-[5px] transition-all duration-200 ease-out"
+          className="flex h-[20px] w-[20px] flex-none items-center justify-center rounded-[4px] transition-all duration-200 ease-out"
           style={isDone
             ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
             : { border: "1.5px solid var(--border-strong)", background: "transparent" }
@@ -268,7 +268,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
             placeholder="Task title"
             className="w-full resize-none bg-transparent font-semibold leading-snug outline-none"
             style={{
-              fontSize: "15px",
+              fontSize: "16px",
               color: isDone ? "var(--fg-faint)" : "var(--fg)",
               textDecoration: isDone ? "line-through" : "none",
               fieldSizing: "content",
@@ -310,6 +310,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
               color: "var(--fg-muted)",
               fieldSizing: "content",
               minHeight: 44,
+              fontSize: "16px",
             } as React.CSSProperties}
           />
         </div>
@@ -323,7 +324,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
                   <div key={st.id} className="group flex items-center gap-2">
                     <button
                       onClick={() => void updateTask(st.id, { status: st.status === "done" ? "todo" : "done" })}
-                      className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[3px] transition-all duration-150 ease-out"
+                      className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] transition-all duration-150 ease-out"
                       style={st.status === "done"
                         ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
                         : { border: "1.5px solid var(--border-strong)", background: "transparent" }
@@ -345,8 +346,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
                           if (e.key === "Escape") setEditSubId(null);
                         }}
                         onBlur={() => { if (editSubVal.trim()) void updateTask(st.id, { title: editSubVal.trim() }); setEditSubId(null); }}
-                        className="flex-1 bg-transparent text-[13px] outline-none"
-                        style={{ borderBottom: "1px solid var(--border-mid)", color: "var(--fg)", paddingBottom: "1px" }}
+                        className="flex-1 bg-transparent outline-none"
+                        style={{ borderBottom: "1px solid var(--border-mid)", color: "var(--fg)", paddingBottom: "1px", fontSize: "16px" }}
                       />
                     ) : (
                       <span
@@ -370,7 +371,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
             {/* Inline add subtask */}
             <div className="flex items-center gap-2">
               <span
-                className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[3px] text-[10px]"
+                className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] text-[10px]"
                 style={{ border: "1.5px dashed var(--border-strong)", color: "var(--fg-faint)" }}
               >+</span>
               <input
@@ -382,8 +383,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
                   if (e.key === "Escape") setNewSub("");
                 }}
                 placeholder="Add subtask…"
-                className="flex-1 bg-transparent text-[13px] outline-none"
-                style={{ color: "var(--fg)", caretColor: "var(--accent)" }}
+                className="flex-1 bg-transparent outline-none"
+                style={{ color: "var(--fg)", caretColor: "var(--accent)", fontSize: "16px" }}
               />
             </div>
           </div>
@@ -431,11 +432,12 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
               type="date"
               value={task.dueDate ? dateOnly(task.dueDate) : ""}
               onChange={(e) => void updateTask(task.id, { dueDate: e.target.value || undefined })}
-              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
               style={{
                 background: "var(--bg-card)",
                 border: "1px solid var(--border)",
                 color: "var(--fg)",
+                fontSize: "16px",
               }}
             />
           </div>
@@ -692,8 +694,8 @@ function TagAdder({ task, updateTask }: {
         if (e.key === "Enter") commit();
         if (e.key === "Escape") { setDraft(""); setAdding(false); }
       }}
-      className="w-20 rounded-full bg-transparent px-2 py-0.5 text-[11px] outline-none"
-      style={{ border: "1px solid var(--border-mid)", color: "var(--fg)" }}
+      className="w-20 rounded-full bg-transparent px-2 py-0.5 outline-none"
+      style={{ border: "1px solid var(--border-mid)", color: "var(--fg)", fontSize: "16px" }}
       placeholder="tag…"
     />
   );

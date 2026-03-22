@@ -265,7 +265,7 @@ export function DocumentEditor({ documentId }: Props) {
 
   if (!doc) {
     return (
-      <div className="flex h-full w-full items-center justify-center py-16 text-sm text-zinc-400">
+      <div className="flex h-full w-full items-center justify-center py-16 text-sm" style={{ color: "var(--fg-muted)" }}>
         Loading…
       </div>
     );
@@ -278,22 +278,23 @@ export function DocumentEditor({ documentId }: Props) {
           <input
             value={doc.title}
             onChange={(e) => void updateDocument(doc.id, { title: e.target.value })}
-            className="w-full bg-transparent text-3xl font-bold tracking-tight text-zinc-100 outline-none placeholder:text-zinc-600"
+            className="w-full bg-transparent text-3xl font-bold tracking-tight outline-none"
+            style={{ color: "var(--fg)" }}
             placeholder="Untitled"
           />
-          <div className="mt-1 text-xs text-zinc-500">
+          <div className="mt-1 text-xs" style={{ color: "var(--fg-faint)" }}>
             Updated {formatUpdatedAt(doc.updatedAt)}
           </div>
         </div>
 
         {syncedBadge ? (
-          <div className="mt-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+          <div className="mt-2 rounded-lg px-3 py-1 text-xs font-medium" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
             Synced to Tasks
           </div>
         ) : null}
       </div>
 
-      <div className="mt-6 rounded-xl border border-white/10 bg-zinc-900/30 p-4">
+      <div className="mt-6 rounded-xl p-4" style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)" }}>
         {editor ? <EditorContent editor={editor} /> : null}
       </div>
     </div>

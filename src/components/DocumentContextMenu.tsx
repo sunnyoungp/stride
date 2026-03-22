@@ -58,22 +58,24 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
   return (
     <div
       ref={menuRef}
-      style={{ left: clampedPos.x, top: clampedPos.y }}
-      className="fixed z-50 w-[200px] select-none rounded-lg border border-white/10 bg-zinc-900 p-1 shadow-xl"
+      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-float)" }}
+      className="fixed z-[9999] w-[200px] select-none rounded-xl p-1"
       role="menu"
     >
       <button
         type="button"
         onClick={onOpen}
-        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5 transition-colors"
+        className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+        style={{ color: "var(--fg)" }}
       >
         Open
       </button>
-      <div className="my-1 h-px bg-white/8" />
+      <div className="my-1 h-px" style={{ background: "var(--border)" }} />
       <button
         type="button"
         onClick={() => void onDelete()}
-        className="w-full rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+        className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
+        style={{ color: "#ef4444" }}
       >
         Delete Document
       </button>

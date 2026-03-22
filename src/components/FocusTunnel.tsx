@@ -11,17 +11,17 @@ import type { Task } from "@/types/index";
 const getMatteStyle = (index: number) => {
   if (index % 2 === 0) {
     return {
-      bg: "bg-white",
-      text: "text-zinc-900",
+      bg: "#ffffff",
+      textColor: "#18181b",
       fill: "#E05252",
     };
   }
   const cycleIndex = (Math.floor(index / 2)) % 3;
   switch (cycleIndex) {
-    case 0: return { bg: "bg-[#E8F5E9]", text: "text-green-900", fill: "#1b4332" };
-    case 1: return { bg: "bg-[#F3E5F5]", text: "text-purple-900", fill: "#4a148c" };
-    case 2: return { bg: "bg-[#FFEBEE]", text: "text-rose-900", fill: "#880e4f" };
-    default: return { bg: "bg-white", text: "text-zinc-900", fill: "#E05252" };
+    case 0: return { bg: "#E8F5E9", textColor: "#14532d", fill: "#1b4332" };
+    case 1: return { bg: "#F3E5F5", textColor: "#581c87", fill: "#4a148c" };
+    case 2: return { bg: "#FFEBEE", textColor: "#881337", fill: "#880e4f" };
+    default: return { bg: "#ffffff", textColor: "#18181b", fill: "#E05252" };
   }
 };
 
@@ -250,8 +250,8 @@ export function FocusTunnel() {
                         transition: { duration: 0.5, ease: "anticipate" }
                       }}
                       transition={{ type: "spring", stiffness: 350, damping: 38 }}
-                      className={`relative w-full ${style.bg} rounded-[32px] p-10 md:p-12 mb-4 last:mb-0 transition-all duration-700 shadow-none`}
-                      style={{ border: "1px solid rgba(0,0,0,0.06)" }}
+                      className="relative w-full rounded-[32px] p-10 md:p-12 mb-4 last:mb-0 transition-all duration-700 shadow-none"
+                      style={{ background: style.bg, border: "1px solid rgba(0,0,0,0.06)" }}
                     >
                       <div className="flex items-center gap-10">
                         <button
@@ -266,11 +266,10 @@ export function FocusTunnel() {
                         </button>
 
                         <div className="flex-1 min-w-0">
-                          <h2 className={`font-medium tracking-tight transition-all duration-500 ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${
-                            isChecking
-                              ? 'text-zinc-400 line-through opacity-50'
-                              : style.text
-                          }`}>
+                          <h2
+                            className={`font-medium tracking-tight transition-all duration-500 ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${isChecking ? 'line-through opacity-50' : ''}`}
+                            style={{ color: isChecking ? "var(--fg-muted)" : style.textColor }}
+                          >
                             {task.title}
                           </h2>
                         </div>

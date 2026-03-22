@@ -44,11 +44,12 @@ export function DocumentList() {
   return (
     <div className="mx-auto h-full w-full max-w-4xl px-6 py-8">
       <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-black-100">Documents</h1>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--fg)" }}>Documents</h1>
         <button
           type="button"
           onClick={() => void onNew()}
-          className="rounded-md bg-black/100 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-white/15"
+          className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150"
+          style={{ background: "var(--accent)", color: "white" }}
         >
           + New Document
         </button>
@@ -56,7 +57,7 @@ export function DocumentList() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-sm text-zinc-500">
+          <div className="col-span-full py-16 text-center text-sm" style={{ color: "var(--fg-muted)" }}>
             No documents yet. Click + New Document to get started.
           </div>
         ) : (
@@ -73,12 +74,15 @@ export function DocumentList() {
                   y: e.clientY,
                 });
               }}
-              className="flex flex-col gap-2 rounded-xl border border-white/10 bg-zinc-900/40 p-5 text-left transition-colors hover:border-white/20 hover:bg-zinc-900/60"
+              className="flex flex-col gap-2 rounded-xl p-5 text-left transition-all duration-150"
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)"; (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"; }}
             >
-              <div className="line-clamp-2 text-base font-semibold text-zinc-100">
+              <div className="line-clamp-2 text-base font-semibold" style={{ color: "var(--fg)" }}>
                 {doc.title || "Untitled"}
               </div>
-              <div className="mt-auto text-xs text-zinc-500">
+              <div className="mt-auto text-xs" style={{ color: "var(--fg-muted)" }}>
                 Updated {formatUpdatedAt(doc.updatedAt)}
               </div>
             </button>

@@ -253,7 +253,7 @@ function DnSelectionBar({
     <div
       data-selection-bar
       style={{
-        position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+        position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",
         zIndex: 9999, display: "flex", alignItems: "center", gap: 8,
         padding: "10px 14px", background: "var(--bg-card)",
         border: "1px solid var(--border)", borderRadius: 14,

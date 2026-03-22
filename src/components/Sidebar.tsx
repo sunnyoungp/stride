@@ -177,11 +177,12 @@ function IconPicker({
             if (e.key === "Escape") onClose();
           }}
           placeholder="Custom…"
-          className="flex-1 h-7 rounded-lg px-2 text-sm outline-none"
+          className="flex-1 h-7 rounded-xl px-2 outline-none"
           style={{
             border: "1px solid var(--border-mid)",
             background: "var(--bg-card)",
             color: "var(--fg)",
+            fontSize: "16px",
           }}
         />
         <button
@@ -510,7 +511,7 @@ export function Sidebar() {
           </svg>
           <span style={{ flex: 1, textAlign: "left" }}>Search</span>
           <kbd style={{
-            fontSize: 10, padding: "1px 5px", borderRadius: 5,
+            fontSize: 10, padding: "1px 5px", borderRadius: 4,
             background: "var(--bg-hover)", border: "1px solid var(--border)",
             color: "var(--fg-faint)", lineHeight: "1.6",
           }}>⌘F</kbd>
@@ -577,13 +578,14 @@ export function Sidebar() {
                     if (e.key === "Escape") { setRenamingId(null); setRenameDraft(""); }
                   }}
                   onBlur={() => commitRename(s.id)}
-                  className="rounded-full px-2.5 py-1 text-[12px] outline-none"
+                  className="rounded-full px-2.5 py-1 outline-none"
                   style={{
                     background: c.bg,
                     color: c.fg,
                     border: "2px solid var(--accent)",
                     minWidth: 60,
                     maxWidth: 120,
+                    fontSize: "16px",
                   }}
                 />
               );
@@ -667,8 +669,8 @@ export function Sidebar() {
               }}
               onBlur={() => { if (!draft.trim()) { setDraft(""); setDraftIcon(""); setCreating(false); } }}
               placeholder="Section name…"
-              className="flex-1 h-8 rounded-xl px-3 text-xs outline-none"
-              style={{ border: "1px solid var(--border-mid)", background: "var(--bg-card)", color: "var(--fg)" }}
+              className="flex-1 h-8 rounded-xl px-3 outline-none"
+              style={{ border: "1px solid var(--border-mid)", background: "var(--bg-card)", color: "var(--fg)", fontSize: "16px" }}
             />
 
             {showNewIconPicker && (
@@ -696,8 +698,8 @@ export function Sidebar() {
               }
             }}
             placeholder="Subsection…"
-            className="mt-2 h-8 w-full rounded-xl px-3 text-xs outline-none"
-            style={{ border: "1px solid var(--border-mid)", background: "var(--bg-card)", color: "var(--fg)" }}
+            className="mt-2 h-8 w-full rounded-xl px-3 outline-none"
+            style={{ border: "1px solid var(--border-mid)", background: "var(--bg-card)", color: "var(--fg)", fontSize: "16px" }}
           />
         )}
 

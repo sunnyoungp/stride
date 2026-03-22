@@ -44,7 +44,7 @@ function MonthNavBtn({ onClick, dir }: { onClick: () => void; dir: "prev" | "nex
       type="button"
       onClick={onClick}
       style={{
-        width: 28, height: 28, borderRadius: 7, border: "none",
+        width: 28, height: 28, borderRadius: 8, border: "none",
         background: "transparent", cursor: "pointer",
         fontSize: 18, lineHeight: 1, color: "var(--fg-faint)",
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -186,7 +186,7 @@ export function MiniCalendar({
             onClick={goToToday}
             style={{
               fontSize: 10, fontWeight: 500, lineHeight: 1,
-              padding: "2px 7px", borderRadius: 5, cursor: "pointer",
+              padding: "2px 7px", borderRadius: 6, cursor: "pointer",
               background: "var(--accent-bg)", color: "var(--accent)",
               border: "1px solid var(--accent-bg-strong)",
             }}

@@ -380,7 +380,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
             {task.priority !== "none" && <PriorityFlag priority={task.priority} />}
             {task.dueDate && (
               <span
-                className="rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
+                className="rounded-lg px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
                 style={isOverdue(dateOnly(task.dueDate))
                   ? { background: "rgba(239,68,68,0.08)", color: "var(--priority-high)" }
                   : { background: "var(--accent-bg)", color: "var(--accent)" }
@@ -455,7 +455,7 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); void updateTask(st.id, { status: stDone ? "todo" : "done" }); }}
-                    className="flex h-[14px] w-[14px] flex-none items-center justify-center rounded-[3px] transition-all duration-150"
+                    className="flex h-[14px] w-[14px] flex-none items-center justify-center rounded-[4px] transition-all duration-150"
                     style={stDone
                       ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
                       : { border: "1.5px solid var(--border-strong)", background: "transparent" }
@@ -485,8 +485,8 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                           void updateTask(st.id, { title: editSubVal.trim() });
                         setEditSubId(null);
                       }}
-                      className="flex-1 bg-transparent text-[13.5px] leading-snug outline-none"
-                      style={{ color: "var(--fg)" }}
+                      className="flex-1 bg-transparent leading-snug outline-none"
+                      style={{ color: "var(--fg)", fontSize: "16px" }}
                     />
                   ) : (
                     <span
@@ -715,11 +715,12 @@ export function TaskListView({ onTaskClick, filterDate }: Props) {
                   }}
                   onBlur={() => { setAddingSection(false); setSectionDraft(""); }}
                   placeholder="Section name…"
-                  className="h-9 w-full rounded-xl px-4 text-sm outline-none"
+                  className="h-9 w-full rounded-xl px-4 outline-none"
                   style={{
                     background: "var(--bg-card)",
                     border: "1px solid var(--accent)",
                     color: "var(--fg)",
+                    fontSize: "16px",
                   }}
                 />
               ) : (

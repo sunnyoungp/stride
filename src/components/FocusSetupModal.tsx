@@ -51,7 +51,8 @@ export function FocusSetupModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-zinc-950/20 dark:bg-black/40 backdrop-blur-lg"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12"
+      style={{ background: "rgba(0,0,0,0.3)" }}
       onClick={() => setSetupModalOpen(false)}
     >
       <motion.div

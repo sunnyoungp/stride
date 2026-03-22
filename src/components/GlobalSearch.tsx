@@ -178,12 +178,12 @@ function ResultRow({
         {/* Chips */}
         <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
           {section && (
-            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
+            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 9999, background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
               {section.icon ? `${section.icon} ` : ""}{section.title}
             </span>
           )}
           {task.dueDate && (
-            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
+            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 9999, background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
               {task.dueDate}
             </span>
           )}

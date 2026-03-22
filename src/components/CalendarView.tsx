@@ -101,7 +101,7 @@ function TogglePill({ label, active, onClick }: { label: string; active: boolean
       onClick={onClick}
       style={{
         fontSize: 10.5, fontWeight: 500,
-        padding: "3px 9px", borderRadius: 20,
+        padding: "3px 9px", borderRadius: 9999,
         border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
         background: active ? "var(--accent-bg)" : "transparent",
         color: active ? "var(--accent)" : "var(--fg-faint)",
@@ -344,7 +344,7 @@ function NewEventPopover({
       onMouseDown={(e) => e.stopPropagation()}
       style={{
         position: "fixed", left: px, top: py, width: W,
-        zIndex: 1000,
+        zIndex: 50,
         background: "var(--bg-card)",
         border: "1px solid var(--border)",
         borderRadius: 12,
@@ -366,7 +366,7 @@ function NewEventPopover({
           background: "var(--bg-subtle)",
           border: "1px solid var(--border)",
           borderRadius: 8, padding: "6px 10px",
-          fontSize: "0.875rem", fontWeight: 600,
+          fontSize: "16px", fontWeight: 600,
           color: "var(--fg)", outline: "none",
           marginBottom: 10,
         }}
@@ -401,7 +401,7 @@ function NewEventPopover({
         <button
           type="button" onClick={onCancel}
           style={{
-            padding: "5px 12px", borderRadius: 7,
+            padding: "5px 12px", borderRadius: 8,
             border: "1px solid var(--border)",
             background: "transparent",
             color: "var(--fg-muted)",
@@ -411,7 +411,7 @@ function NewEventPopover({
         <button
           type="button" onClick={confirm}
           style={{
-            padding: "5px 12px", borderRadius: 7,
+            padding: "5px 12px", borderRadius: 8,
             border: "none",
             background: color, color: "#fff",
             fontSize: "0.75rem", fontWeight: 600,
@@ -768,7 +768,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 26, height: 26, borderRadius: 7,
+                  width: 26, height: 26, borderRadius: 8,
                   border: "1px solid var(--border)",
                   background: "var(--bg-subtle)",
                   color: "var(--fg-muted)", cursor: "pointer", flexShrink: 0,
@@ -795,7 +795,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                 }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 26, height: 26, borderRadius: 7,
+                  width: 26, height: 26, borderRadius: 8,
                   border: "1px solid var(--border)",
                   background: "var(--bg-subtle)",
                   color: "var(--fg-muted)", cursor: "pointer", flexShrink: 0,
@@ -814,7 +814,7 @@ export function CalendarView({ initialView = "week", hideSidebar = false, hideHe
                   calendarRef.current?.getApi().gotoDate(defaultStart(view));
                 }}
                 style={{
-                  padding: "3px 10px", borderRadius: 20,
+                  padding: "3px 10px", borderRadius: 9999,
                   border: "none",
                   background: "var(--accent)",
                   color: "#fff",

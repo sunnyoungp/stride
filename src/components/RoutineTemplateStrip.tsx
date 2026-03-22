@@ -94,10 +94,10 @@ export function RoutineTemplateStrip({ onManageTemplates }: Props) {
                   style={{
                     fontSize: 11,
                     padding: "3px 10px",
-                    borderRadius: 20,
-                    background: "rgba(0,0,0,0.05)",
+                    borderRadius: 9999,
+                    background: "var(--bg-hover)",
                     border: "none",
-                    color: "rgba(0,0,0,0.4)",
+                    color: "var(--fg-muted)",
                     cursor: "pointer",
                     flexShrink: 0,
                     lineHeight: "22px",
