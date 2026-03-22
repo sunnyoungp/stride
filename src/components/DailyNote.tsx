@@ -101,15 +101,27 @@ function collectSelectablePositions(doc: PmNode): number[] {
   return positions;
 }
 
-/** Remove a taskItem node from the editor by title match. Returns true if found. */
+/** Remove a taskItem or plain block node from the editor by title match. Returns true if found. */
 function removeNodeFromEditor(editor: Editor, title: string): boolean {
   const doc = editor.state.doc;
   const tr  = editor.state.tr;
   let found = false;
+  const matchable = new Set(["taskItem", "paragraph", "heading", "listItem"]);
   doc.nodesBetween(0, doc.nodeSize - 2, (node, pos) => {
     if (found) return false;
-    if (node.type.name === "taskItem" && node.textContent.trim() === title) {
-      tr.delete(pos, pos + node.nodeSize);
+    if (matchable.has(node.type.name) && node.textContent.trim() === title) {
+      try {
+        const $pos = doc.resolve(pos);
+        // If the taskItem is the only child of its taskList, delete the whole taskList
+        // so no empty wrapper node is left behind
+        if (node.type.name === "taskItem" && $pos.parent.type.name === "taskList" && $pos.parent.childCount === 1) {
+          tr.delete($pos.before($pos.depth), $pos.after($pos.depth));
+        } else {
+          tr.delete(pos, pos + node.nodeSize);
+        }
+      } catch {
+        tr.delete(pos, pos + node.nodeSize);
+      }
       found = true;
       return false;
     }
@@ -575,6 +587,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   const loadDailyNotes    = useDailyNoteStore((s) => s.loadDailyNotes);
   const getTodayNote      = useDailyNoteStore((s) => s.getTodayNote);
   const updateNoteContent = useDailyNoteStore((s) => s.updateNoteContent);
+  const upsertNote        = useDailyNoteStore((s) => s.upsertNote);
 
   const tasks      = useTaskStore((s) => s.tasks);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -617,8 +630,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     window.dispatchEvent(new StorageEvent("storage", { key: "stride-note-linked-mode", newValue: String(next) }));
   };
 
-  // Note font-size and heading settings
-  const [noteFontSize,  setNoteFontSize]  = useState("16px");
+  // Note font-size: global stride-font-size + 3px
+  const [noteFontSize,  setNoteFontSize]  = useState("17px");
   useEffect(() => {
     // Read persisted settings on mount (client-only, avoids SSR mismatch)
     const primary = localStorage.getItem("stride-note-linked-mode");
@@ -627,12 +640,12 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     } else {
       setIsLinked(localStorage.getItem("dailynote-linked-mode") === "true");
     }
-    const savedSize = localStorage.getItem("stride-note-font-size");
-    if (savedSize) setNoteFontSize(savedSize);
+    const base = localStorage.getItem("stride-font-size");
+    if (base) setNoteFontSize(`${(parseInt(base, 10) || 14) + 3}px`);
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-note-linked-mode") setIsLinked(e.newValue === "true");
-      if (e.key === "stride-note-font-size" && e.newValue) setNoteFontSize(e.newValue);
+      if (e.key === "stride-font-size" && e.newValue) setNoteFontSize(`${(parseInt(e.newValue, 10) || 14) + 3}px`);
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -1145,39 +1158,66 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
 
     if (taskId) pendingMoveRef.current.add(taskId);
 
+    // Detect node type before removing — only match taskItem/paragraph/heading directly,
+    // skip wrapper nodes (taskList, bulletList, doc) whose textContent also matches
+    const wrappers = new Set(["doc", "taskList", "bulletList", "orderedList", "blockquote"]);
+    let nodeType = "paragraph";
+    ed.state.doc.nodesBetween(0, ed.state.doc.nodeSize - 2, (node) => {
+      if (wrappers.has(node.type.name)) return true; // descend into wrappers
+      if (node.textContent.trim() === title) {
+        nodeType = node.type.name; // e.g. "taskItem", "paragraph", "heading"
+        return false; // stop traversal
+      }
+    });
+
     removeNodeFromEditor(ed, title);
 
-    // Save current note immediately
+    // Flush save immediately so the removal is persisted before writing to the target
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     await updateNoteContent(note.id, JSON.stringify(ed.getJSON()));
 
-    // Get or create target note
+    // Get or create target note — use upsertNote which handles Supabase creation
     const storeState = useDailyNoteStore.getState();
-    let targetNote = storeState.dailyNotes.find(n => n.date === targetDate);
-    if (!targetNote) {
-      targetNote = await ensureDailyNote(targetDate);
-      await storeState.loadDailyNotes();
+    const existingTarget = storeState.dailyNotes.find(n => n.date === targetDate);
+    const targetContent = existingTarget?.content ?? JSON.stringify({ type: "doc", content: [] });
+
+    // If not in store, fetch from Supabase directly so we get the real content
+    let resolvedContent = targetContent;
+    if (!existingTarget) {
+      const { data: row } = await (await import("@/lib/supabase/client")).createClient()
+        .from("daily_notes").select("content").eq("date", targetDate).maybeSingle();
+      if (row?.content) resolvedContent = row.content;
     }
 
-    // Append the checklist item to the target note's content JSON
-    const targetDoc  = safeParseJson(targetNote.content) ?? { type: "doc", content: [] };
+    const targetDoc  = safeParseJson(resolvedContent) ?? { type: "doc", content: [] };
     const contentArr: JSONContent[] = Array.isArray((targetDoc as any).content) ? (targetDoc as any).content : [];
-    const newItem: JSONContent = {
-      type: "taskItem",
-      attrs: { checked: false, taskId },
-      content: [{ type: "paragraph", content: [{ type: "text", text: title }] }],
-    };
-    const last = contentArr[contentArr.length - 1];
-    if (last?.type === "taskList") {
-      last.content = [...(last.content ?? []), newItem];
-    } else {
-      contentArr.push({ type: "taskList", content: [newItem] });
-    }
-    await updateNoteContent(targetNote.id, JSON.stringify({ ...targetDoc, content: contentArr }));
 
-    // Move only — do not reschedule the task's dueDate here.
-    // Callers that want to also reschedule (e.g. drag-to-mini-calendar) handle it separately.
-  }, [updateNoteContent]);
+    if (nodeType === "taskItem") {
+      // Append as a taskItem inside a taskList
+      const newItem: JSONContent = {
+        type: "taskItem",
+        attrs: { checked: false, taskId },
+        content: [{ type: "paragraph", content: [{ type: "text", text: title }] }],
+      };
+      const last = contentArr[contentArr.length - 1];
+      if (last?.type === "taskList") {
+        last.content = [...(last.content ?? []), newItem];
+      } else {
+        contentArr.push({ type: "taskList", content: [newItem] });
+      }
+    } else {
+      // Append plain text blocks (paragraphs, headings, bullets) as a paragraph
+      contentArr.push({ type: "paragraph", content: [{ type: "text", text: title }] });
+    }
+
+    // upsertNote creates the Supabase row if it doesn't exist, then writes content
+    await upsertNote(targetDate, JSON.stringify({ ...targetDoc, content: contentArr }));
+
+    // Update the task dueDate so it appears on the correct day in all filtered views
+    if (taskId) {
+      await updateTaskRef.current(taskId, { dueDate: targetDate });
+    }
+  }, [updateNoteContent, upsertNote]);
 
   // Expose handleMoveItem to parent via ref so external drop targets can trigger it
   useEffect(() => {

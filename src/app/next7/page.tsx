@@ -179,9 +179,10 @@ function DroppableDateGroup({
 export default function Next7Page() {
   const tasks = useTaskStore((s) => s.tasks);
   const loadTasks = useTaskStore((s) => s.loadTasks);
+  const createTask = useTaskStore((s) => s.createTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
-  const sectionIdFilter = searchParams?.get("sectionId") ?? null;
+
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ task: Task; x: number; y: number } | null>(null);
@@ -262,14 +263,10 @@ export default function Next7Page() {
   const handleTaskRightClick = (task: Task, pos: { x: number; y: number }) => {
     setContextMenu({ task, x: pos.x, y: pos.y });
   };
-  const handleAddTask = async (columnId: string) => {
-    if (sectionIdFilter && sectionIdFilter !== "unsorted") {
-      const subsectionId = columnId === "__general__" ? undefined : columnId;
-      await createTask({ title: "New Task", sectionId: sectionIdFilter, subsectionId, status: "todo" });
-    } else {
-      const sectionId = columnId === "__unsorted__" ? undefined : columnId;
-      await createTask({ title: "New Task", sectionId, status: "todo" });
-    }
+
+  const handleAddTask = (columnId: string, title: string) => {
+    if (columnId === "__overdue__") return;
+    void createTask({ title, status: "todo", dueDate: columnId });
   };
 
   const handleTaskMove = async (taskId: string, targetColId: string, newOrder: number) => {
@@ -350,8 +347,8 @@ export default function Next7Page() {
             allTasks={tasks}
             onTaskMove={(id, col, order) => void handleTaskMove(id, col, order)}
             onTaskClick={handleTaskClick}
-            onAddTask={handleAddTask}
             onTaskRightClick={handleTaskRightClick}
+            onAddTask={handleAddTask}
           />
         </div>
       ) : (

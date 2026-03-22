@@ -122,12 +122,8 @@ export default function NotesPage() {
 
   const handleBlockDrop = (blockType: "task" | "note", title: string, taskId: string | null, date: string) => {
     if (!title) return;
-    // Move the block from current note to target date's note
+    // handleMoveItem handles both the note content move AND dueDate update internally
     void dailyNoteMoveRef.current?.(title, taskId, date);
-    // For task blocks, also reschedule the linked task's due date
-    if (blockType === "task" && taskId) {
-      void updateTask(taskId, { dueDate: date });
-    }
   };
 
   useEffect(() => { setMounted(true); }, []);

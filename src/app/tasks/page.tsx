@@ -7,6 +7,7 @@ import { useTaskStore } from "@/store/taskStore";
 import { useSectionStore } from "@/store/sectionStore";
 import { TaskListView } from "@/components/TaskListView";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
+import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
 import type { Task, TaskSection } from "@/types/index";
@@ -55,10 +56,12 @@ function getSectionAccent(s: TaskSection): string {
 function TasksPageInner({
   view,
   onTaskClick,
+  onTaskRightClick,
   filterDates,
 }: {
   view: "list" | "kanban";
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
+  onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
   filterDates?: string[];
 }) {
   const searchParams = useSearchParams();
@@ -157,13 +160,13 @@ function TasksPageInner({
     }
   };
 
-  const handleAddTask = async (columnId: string) => {
+  const handleAddTask = async (columnId: string, title: string) => {
     if (sectionIdFilter && sectionIdFilter !== "unsorted") {
       const subsectionId = columnId === "__general__" ? undefined : columnId;
-      await createTask({ title: "New Task", sectionId: sectionIdFilter, subsectionId, status: "todo" });
+      await createTask({ title, sectionId: sectionIdFilter, subsectionId, status: "todo" });
     } else {
       const sectionId = columnId === "__unsorted__" ? undefined : columnId;
-      await createTask({ title: "New Task", sectionId, status: "todo" });
+      await createTask({ title, sectionId, status: "todo" });
     }
   };
 
@@ -175,7 +178,7 @@ function TasksPageInner({
           allTasks={tasks}
           onTaskMove={(id, col, order) => void handleKanbanMove(id, col, order)}
           onTaskClick={onTaskClick}
-          onTaskRightClick={() => {}}
+          onTaskRightClick={onTaskRightClick}
           onAddTask={handleAddTask}
         />
       </div>
@@ -197,6 +200,7 @@ const DATE_FILTER_CHIPS: { key: DateFilter; label: string }[] = [
 export default function Page() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
+  const [contextMenu, setContextMenu] = useState<{ task: Task; x: number; y: number } | null>(null);
   const [view, setView] = useState<"list" | "kanban">("list");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   useEffect(() => {
@@ -278,6 +282,7 @@ export default function Page() {
               setSelectedTaskId(task.id);
               setClickPos(pos);
             }}
+            onTaskRightClick={(task, pos) => setContextMenu({ task, x: pos.x, y: pos.y })}
           />
         </Suspense>
       </div>
@@ -286,6 +291,13 @@ export default function Page() {
           task={selectedTask}
           position={clickPos}
           onClose={() => setSelectedTaskId(null)}
+        />
+      )}
+      {contextMenu && (
+        <TaskContextMenu
+          task={contextMenu.task}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

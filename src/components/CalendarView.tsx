@@ -888,6 +888,16 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
     return () => clearTimeout(timer);
   }, [showRoutinesSidebar, showTasksSidebar, isMobile]);
 
+  // Tell FullCalendar to re-measure after the sidebar CSS transition completes (250ms)
+  // Without this it is always one step behind — measuring the pre-transition width
+  useEffect(() => {
+    if (isMobile) return;
+    const timer = setTimeout(() => {
+      calendarRef.current?.getApi().updateSize();
+    }, 260);
+    return () => clearTimeout(timer);
+  }, [showRoutinesSidebar, showTasksSidebar, isMobile]);
+
   const VIEW_LABELS: [ViewKey, string][] = [["1d", "Day"], ["2d", "2D"], ["3d", "3D"], ["4d", "4D"], ["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]];
 
   const isAgenda = view === "agenda";
@@ -987,8 +997,8 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
         }}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 overflow-hidden" style={{ minWidth: 0 }}>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ minWidth: 0 }}>
           {/* Navigation bar — hidden in dashboard mode */}
           {!dashboardMode && (
             <div
@@ -1137,7 +1147,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
           <div
             ref={calendarBodyRef}
             className="flex-1 p-2 overflow-hidden"
-            style={{ display: isAgenda ? "none" : undefined, overscrollBehaviorX: "none", paddingBottom: isMobile ? "calc(8px + env(safe-area-inset-bottom))" : undefined }}
+            style={{ display: isAgenda ? "none" : undefined, overscrollBehaviorX: "none", fontSize: "11px", paddingBottom: isMobile ? "calc(8px + env(safe-area-inset-bottom))" : undefined }}
           >
             <div className="h-full rounded-xl overflow-hidden">
               <FullCalendar
@@ -1246,11 +1256,13 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
         {/* ── Right sidebar: Routines ── desktop only, slides in from right */}
         {!isAgenda && (
           <div
-            className="hidden md:flex flex-col flex-none overflow-hidden"
+            className="hidden md:flex flex-col overflow-hidden"
             style={{
+              flexShrink: 0,
               width: showRoutinesSidebar ? 260 : 0,
               transition: "width 250ms cubic-bezier(0.4,0,0.2,1)",
               borderLeft: showRoutinesSidebar ? "1px solid var(--border)" : "none",
+              minWidth: 0,
             }}
           >
             <div style={{ width: 260, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -1269,11 +1281,13 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
         {/* ── Right sidebar: Unscheduled Tasks ── desktop only, slides in from right */}
         {!isAgenda && (
           <div
-            className="hidden md:flex flex-col flex-none overflow-hidden"
+            className="hidden md:flex flex-col overflow-hidden"
             style={{
+              flexShrink: 0,
               width: showTasksSidebar ? 260 : 0,
               transition: "width 250ms cubic-bezier(0.4,0,0.2,1)",
               borderLeft: showTasksSidebar ? "1px solid var(--border)" : "none",
+              minWidth: 0,
             }}
           >
             <div ref={taskPanelRef} style={{ width: 260, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>

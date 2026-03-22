@@ -8,6 +8,14 @@
 
 ---
 
+## Kanban — applies to ALL three pages
+
+Kanban view exists on **Tasks** (`/app/tasks/page.tsx`), **Inbox** (`/app/inbox/page.tsx`), and **Next 7 Days** (`/app/next7/page.tsx`). All three share the same `KanbanBoard` component.
+
+**Any change to Kanban behavior — cards, interactions, right-click menus, inline inputs, column headers, `onAddTask` — must be applied to all three pages.** Never patch only one page.
+
+---
+
 ## Design System — ALWAYS use these, never hardcode values
 
 ### CSS Variables (defined in globals.css / SettingsApplier.tsx)

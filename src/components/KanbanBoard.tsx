@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, CSSProperties } from "react";
+import { useState, useMemo, useRef, useEffect, CSSProperties } from "react";
 import {
   DndContext,
   closestCenter,
@@ -60,7 +60,7 @@ type Props = {
   onTaskMove: (taskId: string, targetColumnId: string, newOrder: number) => void;
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
-  onAddTask?: (columnId: string) => void;
+  onAddTask?: (columnId: string, title: string) => void;
 };
 
 // ── Priority dot color ────────────────────────────────────────────────────────
@@ -328,6 +328,44 @@ function KanbanCard({
   );
 }
 
+// ── InlineInputCard ───────────────────────────────────────────────────────────
+
+function InlineInputCard({ onCommit, onCancel }: { onCommit: (title: string) => void; onCancel: () => void }) {
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const h = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) onCancel();
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", h), 80);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div ref={containerRef} style={{
+      background: "var(--bg-card)", borderRadius: 10,
+      border: "1px solid var(--accent)",
+      boxShadow: "0 0 0 2px var(--accent-bg-strong)",
+      padding: "10px 12px",
+    }}>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); onCommit(value.trim()); }
+          if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        }}
+        placeholder="Task name"
+        style={{ width: "100%", background: "transparent", border: "none", outline: "none", fontSize: 14, color: "var(--fg)" }}
+      />
+    </div>
+  );
+}
+
 // ── KanbanColumnView ──────────────────────────────────────────────────────────
 
 function KanbanColumnView({
@@ -339,72 +377,63 @@ function KanbanColumnView({
   column: KanbanColumn;
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
-  onAddTask?: (columnId: string) => void;
+  onAddTask?: (columnId: string, title: string) => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id });
   const color = column.color ?? "#94a3b8";
   const taskIds = useMemo(() => column.tasks.map((t) => t.id), [column.tasks]);
+  const [addingAt, setAddingAt] = useState<"top" | "bottom" | null>(null);
+
+  const commit = (title: string) => {
+    if (title && onAddTask) onAddTask(column.id, title);
+    setAddingAt(null);
+  };
 
   return (
     <div
       ref={setNodeRef}
       style={{
-        minWidth: 320,
-        maxWidth: 320,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: 14,
-        background: "var(--bg-card)",
+        minWidth: 320, maxWidth: 320, flexShrink: 0,
+        display: "flex", flexDirection: "column",
+        borderRadius: 14, background: "var(--bg-card)",
         border: isOver ? `2px solid var(--accent)` : "1px solid var(--border)",
         transition: "border 150ms ease",
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          borderTop: `0px solid ${color}`,
-          background: `${color}14`,
-          padding: "12px 16px",
-          borderRadius: "12px 12px 0 0",
-        }}
-      >
+      <div style={{ background: `${color}14`, padding: "12px 16px", borderRadius: "12px 12px 0 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {column.icon && (
-            <span style={{ fontSize: 14 }}>{column.icon}</span>
+          {column.icon && <span style={{ fontSize: 14 }}>{column.icon}</span>}
+          <span style={{ fontWeight: 600, fontSize: 13, color: "var(--fg)" }}>{column.title}</span>
+          <span style={{ fontSize: 12, color: "var(--fg-faint)", fontWeight: 500 }}>{column.tasks.length}</span>
+          <div style={{ flex: 1 }} />
+          {onAddTask && (
+            <button
+              type="button"
+              onClick={() => setAddingAt("top")}
+              style={{
+                width: 24, height: 24, borderRadius: 6, border: "none",
+                background: "transparent", color: "var(--fg-faint)",
+                cursor: "pointer", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: 18, lineHeight: 1, flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--fg-muted)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint)"; }}
+            >
+              +
+            </button>
           )}
-          <span style={{ fontWeight: 600, fontSize: 13, color: "var(--fg)", flex: 1 }}>
-            {column.title}
-          </span>
-          <span style={{ fontSize: 12, color: "var(--fg-faint)", fontWeight: 500 }}>
-            {column.tasks.length}
-          </span>
         </div>
       </div>
 
       {/* Tasks area */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "8px 12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          minHeight: 80,
-        }}
-      >
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8, minHeight: 80 }}>
+        {addingAt === "top" && (
+          <InlineInputCard onCommit={commit} onCancel={() => setAddingAt(null)} />
+        )}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {column.tasks.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                color: "var(--fg-faint)",
-                fontSize: 13,
-                fontStyle: "italic",
-                padding: "16px 0",
-              }}
-            >
+          {column.tasks.length === 0 && addingAt !== "top" ? (
+            <div style={{ textAlign: "center", color: "var(--fg-faint)", fontSize: 13, fontStyle: "italic", padding: "16px 0" }}>
               No tasks
             </div>
           ) : (
@@ -421,34 +450,26 @@ function KanbanColumnView({
         </SortableContext>
       </div>
 
-      {/* Footer: Add Task */}
+      {/* Footer */}
       {onAddTask && (
         <div style={{ padding: "8px 12px 12px" }}>
-          <button
-            type="button"
-            onClick={() => onAddTask(column.id)}
-            style={{
-              width: "100%",
-              padding: "7px 0",
-              borderRadius: 8,
-              border: "1px dashed var(--border-mid)",
-              background: "transparent",
-              color: "var(--fg-faint)",
-              fontSize: 12,
-              cursor: "pointer",
-              transition: "all 150ms ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--bg-hover)";
-              e.currentTarget.style.color = "var(--fg-muted)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "var(--fg-faint)";
-            }}
-          >
-            + Add Task
-          </button>
+          {addingAt === "bottom" ? (
+            <InlineInputCard onCommit={commit} onCancel={() => setAddingAt(null)} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingAt("bottom")}
+              style={{
+                width: "100%", padding: "7px 0", borderRadius: 8,
+                border: "1px dashed var(--border-mid)", background: "transparent",
+                color: "var(--fg-faint)", fontSize: 12, cursor: "pointer", transition: "all 150ms ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--fg-muted)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-faint)"; }}
+            >
+              + Add Task
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -530,7 +551,7 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
           display: "flex",
           gap: 20,
           overflowX: "auto",
-          overflowY: "hidden",
+          overflowY: "auto",
           padding: 16,
           height: "100%",
           alignItems: "flex-start",

@@ -40,6 +40,7 @@ type DailyNoteStore = {
   loadDailyNotes: () => Promise<void>;
   getTodayNote: () => Promise<DailyNote>;
   updateNoteContent: (id: string, content: string) => Promise<void>;
+  upsertNote: (date: string, content: string) => Promise<DailyNote>;
 };
 
 function todayDateString(): string {
@@ -105,9 +106,49 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
       .update({ content })
       .eq("id", id);
     if (error) console.error("Failed to update note content:", error);
+    // Update in local state — only maps existing notes, new notes go through upsertNote
     set({
       dailyNotes: get().dailyNotes.map((n) => (n.id === id ? { ...n, content } : n)),
     });
+  };
+
+  const upsertNote: DailyNoteStore["upsertNote"] = async (date, content) => {
+    // Check local store first
+    const existing = get().dailyNotes.find((n) => n.date === date);
+    if (existing) {
+      await updateNoteContent(existing.id, content);
+      return { ...existing, content };
+    }
+
+    // Check Supabase
+    const { data: row } = await supabase
+      .from("daily_notes")
+      .select("*")
+      .eq("date", date)
+      .maybeSingle();
+
+    if (row) {
+      const note = noteFromRow(row);
+      const updated = { ...note, content };
+      await updateNoteContent(note.id, content);
+      // Ensure it's in local state
+      set({ dailyNotes: [...get().dailyNotes.filter(n => n.id !== note.id), updated] });
+      return updated;
+    }
+
+    // Create new note in Supabase
+    const userId = await getUserId();
+    if (!userId) throw new Error("Not authenticated");
+    const note: DailyNote = {
+      id: crypto.randomUUID(),
+      date,
+      content,
+      linkedTaskIds: [],
+    };
+    const { error } = await supabase.from("daily_notes").insert(noteToRow(note, userId));
+    if (error) throw error;
+    set({ dailyNotes: [...get().dailyNotes, note] });
+    return note;
   };
 
   return {
@@ -116,5 +157,6 @@ export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
     loadDailyNotes,
     getTodayNote,
     updateNoteContent,
+    upsertNote,
   };
 });

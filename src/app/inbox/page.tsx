@@ -16,6 +16,7 @@ import type { Task } from "@/types/index";
 function InboxPageContent() {
   const tasks = useTaskStore((s) => s.tasks);
   const loadTasks = useTaskStore((s) => s.loadTasks);
+  const createTask = useTaskStore((s) => s.createTask);
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -78,6 +79,10 @@ function InboxPageContent() {
 
   const handleTaskRightClick = (task: Task, pos: { x: number; y: number }) => {
     setContextMenu({ task, x: pos.x, y: pos.y });
+  };
+
+  const handleAddTask = (columnId: string, title: string) => {
+    void createTask({ title, status: "todo" });
   };
 
   const handleTaskMove = async (taskId: string, targetColId: string, newOrder: number) => {
@@ -165,6 +170,7 @@ function InboxPageContent() {
             onTaskMove={(id, col, order) => void handleTaskMove(id, col, order)}
             onTaskClick={handleTaskClick}
             onTaskRightClick={handleTaskRightClick}
+            onAddTask={handleAddTask}
           />
         </div>
       ) : (
