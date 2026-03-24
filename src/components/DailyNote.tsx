@@ -630,7 +630,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     window.dispatchEvent(new StorageEvent("storage", { key: "stride-note-linked-mode", newValue: String(next) }));
   };
 
-  // Note font-size: global stride-font-size + 3px
+  // Note font-size: global stride-font-size + 5px
   const [noteFontSize,  setNoteFontSize]  = useState("17px");
   useEffect(() => {
     // Read persisted settings on mount (client-only, avoids SSR mismatch)
@@ -641,7 +641,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       setIsLinked(localStorage.getItem("dailynote-linked-mode") === "true");
     }
     const base = localStorage.getItem("stride-font-size");
-    if (base) setNoteFontSize(`${(parseInt(base, 10) || 14) + 3}px`);
+    if (base) setNoteFontSize(`${(parseInt(base, 10) || 14) + 5}px`);
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-note-linked-mode") setIsLinked(e.newValue === "true");

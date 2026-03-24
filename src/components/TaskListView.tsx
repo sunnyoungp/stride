@@ -20,11 +20,13 @@ import { useTaskStore } from "@/store/taskStore";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { useDragStore } from "@/store/dragStore";
 import { AddTaskRow, friendlyDate, isOverdue, PriorityFlag, SelectionActionBar } from "@/components/TaskList";
+import type { SortBy } from "@/components/SortFilterPopover";
 
 type Props = {
   onTaskClick: (task: Task, position: { x: number; y: number }) => void;
   filterDate?: string;
   filterDates?: string[];
+  sortBy?: SortBy;
 };
 
 // ── Color palette for sections ────────────────────────────────────────────────
@@ -80,7 +82,7 @@ function DroppableSection({ id, children }: { id: string; children: React.ReactN
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function TaskListView({ onTaskClick, filterDate, filterDates }: Props) {
+export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: Props) {
   const searchParams    = useSearchParams();
   const sectionIdFilter = searchParams?.get("sectionId") ?? null;
 
@@ -185,8 +187,25 @@ export function TaskListView({ onTaskClick, filterDate, filterDates }: Props) {
         ? base.filter((t) => !t.sectionId)
         : base.filter((t) => t.sectionId === sectionIdFilter);
     }
-    return base.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  }, [filterDate, filterDates, sectionIdFilter, rootIncompleteTasks]);
+    switch (sortBy) {
+      case "title": return [...base].sort((a, b) => a.title.localeCompare(b.title));
+      case "priority": {
+        const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
+        return [...base].sort((a, b) => (p[a.priority ?? ""] ?? 3) - (p[b.priority ?? ""] ?? 3));
+      }
+      case "tag":
+        return [...base].sort((a, b) => (a.tags[0] ?? "").localeCompare(b.tags[0] ?? ""));
+      case "date":
+        return [...base].sort((a, b) => {
+          if (!a.dueDate && !b.dueDate) return (a.order ?? 0) - (b.order ?? 0);
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return a.dueDate.localeCompare(b.dueDate);
+        });
+      default:
+        return [...base].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+  }, [filterDate, filterDates, sectionIdFilter, rootIncompleteTasks, sortBy]);
 
   const filteredCompleted = useMemo(() => {
     let base = rootCompletedTasks;

@@ -14,7 +14,7 @@ import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { RoutineTemplateStrip } from "@/components/RoutineTemplateStrip";
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
 import { TimeBlockContextMenu } from "@/components/TimeBlockContextMenu";
-import { TimeBlockPopover } from "@/components/TimeBlockPopover";
+import { EventPanel } from "@/components/EventPanel";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
@@ -66,7 +66,6 @@ function defaultStart(v: ViewKey): Date {
 
 /** Default color for new time blocks — warm coral accent */
 const DEFAULT_BLOCK_COLOR = "#f4714a";
-const PRESET_COLORS = ["#f4714a", "#6c7ce7", "#4ecdc4", "#45b7d1", "#96ceb4", "#e8a0bf"];
 
 type PendingBlock = { startTime: string; endTime: string; x: number; y: number };
 
@@ -281,300 +280,6 @@ function AgendaDayCard({
   );
 }
 
-// ─── New Event Modal (full-featured) ─────────────────────────────────────────
-
-type EventFormData = {
-  title: string;
-  color: string;
-  allDay: boolean;
-  startTime: string; // "HH:MM"
-  endTime: string;   // "HH:MM"
-  date: string;      // "YYYY-MM-DD"
-  repeat: "none" | "daily" | "weekly" | "monthly";
-  location: string;
-  description: string;
-};
-
-function toTimeInput(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function toDateInput(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-
-function calcDuration(start: string, end: string): number {
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  return ((eh ?? 0) * 60 + (em ?? 0)) - ((sh ?? 0) * 60 + (sm ?? 0));
-}
-
-function fmtDateLabel(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(
-    new Date(y ?? 2024, (m ?? 1) - 1, d ?? 1)
-  );
-}
-
-function NewEventModal({
-  pending,
-  onConfirm,
-  onCancel,
-}: {
-  pending: PendingBlock;
-  onConfirm: (data: { title: string; color: string; allDay: boolean }) => void;
-  onCancel: () => void;
-}) {
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-  const [form, setForm] = useState<EventFormData>({
-    title: "",
-    color: DEFAULT_BLOCK_COLOR,
-    allDay: false,
-    startTime: toTimeInput(pending.startTime),
-    endTime: toTimeInput(pending.endTime),
-    date: toDateInput(pending.startTime),
-    repeat: "none",
-    location: "",
-    description: "",
-  });
-
-  const titleRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { setTimeout(() => titleRef.current?.focus(), 60); }, []);
-
-  const set = <K extends keyof EventFormData>(key: K, val: EventFormData[K]) =>
-    setForm(f => ({ ...f, [key]: val }));
-
-  const durMins = calcDuration(form.startTime, form.endTime);
-
-  const confirm = () => {
-    onConfirm({ title: form.title.trim() || "New Event", color: form.color, allDay: form.allDay });
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box",
-    background: "var(--bg-subtle)",
-    border: "1px solid var(--border)",
-    borderRadius: 10, padding: "8px 12px",
-    fontSize: "16px", color: "var(--fg)", outline: "none",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, textTransform: "uppercase",
-    letterSpacing: "0.1em", color: "var(--fg-faint)",
-    display: "block", marginBottom: 5,
-  };
-
-  const content = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: isMobile ? "0 16px 16px" : "20px" }}>
-
-      {/* Title */}
-      <div>
-        <input
-          ref={titleRef}
-          value={form.title}
-          onChange={e => set("title", e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") onCancel(); }}
-          placeholder="Event title"
-          style={{ ...inputStyle, fontSize: "16px", fontWeight: 600 }}
-        />
-      </div>
-
-      {/* Time row */}
-      {!form.allDay && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <input
-            type="time" value={form.startTime}
-            onChange={e => set("startTime", e.target.value)}
-            style={{ ...inputStyle, width: "auto", flex: 1, minWidth: 100, fontSize: 14 }}
-          />
-          <span style={{ color: "var(--fg-faint)", fontSize: 13 }}>→</span>
-          <input
-            type="time" value={form.endTime}
-            onChange={e => set("endTime", e.target.value)}
-            style={{ ...inputStyle, width: "auto", flex: 1, minWidth: 100, fontSize: 14 }}
-          />
-          {durMins > 0 && (
-            <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0 }}>
-              {durMins >= 60
-                ? `${Math.floor(durMins / 60)}h${durMins % 60 > 0 ? `${durMins % 60}m` : ""}`
-                : `${durMins}min`}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Date */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <input
-          type="date" value={form.date}
-          onChange={e => set("date", e.target.value)}
-          style={{ ...inputStyle, width: "auto", flex: 1, fontSize: 14 }}
-        />
-        <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0 }}>
-          {fmtDateLabel(form.date)}
-        </span>
-      </div>
-
-      {/* All-day toggle */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 13, color: "var(--fg)" }}>All day</span>
-        <button
-          type="button"
-          onClick={() => set("allDay", !form.allDay)}
-          style={{
-            width: 40, height: 22, borderRadius: 9999, border: "none", cursor: "pointer",
-            background: form.allDay ? "var(--accent)" : "var(--border-strong)",
-            position: "relative", transition: "background 150ms ease",
-          }}
-        >
-          <span style={{
-            position: "absolute", top: 2,
-            left: form.allDay ? 20 : 2,
-            width: 18, height: 18, borderRadius: "50%",
-            background: "white", transition: "left 150ms ease",
-          }} />
-        </button>
-      </div>
-
-      {/* Repeat */}
-      <div>
-        <label style={labelStyle}>Repeat</label>
-        <select
-          value={form.repeat}
-          onChange={e => set("repeat", e.target.value as EventFormData["repeat"])}
-          style={{ ...inputStyle, fontSize: 14, cursor: "pointer" }}
-        >
-          <option value="none">None</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-      </div>
-
-      {/* Location */}
-      <div>
-        <label style={labelStyle}>Location</label>
-        <input
-          type="text" value={form.location}
-          onChange={e => set("location", e.target.value)}
-          placeholder="Add location"
-          style={{ ...inputStyle, fontSize: 14 }}
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <label style={labelStyle}>Description</label>
-        <textarea
-          value={form.description}
-          onChange={e => set("description", e.target.value)}
-          placeholder="Add description"
-          rows={3}
-          style={{
-            ...inputStyle, fontSize: 14,
-            resize: "vertical", minHeight: 72,
-          }}
-        />
-      </div>
-
-      {/* Color picker */}
-      <div>
-        <label style={labelStyle}>Color</label>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {PRESET_COLORS.map(c => (
-            <button key={c} type="button" onClick={() => set("color", c)}
-              style={{
-                width: 20, height: 20, borderRadius: "50%", background: c,
-                border: form.color === c ? "2.5px solid var(--fg)" : "2.5px solid transparent",
-                outline: form.color === c ? "2px solid var(--bg-card)" : "none",
-                outlineOffset: "-3px",
-                cursor: "pointer", padding: 0, flexShrink: 0, transition: "border 120ms ease",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 }}>
-        <button
-          type="button" onClick={onCancel}
-          className="rounded-xl px-4 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
-          style={{ color: "var(--fg)", background: "none", border: "1px solid var(--border)", cursor: "pointer" }}
-        >Cancel</button>
-        <button
-          type="button" onClick={confirm}
-          className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150"
-          style={{ background: "var(--accent)", color: "white", border: "none", cursor: "pointer" }}
-        >Create</button>
-      </div>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <>
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }}
-          onClick={onCancel}
-        />
-        <div style={{
-          position: "fixed", left: 0, right: 0, bottom: 0,
-          paddingBottom: "calc(32px + env(safe-area-inset-bottom))",
-          background: "var(--bg-card)",
-          borderTop: "1px solid var(--border-mid)",
-          borderRadius: "16px 16px 0 0",
-          boxShadow: "var(--shadow-float)",
-          zIndex: 50,
-          maxHeight: "90vh",
-          overflowY: "auto",
-        }}>
-          <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
-            <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
-          </div>
-          <div style={{ padding: "0 0 8px", textAlign: "center" }}>
-            <span style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)" }}>New Event</span>
-          </div>
-          {content}
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }}
-        onClick={onCancel}
-      />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "100%", maxWidth: 560,
-        margin: "0 16px",
-        background: "var(--bg-card)",
-        border: "1px solid var(--border-mid)",
-        borderRadius: 16,
-        boxShadow: "var(--shadow-float)",
-        zIndex: 50,
-        maxHeight: "90vh",
-        overflowY: "auto",
-      }}>
-        <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)" }}>New Event</span>
-          <button type="button" onClick={onCancel}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--fg-faint)", lineHeight: 1 }}
-          >✕</button>
-        </div>
-        {content}
-      </div>
-    </>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1325,24 +1030,25 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
       </div>
 
       {pendingBlock && (
-        <NewEventModal
-          pending={pendingBlock}
-          onConfirm={({ title, color, allDay }) => {
-            void createTimeBlock({
-              type: "event", title,
-              startTime: pendingBlock.startTime,
-              endTime: pendingBlock.endTime,
-              color,
-              allDay,
-            });
-            setPendingBlock(null);
+        <EventPanel
+          mode="create"
+          startTime={pendingBlock.startTime}
+          endTime={pendingBlock.endTime}
+          clickPos={{ x: pendingBlock.x, y: pendingBlock.y }}
+          onCreate={({ title, color, allDay, startTime, endTime }) => {
+            void createTimeBlock({ type: "event", title, startTime, endTime, color, allDay });
           }}
-          onCancel={() => setPendingBlock(null)}
+          onClose={() => setPendingBlock(null)}
         />
       )}
 
       {popover && activeBlock && (
-        <TimeBlockPopover timeBlock={activeBlock} position={{ x: popover.x, y: popover.y }} onClose={() => setPopover(null)} />
+        <EventPanel
+          mode="edit"
+          timeBlock={activeBlock}
+          clickPos={{ x: popover.x, y: popover.y }}
+          onClose={() => setPopover(null)}
+        />
       )}
       {contextMenu && activeBlock && (
         <TimeBlockContextMenu

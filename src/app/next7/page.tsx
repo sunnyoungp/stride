@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import {
   DndContext,
@@ -25,7 +25,29 @@ import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
 import { TaskGroup, TaskSelectionProvider, localDateStr, TaskRow, AddTaskRow } from "@/components/TaskList";
+import { SortFilterPopover, type GroupBy, type SortBy } from "@/components/SortFilterPopover";
 import type { Task } from "@/types/index";
+
+function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
+  switch (sortBy) {
+    case "title": return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
+    case "priority": {
+      const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      return [...tasks].sort((a, b) => (p[a.priority ?? ""] ?? 3) - (p[b.priority ?? ""] ?? 3));
+    }
+    case "tag":  return [...tasks].sort((a, b) => (a.tags[0] ?? "").localeCompare(b.tags[0] ?? ""));
+    case "date": return [...tasks].sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
+  }
+}
+
+function SortFilterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M2 4h5M2 8h8M2 12h11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M13 6v7m0 0-2-2m2 2 2-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -187,6 +209,10 @@ export default function Next7Page() {
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ task: Task; x: number; y: number } | null>(null);
   const [view, setView] = useState<"list" | "kanban">("list");
+  const [groupBy, setGroupBy] = useState<GroupBy>("list");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortPopoverAnchor, setSortPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
+  const sortBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
     if (saved === "kanban") setView("kanban");
@@ -214,11 +240,8 @@ export default function Next7Page() {
   );
 
   const overdueTasks = useMemo(
-    () =>
-      incompleteTasks
-        .filter((t) => t.dueDate && t.dueDate < today)
-        .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "")),
-    [incompleteTasks, today]
+    () => applySortBy(incompleteTasks.filter((t) => t.dueDate && t.dueDate < today), sortBy),
+    [incompleteTasks, today, sortBy]
   );
 
   const tasksByDate = useMemo(() => {
@@ -229,8 +252,10 @@ export default function Next7Page() {
       const d = t.dueDate.slice(0, 10);
       if (map.has(d)) map.get(d)!.push(t);
     }
+    // Apply sort within each date bucket
+    for (const [date, bucket] of map) map.set(date, applySortBy(bucket, sortBy));
     return map;
-  }, [incompleteTasks, next7]);
+  }, [incompleteTasks, next7, sortBy]);
 
   const kanbanColumns: KanbanColumn[] = useMemo(() => {
     const cols: KanbanColumn[] = [];
@@ -254,6 +279,14 @@ export default function Next7Page() {
     setView(v);
     localStorage.setItem("stride-tasks-view", v);
   };
+
+  const openSortPopover = () => {
+    if (sortPopoverAnchor) { setSortPopoverAnchor(null); return; }
+    const r = sortBtnRef.current?.getBoundingClientRect();
+    if (r) setSortPopoverAnchor({ x: r.right, y: r.bottom });
+  };
+
+  const sortActive = sortBy !== "date" || groupBy !== "list";
 
   const handleTaskClick = (task: Task, pos: { x: number; y: number }) => {
     setSelectedTaskId(task.id);
@@ -336,7 +369,20 @@ export default function Next7Page() {
         }}
       >
         <h1 style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", margin: 0 }}>Next 7 Days</h1>
-        <ViewSwitcher view={view} onChange={handleViewChange} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            ref={sortBtnRef}
+            type="button"
+            onClick={openSortPopover}
+            className="flex items-center justify-center rounded-lg transition-all duration-150"
+            style={{
+              width: 32, height: 32,
+              background: sortActive ? "var(--accent-bg-strong)" : "var(--bg-hover)",
+              color: sortActive ? "var(--accent)" : "var(--fg-muted)",
+            }}
+          ><SortFilterIcon /></button>
+          <ViewSwitcher view={view} onChange={handleViewChange} />
+        </div>
       </div>
 
       {/* Content */}
@@ -435,6 +481,16 @@ export default function Next7Page() {
           task={contextMenu.task}
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+      {sortPopoverAnchor && (
+        <SortFilterPopover
+          groupBy={groupBy}
+          sortBy={sortBy}
+          onGroupByChange={setGroupBy}
+          onSortByChange={setSortBy}
+          anchor={sortPopoverAnchor}
+          onClose={() => setSortPopoverAnchor(null)}
         />
       )}
     </div>

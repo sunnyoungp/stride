@@ -302,3 +302,30 @@ Mobile inputs MUST use `fontSize: "16px"` to prevent iOS zoom.
 - Never skip `env(safe-area-inset-bottom)` on fixed bottom elements
 - Never make a feature that only works via right-click with no mobile fallback
 - Never use `font-size` smaller than 16px on mobile inputs
+
+## Tauri Desktop App
+
+This app is wrapped in Tauri for desktop distribution.
+
+**Key constraints:**
+- `output: 'export'` is set in next.config.ts — no server-side features
+- No API routes, no Server Components, no Server Actions
+- All Supabase calls must use the browser client (`@/lib/supabase/client`)
+- All new dynamic routes (e.g. `/something/[id]`) need both:
+  - `export const dynamic = 'force-static'`
+  - `export async function generateStaticParams() { return [{ id: 'placeholder' }] }`
+
+**Commands:**
+- `npm run tauri dev` — run as desktop app
+- `npm run tauri build` — build distributable .app / .dmg
+- `npm run dev` — still works normally for browser development  
+
+**Building & updating the app:**
+- `npm run tauri build` — creates the installable .app file
+- Output: `src-tauri/target/release/bundle/macos/Stride.app`
+- After building, drag to /Applications to install/update
+- Bundle identifier: com.sunyoung.stride
+
+**Dev vs production:**
+- `npm run tauri dev` — live dev mode (terminal must stay open, for making changes)
+- `npm run tauri build` — creates real standalone .app (no terminal needed)

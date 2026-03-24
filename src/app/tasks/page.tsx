@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useSearchParams } from "next/navigation";
 import { useTaskStore } from "@/store/taskStore";
@@ -10,33 +10,34 @@ import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
+import { SortFilterPopover, type GroupBy, type SortBy } from "@/components/SortFilterPopover";
 import type { Task, TaskSection } from "@/types/index";
 
-// ── Date filter helpers ────────────────────────────────────────────────────────
-
-type DateFilter = "all" | "today" | "today+tomorrow" | "week";
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function localDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function getFilterDates(filter: DateFilter): string[] | undefined {
-  if (filter === "all") return undefined;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (filter === "today") return [localDate(today)];
-  if (filter === "today+tomorrow") {
-    const tom = new Date(today); tom.setDate(tom.getDate() + 1);
-    return [localDate(today), localDate(tom)];
+function todayStr() { return localDate(new Date()); }
+
+function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
+  switch (sortBy) {
+    case "title": return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
+    case "priority": {
+      const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      return [...tasks].sort((a, b) => (p[a.priority ?? ""] ?? 3) - (p[b.priority ?? ""] ?? 3));
+    }
+    case "tag":
+      return [...tasks].sort((a, b) => (a.tags[0] ?? "").localeCompare(b.tags[0] ?? ""));
+    case "date":
+      return [...tasks].sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return (a.order ?? 0) - (b.order ?? 0);
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      });
   }
-  // "week" = current Sun-Sat week
-  const dates: string[] = [];
-  const sun = new Date(today); sun.setDate(sun.getDate() - sun.getDay());
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(sun); d.setDate(sun.getDate() + i);
-    dates.push(localDate(d));
-  }
-  return dates;
 }
 
 const PALETTE = [
@@ -51,18 +52,22 @@ function getSectionAccent(s: TaskSection): string {
   return PALETTE[Math.abs(h) % PALETTE.length]!;
 }
 
-// ── Inner component that reads searchParams (must be in Suspense) ─────────────
+// ── Inner component (reads searchParams — must be in Suspense) ─────────────────
 
 function TasksPageInner({
   view,
   onTaskClick,
   onTaskRightClick,
-  filterDates,
+  todayOnly,
+  groupBy,
+  sortBy,
 }: {
   view: "list" | "kanban";
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
-  filterDates?: string[];
+  todayOnly: boolean;
+  groupBy: GroupBy;
+  sortBy: SortBy;
 }) {
   const searchParams = useSearchParams();
   const sectionIdFilter = searchParams?.get("sectionId") ?? null;
@@ -74,66 +79,89 @@ function TasksPageInner({
   const sections = useSectionStore((s) => s.sections);
   const subsections = useSectionStore((s) => s.subsections);
 
-  const incompleteTasks = useMemo(
-    () =>
-      tasks
-        .filter((t) => !t.parentTaskId && t.status !== "done" && t.status !== "cancelled")
-        .filter((t) => !filterDates || !t.dueDate || filterDates.includes(t.dueDate.slice(0, 10)))
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [tasks, filterDates]
-  );
+  const today = todayStr();
 
-  // Build kanban columns
+  const incompleteTasks = useMemo(() => {
+    let base = tasks
+      .filter((t) => !t.parentTaskId && t.status !== "done" && t.status !== "cancelled");
+    if (todayOnly) base = base.filter((t) => !t.dueDate || t.dueDate.slice(0, 10) === today);
+    return applySortBy(base, sortBy);
+  }, [tasks, todayOnly, today, sortBy]);
+
+  // ── Kanban columns ─────────────────────────────────────────────────────────
+
   const kanbanColumns = useMemo((): KanbanColumn[] => {
+    // When a section is selected, always use subsection grouping regardless of groupBy
     if (sectionIdFilter && sectionIdFilter !== "unsorted") {
-      // Section view: columns = subsections + "General"
       const sectionTasks = incompleteTasks.filter((t) => t.sectionId === sectionIdFilter);
       const subs = subsections
         .filter((s) => s.sectionId === sectionIdFilter)
         .sort((a, b) => a.order - b.order);
       const cols: KanbanColumn[] = subs.map((sub) => ({
-        id: sub.id,
-        title: sub.title,
-        color: sub.color ?? "#94a3b8",
+        id: sub.id, title: sub.title, color: sub.color ?? "#94a3b8",
         tasks: sectionTasks.filter((t) => t.subsectionId === sub.id),
       }));
-      cols.push({
-        id: "__general__",
-        title: "General",
-        color: "#94a3b8",
-        tasks: sectionTasks.filter((t) => !t.subsectionId),
-      });
+      cols.push({ id: "__general__", title: "General", color: "#94a3b8", tasks: sectionTasks.filter((t) => !t.subsectionId) });
       return cols;
     }
-    // All sections view
+
+    // groupBy: date
+    if (groupBy === "date") {
+      const tom = new Date(); tom.setDate(tom.getDate() + 1);
+      const tomorrowStr = localDate(tom);
+      const overdue = incompleteTasks.filter((t) => t.dueDate && t.dueDate.slice(0, 10) < today);
+      const todayT  = incompleteTasks.filter((t) => t.dueDate?.slice(0, 10) === today);
+      const tomorrowT = incompleteTasks.filter((t) => t.dueDate?.slice(0, 10) === tomorrowStr);
+      const laterT = incompleteTasks.filter((t) => t.dueDate && t.dueDate.slice(0, 10) > tomorrowStr);
+      const noDate = incompleteTasks.filter((t) => !t.dueDate);
+      const cols: KanbanColumn[] = [];
+      if (overdue.length) cols.push({ id: "__overdue__", title: "Overdue", color: "#ef4444", tasks: overdue });
+      cols.push({ id: "__today__", title: "Today", color: "var(--accent)", tasks: todayT });
+      cols.push({ id: "__tomorrow__", title: "Tomorrow", color: "#8b5cf6", tasks: tomorrowT });
+      if (laterT.length) cols.push({ id: "__later__", title: "Later", color: "#94a3b8", tasks: laterT });
+      cols.push({ id: "__nodate__", title: "No Date", color: "#94a3b8", tasks: noDate });
+      return cols;
+    }
+
+    // groupBy: priority
+    if (groupBy === "priority") {
+      return [
+        { id: "__high__",   title: "High",        color: "var(--priority-high, #ef4444)",   tasks: incompleteTasks.filter((t) => t.priority === "high") },
+        { id: "__medium__", title: "Medium",       color: "var(--priority-medium, #f59e0b)", tasks: incompleteTasks.filter((t) => t.priority === "medium") },
+        { id: "__low__",    title: "Low",          color: "var(--priority-low, #3b82f6)",    tasks: incompleteTasks.filter((t) => t.priority === "low") },
+        { id: "__nopri__",  title: "No Priority",  color: "#94a3b8",                          tasks: incompleteTasks.filter((t) => !t.priority || t.priority === "none") },
+      ];
+    }
+
+    // groupBy: tag
+    if (groupBy === "tag") {
+      const allTags = [...new Set(incompleteTasks.flatMap((t) => t.tags ?? []))].sort();
+      const cols: KanbanColumn[] = allTags.map((tag) => ({
+        id: `__tag__${tag}`, title: tag, color: "#94a3b8",
+        tasks: incompleteTasks.filter((t) => (t.tags ?? []).includes(tag)),
+      }));
+      cols.push({ id: "__notag__", title: "No Tag", color: "#94a3b8", tasks: incompleteTasks.filter((t) => !t.tags || t.tags.length === 0) });
+      return cols;
+    }
+
+    // groupBy: list (default) — section-based
     const cols: KanbanColumn[] = sections
-      .slice()
-      .sort((a, b) => a.order - b.order)
+      .slice().sort((a, b) => a.order - b.order)
       .map((s) => ({
-        id: s.id,
-        title: s.title,
-        icon: s.icon,
-        color: getSectionAccent(s),
+        id: s.id, title: s.title, icon: s.icon, color: getSectionAccent(s),
         tasks: incompleteTasks.filter((t) => t.sectionId === s.id),
       }));
-    cols.push({
-      id: "__unsorted__",
-      title: "Inbox",
-      color: "#94a3b8",
-      tasks: incompleteTasks.filter((t) => !t.sectionId),
-    });
+    cols.push({ id: "__unsorted__", title: "Inbox", color: "#94a3b8", tasks: incompleteTasks.filter((t) => !t.sectionId) });
     return cols;
-  }, [incompleteTasks, sections, subsections, sectionIdFilter]);
+  }, [incompleteTasks, sections, subsections, sectionIdFilter, groupBy, today]);
 
   const handleKanbanMove = async (taskId: string, targetColId: string, newOrder: number) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
     if (sectionIdFilter && sectionIdFilter !== "unsorted") {
-      // Subsection context
       const newSubId = targetColId === "__general__" ? undefined : targetColId;
-      const isIntraCol =
-        (task.subsectionId ?? "__general__") === (newSubId ?? "__general__");
+      const isIntraCol = (task.subsectionId ?? "__general__") === (newSubId ?? "__general__");
       if (isIntraCol) {
         const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
         const old = colTasks.findIndex((t) => t.id === taskId);
@@ -143,11 +171,9 @@ function TasksPageInner({
       } else {
         await updateTask(taskId, { subsectionId: newSubId, order: newOrder });
       }
-    } else {
-      // Section context
+    } else if (groupBy === "list") {
       const newSecId = targetColId === "__unsorted__" ? undefined : targetColId;
-      const isIntraCol =
-        (task.sectionId ?? "__unsorted__") === (newSecId ?? "__unsorted__");
+      const isIntraCol = (task.sectionId ?? "__unsorted__") === (newSecId ?? "__unsorted__");
       if (isIntraCol) {
         const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
         const old = colTasks.findIndex((t) => t.id === taskId);
@@ -157,6 +183,15 @@ function TasksPageInner({
       } else {
         await reorderTasks([{ id: taskId, order: newOrder, sectionId: newSecId }]);
       }
+    } else {
+      // For non-list groupings, only allow same-column reorder
+      const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
+      const isInCol = colTasks.some((t) => t.id === taskId);
+      if (!isInCol) return;
+      const old = colTasks.findIndex((t) => t.id === taskId);
+      if (old === -1) return;
+      const reordered = arrayMove([...colTasks], old, newOrder);
+      await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
     }
   };
 
@@ -164,11 +199,18 @@ function TasksPageInner({
     if (sectionIdFilter && sectionIdFilter !== "unsorted") {
       const subsectionId = columnId === "__general__" ? undefined : columnId;
       await createTask({ title, sectionId: sectionIdFilter, subsectionId, status: "todo" });
-    } else {
+    } else if (groupBy === "list") {
       const sectionId = columnId === "__unsorted__" ? undefined : columnId;
       await createTask({ title, sectionId, status: "todo" });
+    } else if (groupBy === "date") {
+      const dueDate = ["__today__", "__tomorrow__", "__nodate__", "__later__"].includes(columnId) ? undefined : columnId;
+      await createTask({ title, status: "todo", dueDate });
+    } else {
+      await createTask({ title, status: "todo" });
     }
   };
+
+  const filterDates = todayOnly ? [today] : undefined;
 
   if (view === "kanban") {
     return (
@@ -185,24 +227,31 @@ function TasksPageInner({
     );
   }
 
-  return <TaskListView onTaskClick={onTaskClick} filterDates={filterDates} />;
+  return <TaskListView onTaskClick={onTaskClick} filterDates={filterDates} sortBy={sortBy} />;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const DATE_FILTER_CHIPS: { key: DateFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "today", label: "Today" },
-  { key: "today+tomorrow", label: "Today + Tomorrow" },
-  { key: "week", label: "This Week" },
-];
+function SortFilterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M2 4h5M2 8h8M2 12h11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M13 6v7m0 0-2-2m2 2 2-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
 
 export default function Page() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 });
   const [contextMenu, setContextMenu] = useState<{ task: Task; x: number; y: number } | null>(null);
   const [view, setView] = useState<"list" | "kanban">("list");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [todayOnly, setTodayOnly] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupBy>("list");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortPopoverAnchor, setSortPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
+  const sortBtnRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
     if (saved === "kanban") setView("kanban");
@@ -212,15 +261,11 @@ export default function Page() {
   const loadTasks = useTaskStore((s) => s.loadTasks);
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
-  useEffect(() => {
-    void loadTasks();
-  }, [loadTasks]);
+  useEffect(() => { void loadTasks(); }, [loadTasks]);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "stride-tasks-view" && e.newValue) {
-        setView(e.newValue as "list" | "kanban");
-      }
+      if (e.key === "stride-tasks-view" && e.newValue) setView(e.newValue as "list" | "kanban");
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -231,7 +276,13 @@ export default function Page() {
     localStorage.setItem("stride-tasks-view", v);
   };
 
-  const filterDates = getFilterDates(dateFilter);
+  const openSortPopover = () => {
+    if (sortPopoverAnchor) { setSortPopoverAnchor(null); return; }
+    const r = sortBtnRef.current?.getBoundingClientRect();
+    if (r) setSortPopoverAnchor({ x: r.right, y: r.bottom });
+  };
+
+  const sortActive = sortBy !== "date" || groupBy !== "list";
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
@@ -240,64 +291,70 @@ export default function Page() {
         style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}
       >
         <h1 className="text-[15px] font-semibold" style={{ color: "var(--fg)" }}>Tasks</h1>
-        <ViewSwitcher view={view} onChange={handleViewChange} />
-      </div>
-
-      {/* Date filter chips */}
-      <div
-        className="flex-none flex items-center gap-2 px-6 py-2.5"
-        style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}
-      >
-        {DATE_FILTER_CHIPS.map(({ key, label }) => {
-          const active = dateFilter === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setDateFilter(key)}
-              className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150"
-              style={active
-                ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
-                : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
-              }
-            >
-              {label}
-            </button>
-          );
-        })}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {/* Today toggle */}
+          <button
+            type="button"
+            onClick={() => setTodayOnly(v => !v)}
+            className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150"
+            style={todayOnly
+              ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
+              : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
+            }
+          >
+            Today
+          </button>
+          {/* Sort/Filter button */}
+          <button
+            ref={sortBtnRef}
+            type="button"
+            onClick={openSortPopover}
+            className="flex items-center justify-center rounded-lg transition-all duration-150"
+            style={{
+              width: 32, height: 32,
+              background: sortActive ? "var(--accent-bg-strong)" : "var(--bg-hover)",
+              color: sortActive ? "var(--accent)" : "var(--fg-muted)",
+            }}
+          >
+            <SortFilterIcon />
+          </button>
+          <ViewSwitcher view={view} onChange={handleViewChange} />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto mobile-scroll-content">
         <Suspense
-          fallback={
-            <div className="p-8 text-sm" style={{ color: "var(--fg-muted)" }}>
-              Loading…
-            </div>
-          }
+          fallback={<div className="p-8 text-sm" style={{ color: "var(--fg-muted)" }}>Loading…</div>}
         >
           <TasksPageInner
             view={view}
-            filterDates={filterDates}
-            onTaskClick={(task, pos) => {
-              setSelectedTaskId(task.id);
-              setClickPos(pos);
-            }}
+            todayOnly={todayOnly}
+            groupBy={groupBy}
+            sortBy={sortBy}
+            onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }}
             onTaskRightClick={(task, pos) => setContextMenu({ task, x: pos.x, y: pos.y })}
           />
         </Suspense>
       </div>
+
       {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask}
-          position={clickPos}
-          onClose={() => setSelectedTaskId(null)}
-        />
+        <TaskDetailModal task={selectedTask} position={clickPos} onClose={() => setSelectedTaskId(null)} />
       )}
       {contextMenu && (
         <TaskContextMenu
           task={contextMenu.task}
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+      {sortPopoverAnchor && (
+        <SortFilterPopover
+          groupBy={groupBy}
+          sortBy={sortBy}
+          onGroupByChange={setGroupBy}
+          onSortByChange={setSortBy}
+          anchor={sortPopoverAnchor}
+          onClose={() => setSortPopoverAnchor(null)}
         />
       )}
     </div>
