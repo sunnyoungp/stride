@@ -20,6 +20,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { useShortcutStore, DEFAULT_SHORTCUTS, normalizeKey, formatBinding, type ShortcutAction } from "@/store/shortcutStore";
 import { saveSettings } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/client";
+import { THEMES, type ThemeId } from "@/lib/themes";
+import { useTheme } from "@/components/ThemeProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,26 +152,62 @@ const ACCENT_PRESETS = [
   { label: "Slate",   hex: "#64748b" },
 ];
 
+const DARK_THEMES = THEMES.filter(t => t.type === "dark");
+const LIGHT_THEMES = THEMES.filter(t => t.type === "light");
+
+function ThemeTile({ theme, active, onSelect }: { theme: typeof THEMES[number]; active: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      style={{
+        position: "relative",
+        background: theme["--bg-card"],
+        border: active ? "2px solid var(--accent)" : "2px solid transparent",
+        outline: active ? "none" : `1px solid ${theme["--border-mid"]}`,
+        outlineOffset: active ? 0 : -1,
+        borderRadius: 12,
+        padding: "10px 10px 8px",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "border 120ms ease, box-shadow 120ms ease",
+        boxShadow: active ? "0 0 0 3px var(--accent-bg-strong)" : "none",
+      }}
+    >
+      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+        {(["--bg", "--bg-card", "--accent", "--fg"] as const).map(prop => (
+          <div
+            key={prop}
+            style={{
+              width: 14, height: 14, borderRadius: "50%",
+              background: theme[prop],
+              border: "1px solid rgba(128,128,128,0.15)",
+              flexShrink: 0,
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: theme["--fg"], lineHeight: 1.2 }}>{theme.name}</div>
+      {active && (
+        <div style={{ position: "absolute", top: 5, right: 5 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="7" cy="7" r="7" fill="var(--accent)" />
+            <path d="M4 7l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      )}
+    </button>
+  );
+}
+
 function AppearanceCard() {
-  const [theme,        setThemeState]  = useState(() => ls("stride-theme",         "light"));
+  const { currentTheme, setTheme } = useTheme();
   const [accent,       setAccentState] = useState(() => ls("stride-accent",        "#e8603c"));
   const [font,         setFontState]   = useState(() => ls("stride-font",          "geist"));
   const [fontSize,     setFontSize]    = useState(() => ls("stride-font-size",     "14px"));
   const [sidebarWidth, setSidebarW]    = useState(() => ls("stride-sidebar-width", "220"));
   const [compact,      setCompact]     = useState(() => ls("stride-compact",       "false") === "true");
   const colorInputRef = useRef<HTMLInputElement>(null);
-
-  const applyTheme = (t: string) => {
-    setThemeState(t);
-    void saveSettings("stride-theme", t);
-    if (t === "dark")   { document.documentElement.classList.add("dark");    document.documentElement.classList.remove("light"); }
-    if (t === "light")  { document.documentElement.classList.remove("dark"); document.documentElement.classList.add("light"); }
-    if (t === "system") {
-      const prefer = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.classList.toggle("dark", prefer);
-    }
-    document.documentElement.setAttribute("data-theme", t);
-  };
 
   const applyAccent = (hex: string) => {
     setAccentState(hex);
@@ -209,13 +247,24 @@ function AppearanceCard() {
 
   return (
     <SettingCard id="appearance" title="Appearance">
-      <SettingRow label="Theme">
-        <PillGroup
-          options={[{ label: "Light", value: "light" }, { label: "Dark", value: "dark" }, { label: "System", value: "system" }]}
-          value={theme}
-          onChange={applyTheme}
-        />
-      </SettingRow>
+      <div style={{ paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
+        <div style={{ marginBottom: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--fg-faint)" }}>Dark</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+          {DARK_THEMES.map(theme => (
+            <ThemeTile key={theme.id} theme={theme} active={currentTheme === theme.id} onSelect={() => setTheme(theme.id as ThemeId)} />
+          ))}
+        </div>
+        <div style={{ marginTop: 14, marginBottom: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--fg-faint)" }}>Light</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+          {LIGHT_THEMES.map(theme => (
+            <ThemeTile key={theme.id} theme={theme} active={currentTheme === theme.id} onSelect={() => setTheme(theme.id as ThemeId)} />
+          ))}
+        </div>
+      </div>
 
       <SettingRow label="Accent color">
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

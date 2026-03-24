@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
 import AuthGuard from "@/components/AuthGuard";
@@ -25,10 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var s=localStorage.getItem('stride-theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s===null&&p))document.documentElement.classList.add('dark');}catch(e){}})();` }} />
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `(function(){try{var darkIds=['neutral-dark','cool-dark','warm-dark','midnight-blue','ocean','forest','aurora','sunset'];var s=localStorage.getItem('stride-theme');if(s==='dark')s='warm-dark';if(s==='light')s='neutral-light';if(!s||s==='system')s='neutral-dark';if(darkIds.indexOf(s)!==-1)document.documentElement.classList.add('dark');}catch(e){}})();` }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ClientLayout>

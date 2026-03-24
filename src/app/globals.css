@@ -59,7 +59,7 @@
   --font-size-base: 16px;   /* body text, task titles, list items */
   --note-font-size: 16px;   /* daily note editor text */
 }
-
+  
 /* ═══════════════════════════════════════════
    DARK MODE — warm near-black
 ═══════════════════════════════════════════ */
@@ -288,17 +288,10 @@ a, button, input, select, textarea {
   margin: 0;
 }
 
-/* ── Task list (checklist) ── */
-.ProseMirror ul[data-type="taskList"] {
-  list-style: none;
-  padding-left: 0;
-  margin-left: 0;
-}
-
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 8.5px;
   padding: 0;
   margin: 0.1rem 0;
 }
@@ -306,7 +299,10 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li > label {
   flex-shrink: 0;
   user-select: none;
-  margin-top: 3px;
+  /* Align checkbox to first line of text regardless of font size */
+  display: flex;
+  align-items: center;
+  height: calc(var(--note-font-size, 16px) * 1.5);
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {

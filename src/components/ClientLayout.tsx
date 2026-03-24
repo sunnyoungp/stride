@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { QuickAdd } from "@/components/QuickAdd";
 import { SettingsApplier } from "@/components/SettingsApplier";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 import { FocusSetupModal } from "@/components/FocusSetupModal";
 import { FocusTunnel } from "@/components/FocusTunnel";
@@ -39,18 +40,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     if (focusState.isActive) {
         return (
-            <>
+            <ThemeProvider>
                 <FocusTunnel />
                 <GlobalSearch />
                 <QuickAdd />
                 <SettingsApplier />
                 <GlobalShortcuts />
                 <FocusSetupModal />
-            </>
+            </ThemeProvider>
         );
     }
 
     return (
+        <ThemeProvider>
         <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
             {/* Sidebar: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
             {!hideSidebar && (
@@ -78,5 +80,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <GlobalShortcuts />
             <FocusSetupModal />
         </div>
+        </ThemeProvider>
     );
 }

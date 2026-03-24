@@ -15,6 +15,8 @@ import { SectionContextMenu } from "@/components/SectionContextMenu";
 import { ProjectContextMenu } from "@/components/ProjectContextMenu";
 import { useDocumentStore } from "@/store/documentStore";
 import type { TaskSection, Project } from "@/types/index";
+import { useTheme } from "@/components/ThemeProvider";
+import { THEMES } from "@/lib/themes";
 
 const PINNED_DOCS_KEY = "stride-pinned-docs";
 function getPinnedDocIds(): Set<string> {
@@ -435,7 +437,8 @@ export function Sidebar() {
     router.push("/login");
   };
 
-  const [isDark, setIsDark] = useState(false);
+  const { currentTheme, setTheme } = useTheme();
+  const isDark = THEMES.find(t => t.id === currentTheme)?.type === "dark";
 
   // New section creation
   const [creating, setCreating]   = useState(false);
@@ -516,15 +519,7 @@ export function Sidebar() {
   useEffect(() => {
     void loadProjects();
     void loadDocuments();
-    setIsDark(document.documentElement.classList.contains("dark"));
   }, [loadProjects, loadDocuments]);
-
-  const toggleDark = () => {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("stride-theme", next ? "dark" : "light");
-  };
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -618,8 +613,8 @@ export function Sidebar() {
         {/* Theme toggle */}
         <button
           type="button"
-          onClick={toggleDark}
-          title={isDark ? "Light mode" : "Dark mode"}
+          onClick={() => setTheme(isDark ? "neutral-light" : "neutral-dark")}
+          title={isDark ? "Switch to light" : "Switch to dark"}
           className="flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
           style={{ color: "var(--fg-muted)" }}
         >
@@ -629,9 +624,15 @@ export function Sidebar() {
               <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1.1 1.1M9.9 9.9 11 11M3 12l1.1-1.1M9.9 5.1 11 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
           ) : (
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M12.5 9A6 6 0 015 1.5a6 6 0 100 11 6 6 0 007.5-3.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path 
+              d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" 
+              stroke="currentColor" 
+              strokeWidth="1.5" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            />
+          </svg>
           )}
         </button>
       </div>
@@ -908,7 +909,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* ── Projects ── */}
+      {/* ── Projects ──
       {projects.length > 0 && (
         <div className="mt-5 flex-none px-4">
           <div className="mb-2.5">
@@ -934,7 +935,7 @@ export function Sidebar() {
             ))}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ── Pinned documents ── */}
       {pinnedDocIds.size > 0 && (() => {
@@ -989,19 +990,30 @@ export function Sidebar() {
           </Link>
           <button
             type="button"
-            onClick={toggleDark}
-            title={isDark ? "Light mode" : "Dark mode"}
+            onClick={() => setTheme(isDark ? "neutral-light" : "neutral-dark")}
+            title={isDark ? "Switch to light" : "Switch to dark"}
             className="flex h-8 w-8 flex-none items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
             style={{ color: "var(--fg-muted)" }}
           >
             {isDark ? (
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                <circle cx="7.5" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
-                <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1.1 1.1M9.9 9.9 11 11M3 12l1.1-1.1M9.9 5.1 11 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path 
+                  d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" 
+                  stroke="currentColor" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round"
+                />
               </svg>
             ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M12.5 9A6 6 0 015 1.5a6 6 0 100 11 6 6 0 007.5-3.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path 
+                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" 
+                  stroke="currentColor" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
               </svg>
             )}
           </button>
