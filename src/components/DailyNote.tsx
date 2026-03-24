@@ -1364,13 +1364,6 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         {editor ? <EditorContent editor={editor} /> : null}
       </div>
 
-      {/* Hint */}
-      <p className="mt-6 text-[11px]" style={{ color: "var(--fg-faint)" }}>
-        {isLinked
-          ? <>Type <kbd className="rounded px-1 py-0.5 text-[10px]" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>x </kbd> to create a linked task · Type <kbd className="rounded px-1 py-0.5 text-[10px]" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>/</kbd> for block types · Right-click to move or delete</>
-          : <>Type <kbd className="rounded px-1 py-0.5 text-[10px]" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>x </kbd> to add a checklist item · Type <kbd className="rounded px-1 py-0.5 text-[10px]" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>/</kbd> for block types · Right-click to move or delete</>
-        }
-      </p>
 
       {lassoRect && createPortal(
         <div
