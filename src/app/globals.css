@@ -56,8 +56,8 @@
   --section-health-fg:   #dc2626;
   
   /* FONT SIZES — change these to rescale the app */
-  --font-size-base: 16px;   /* body text, task titles, list items */
-  --note-font-size: 16px;   /* daily note editor text */
+  --font-size-base: 17px;   /* body text, task titles, list items */
+  --note-font-size: 17px;   /* daily note editor text */
 }
   
 /* ═══════════════════════════════════════════
@@ -123,7 +123,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--font-size-base, 16px);
+  font-size: var(--font-size-base, 17px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -216,7 +216,7 @@ a, button, input, select, textarea {
 ═══════════════════════════════════════════ */
 
 /* ── Base font size (inherits global + 3px offset via --note-font-size) ── */
-.ProseMirror { font-size: var(--note-font-size, 17px); }
+.ProseMirror { font-size: var(--note-font-size, 16px); }
 
 /* ── Headings ── */
 .ProseMirror h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3;  margin: 1rem 0 0.5rem;   color: var(--fg); }
