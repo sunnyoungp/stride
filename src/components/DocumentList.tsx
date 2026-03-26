@@ -38,7 +38,7 @@ export function DocumentList() {
 
   const onNew = async () => {
     const doc = await createDocument("Untitled");
-    router.push(`/documents/${doc.id}`);
+    router.push(`/documents?id=${doc.id}`);
   };
 
   return (
@@ -65,7 +65,7 @@ export function DocumentList() {
             <button
               key={doc.id}
               type="button"
-              onClick={() => router.push(`/documents/${doc.id}`)}
+              onClick={() => router.push(`/documents?id=${doc.id}`)}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setContextMenu({

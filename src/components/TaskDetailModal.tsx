@@ -596,7 +596,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
               <div>
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--fg-faint)" }}>Source</p>
                 <Link
-                  href={`/documents/${task.sourceDocumentId}`}
+                  href={`/documents?id=${task.sourceDocumentId}`}
                   onClick={() => { save(); onClose(); }}
                   className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
                   style={{ color: "var(--fg-muted)" }}

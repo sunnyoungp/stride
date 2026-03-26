@@ -62,7 +62,7 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
   }, [onClose]);
 
   const onOpen = () => {
-    router.push(`/documents/${doc.id}`);
+    router.push(`/documents?id=${doc.id}`);
     onClose();
   };
 

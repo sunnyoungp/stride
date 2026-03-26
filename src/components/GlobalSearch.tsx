@@ -381,7 +381,7 @@ export function GlobalSearch() {
         router.push(`/notes?date=${result.note.date}`);
         break;
       case "document":
-        router.push(`/documents/${result.doc.id}`);
+        router.push(`/documents?id=${result.doc.id}`);
         break;
       case "section":
         router.push(`/tasks?sectionId=${result.section.id}`);

@@ -952,7 +952,7 @@ export function Sidebar() {
               {pinned.map((d) => (
                 <Link
                   key={d.id}
-                  href={`/documents/${d.id}`}
+                  href={`/documents?id=${d.id}`}
                   className="flex h-8 items-center gap-2 rounded-lg px-2 text-[13px] transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
                   style={{ color: "var(--fg-muted)" }}
                 >
