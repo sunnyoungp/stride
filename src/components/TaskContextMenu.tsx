@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTaskStore } from "@/store/taskStore";
+import { useProjectStore } from "@/store/projectStore";
 import type { Task, TaskPriority } from "@/types/index";
 
 type Props = {
@@ -35,8 +36,9 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const menuRef    = useRef<HTMLDivElement | null>(null);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
-  const [activePanel, setActivePanel] = useState<"main" | "priority">("main");
+  const [activePanel, setActivePanel] = useState<"main" | "priority" | "move">("main");
   const [clampedPos, setClampedPos]   = useState(position);
+  const projects = useProjectStore((s) => s.projects);
 
   const today    = useMemo(() => localDateString(new Date()), []);
   const tomorrow = useMemo(() => { const d = new Date(); d.setDate(d.getDate()+1); return localDateString(d); }, []);
@@ -62,6 +64,11 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
   };
   const markComplete = async () => { await updateTask(task.id, { status: "done" }); onClose(); };
   const onDelete = async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } };
+  const convertToTask = async () => {
+    if (!task.parentTaskId) return;
+    await updateTask(task.id, { parentTaskId: undefined });
+    onClose();
+  };
 
   return (
     <div
@@ -118,6 +125,28 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
             <span className="text-xs" style={{ color: "var(--fg-faint)" }}>›</span>
           </button>
 
+          <button type="button" onClick={() => setActivePanel("move")}
+            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+            style={{ color: "var(--fg)" }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs">📁</span>
+              <span>Move to list</span>
+            </div>
+            <span className="text-xs" style={{ color: "var(--fg-faint)" }}>›</span>
+          </button>
+
+          {task.parentTaskId && (
+            <button type="button" 
+              onClick={convertToTask}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+              style={{ color: "var(--fg)" }}
+            >
+              <span className="text-xs">⬆️</span>
+              <span>Convert to task</span>
+            </button>
+          )}
+
           <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
           <button type="button" onClick={() => void markComplete()}
@@ -148,6 +177,37 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
                 <div className="h-2 w-2 rounded-full" style={style} />
                 {label}
                 {task.priority === value && <span className="ml-auto text-[10px]" style={{ color: "var(--fg-faint)" }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {activePanel === "move" && (
+        <>
+          <button onClick={() => setActivePanel("main")}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs transition-all duration-150 hover:bg-[var(--bg-hover)] rounded-xl"
+            style={{ color: "var(--fg-muted)" }}
+          >‹ Back</button>
+          <div className="px-1 max-h-[200px] overflow-y-auto">
+            <button type="button"
+              onClick={async () => { await updateTask(task.id, { projectId: undefined }); onClose(); }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+              style={!task.projectId ? { background: "var(--bg-active)", color: "var(--accent)" } : { color: "var(--fg-muted)" }}
+            >
+              <span className="text-xs">📥</span>
+              Inbox
+              {!task.projectId && <span className="ml-auto text-[10px]" style={{ color: "var(--fg-faint)" }}>✓</span>}
+            </button>
+            {projects.map((p) => (
+              <button key={p.id} type="button"
+                onClick={async () => { await updateTask(task.id, { projectId: p.id }); onClose(); }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+                style={task.projectId === p.id ? { background: "var(--bg-active)", color: "var(--accent)" } : { color: "var(--fg-muted)" }}
+              >
+                <div className="h-2 w-2 rounded-full" style={{ background: p.color || "var(--fg-faint)" }} />
+                <span className="truncate">{p.title}</span>
+                {task.projectId === p.id && <span className="ml-auto text-[10px]" style={{ color: "var(--fg-faint)" }}>✓</span>}
               </button>
             ))}
           </div>

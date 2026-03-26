@@ -337,9 +337,28 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
   const updateTask = useTaskStore((s) => s.updateTask);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const selection = useContext(SelectionContext);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
   const isDone = task.status === "done";
   const chip = task.dueDate ? dueDateChip(task.dueDate) : null;
   const isSelected = selection?.selectedIds.has(task.id) ?? false;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (noContextMenu) return;
+    const touch = e.touches[0];
+    const pos = { x: touch.clientX, y: touch.clientY };
+    longPressTimer.current = setTimeout(() => {
+      setContextMenu(pos);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 600);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.shiftKey || e.metaKey) {
@@ -369,6 +388,9 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
         role="button"
         tabIndex={0}
         onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchEnd}
+        onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => {
           e.preventDefault();
           if (onRightClick) {

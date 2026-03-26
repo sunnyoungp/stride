@@ -104,7 +104,7 @@ type TaskStore = {
   createTask: (data: Partial<Task>) => Promise<Task>;
   updateTask: (id: string, changes: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
-  reorderTasks: (updates: { id: string; order: number; sectionId?: string }[]) => Promise<void>;
+  reorderTasks: (updates: { id: string; order: number; sectionId?: string; parentTaskId?: string | null }[]) => Promise<void>;
   getTasksBySection: (sectionId: string) => Task[];
   getTasksDueToday: () => Task[];
   rolloverPastDueTasks: () => Promise<void>;
@@ -223,9 +223,13 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     const currentTasks = get().tasks;
 
     for (const update of updates) {
+      const row: any = { order: update.order, updated_at: updatedAt };
+      if ("sectionId" in update) row.section_id = update.sectionId ?? null;
+      if ("parentTaskId" in update) row.parent_task_id = update.parentTaskId ?? null;
+
       await supabase
         .from("tasks")
-        .update({ order: update.order, section_id: update.sectionId ?? null, updated_at: updatedAt })
+        .update(row)
         .eq("id", update.id);
     }
 
@@ -233,7 +237,10 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       tasks: currentTasks.map((t) => {
         const update = updates.find((u) => u.id === t.id);
         if (update) {
-          return { ...t, order: update.order, sectionId: update.sectionId ?? t.sectionId, updatedAt };
+          const next: Task = { ...t, order: update.order, updatedAt };
+          if ("sectionId" in update) next.sectionId = update.sectionId ?? undefined;
+          if ("parentTaskId" in update) next.parentTaskId = update.parentTaskId ?? undefined;
+          return next;
         }
         return t;
       }),

@@ -79,11 +79,13 @@ function KanbanCardVisual({
   accentColor,
   style,
   onSubtaskClick,
+  onTaskRightClick,
 }: {
   task: Task;
   accentColor: string;
   style?: CSSProperties;
   onSubtaskClick?: (t: Task, pos: { x: number; y: number }) => void;
+  onTaskRightClick?: (t: Task, pos: { x: number; y: number }) => void;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const allTasks = useTaskStore((s) => s.tasks);
@@ -128,8 +130,11 @@ function KanbanCardVisual({
         userSelect: "none",
         ...style,
       }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onTaskRightClick?.(task, { x: e.clientX, y: e.clientY });
+      }}
     >
-      {/* Top: title + checkbox */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         <div
           style={{
@@ -142,8 +147,12 @@ function KanbanCardVisual({
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             lineHeight: 1.4,
+            paddingLeft: task.parentTaskId ? 12 : 0,
+            textDecoration: isDone ? "line-through" : "none",
+            opacity: isDone ? 0.6 : 1,
           }}
         >
+          {task.parentTaskId && <span style={{ marginRight: 6, opacity: 0.5 }}>↳</span>}
           {task.title}
         </div>
         <button
@@ -174,7 +183,6 @@ function KanbanCardVisual({
         </button>
       </div>
 
-      {/* Subtasks — collapsible */}
       {subtasks.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <button
@@ -191,60 +199,9 @@ function KanbanCardVisual({
             </svg>
             {doneSubs}/{subtasks.length} subtasks
           </button>
-          {subsExpanded && (
-            <div style={{ marginTop: 5, display: "flex", flexDirection: "column", gap: 3 }}>
-              {subtasks.map((st) => {
-                const stDone = st.status === "done";
-                return (
-                  <div
-                    key={st.id}
-                    onClick={(e) => { e.stopPropagation(); onSubtaskClick?.(st, { x: e.clientX, y: e.clientY }); }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "3px 4px", borderRadius: 6,
-                      cursor: "pointer", transition: "background 100ms",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void updateTask(st.id, { status: stDone ? "todo" : "done" });
-                      }}
-                      style={{
-                        flexShrink: 0, width: 14, height: 14, borderRadius: "50%",
-                        border: `1.5px solid ${stDone ? accentColor : "var(--border-mid)"}`,
-                        background: stDone ? accentColor : "transparent",
-                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-                      }}
-                    >
-                      {stDone && (
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                          <path d="M1.5 4l2 2L6.5 2" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </button>
-                    <span style={{ fontSize: 12, color: stDone ? "var(--fg-faint)" : "var(--fg-muted)", textDecoration: stDone ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                      {st.title || "(Untitled)"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Source document indicator */}
-      {task.sourceDocumentId && (
-        <div style={{ marginTop: 4, fontSize: 11, color: "var(--fg-faint)" }}>
-          📄 {task.sourceDocumentTitle ?? "Document"}
-        </div>
-      )}
-
-      {/* Bottom row: due date chip + priority dot */}
       {(dueDateChip || pColor) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
           <div>
@@ -297,6 +254,23 @@ function KanbanCard({
     useSortable({ id: task.id });
 
   const [hovered, setHovered] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const pos = { x: touch.clientX, y: touch.clientY };
+    longPressTimer.current = setTimeout(() => {
+      onTaskRightClick(task, pos);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 600);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const wrapperStyle: CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -320,15 +294,22 @@ function KanbanCard({
         e.preventDefault();
         onTaskRightClick(task, { x: e.clientX, y: e.clientY });
       }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchEnd}
+      onTouchEnd={handleTouchEnd}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <KanbanCardVisual task={task} accentColor={accentColor} style={cardStyle} onSubtaskClick={onTaskClick} />
+      <KanbanCardVisual 
+        task={task} 
+        accentColor={accentColor} 
+        style={cardStyle} 
+        onSubtaskClick={onTaskClick} 
+        onTaskRightClick={onTaskRightClick}
+      />
     </div>
   );
 }
-
-// ── InlineInputCard ───────────────────────────────────────────────────────────
 
 function InlineInputCard({ onCommit, onCancel }: { onCommit: (title: string) => void; onCancel: () => void }) {
   const [value, setValue] = useState("");
@@ -342,7 +323,7 @@ function InlineInputCard({ onCommit, onCancel }: { onCommit: (title: string) => 
     };
     const t = setTimeout(() => document.addEventListener("mousedown", h), 80);
     return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div ref={containerRef} style={{
@@ -366,8 +347,6 @@ function InlineInputCard({ onCommit, onCancel }: { onCommit: (title: string) => 
   );
 }
 
-// ── KanbanColumnView ──────────────────────────────────────────────────────────
-
 function KanbanColumnView({
   column,
   onTaskClick,
@@ -380,8 +359,17 @@ function KanbanColumnView({
   onAddTask?: (columnId: string, title: string) => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id });
+  const allTasks = useTaskStore((s) => s.tasks);
   const color = column.color ?? "#94a3b8";
-  const taskIds = useMemo(() => column.tasks.map((t) => t.id), [column.tasks]);
+  
+  const tasksWithSubs = useMemo(() => {
+    return column.tasks.flatMap(t => {
+      const subs = allTasks.filter(st => st.parentTaskId === t.id && st.status !== 'done' && st.status !== 'cancelled');
+      return [t, ...subs];
+    });
+  }, [column.tasks, allTasks]);
+
+  const taskIds = useMemo(() => tasksWithSubs.map((t) => t.id), [tasksWithSubs]);
   const [addingAt, setAddingAt] = useState<"top" | "bottom" | null>(null);
 
   const commit = (title: string) => {
@@ -400,7 +388,6 @@ function KanbanColumnView({
         transition: "border 150ms ease",
       }}
     >
-      {/* Header */}
       <div style={{ background: `${color}14`, padding: "12px 16px", borderRadius: "12px 12px 0 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {column.icon && <span style={{ fontSize: 14 }}>{column.icon}</span>}
@@ -426,18 +413,17 @@ function KanbanColumnView({
         </div>
       </div>
 
-      {/* Tasks area */}
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8, minHeight: 80 }}>
         {addingAt === "top" && (
           <InlineInputCard onCommit={commit} onCancel={() => setAddingAt(null)} />
         )}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {column.tasks.length === 0 && addingAt !== "top" ? (
+          {tasksWithSubs.length === 0 && addingAt !== "top" ? (
             <div style={{ textAlign: "center", color: "var(--fg-faint)", fontSize: 13, fontStyle: "italic", padding: "16px 0" }}>
               No tasks
             </div>
           ) : (
-            column.tasks.map((task) => (
+            tasksWithSubs.map((task) => (
               <KanbanCard
                 key={task.id}
                 task={task}
@@ -450,7 +436,6 @@ function KanbanColumnView({
         </SortableContext>
       </div>
 
-      {/* Footer */}
       {onAddTask && (
         <div style={{ padding: "8px 12px 12px" }}>
           {addingAt === "bottom" ? (
@@ -476,8 +461,6 @@ function KanbanColumnView({
   );
 }
 
-// ── KanbanBoard ───────────────────────────────────────────────────────────────
-
 export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTaskRightClick, onAddTask }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -488,16 +471,12 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
 
   const activeTask = useMemo(() => {
     if (!activeId) return null;
-    for (const col of columns) {
-      const found = col.tasks.find((t) => t.id === activeId);
-      if (found) return found;
-    }
-    return null;
-  }, [activeId, columns]);
+    return allTasks.find(t => t.id === activeId) ?? null;
+  }, [activeId, allTasks]);
 
   const activeColumn = useMemo(() => {
     if (!activeTask) return null;
-    return columns.find((c) => c.tasks.some((t) => t.id === activeTask.id)) ?? null;
+    return columns.find((c) => c.tasks.some((t) => t.id === activeTask.id || (activeTask.parentTaskId && t.id === activeTask.parentTaskId))) ?? null;
   }, [activeTask, columns]);
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -513,27 +492,31 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
     const overId = over.id as string;
     if (taskId === overId) return;
 
-    const sourceCol = columns.find((c) => c.tasks.some((t) => t.id === taskId));
-    if (!sourceCol) return;
+    const draggedTask = allTasks.find(t => t.id === taskId);
+    if (!draggedTask) return;
 
+    // Find target column
     const isOverColumn = columns.some((c) => c.id === overId);
-    const targetColId = isOverColumn
-      ? overId
-      : (columns.find((c) => c.tasks.some((t) => t.id === overId))?.id ?? sourceCol.id);
-    const targetCol = columns.find((c) => c.id === targetColId);
-    if (!targetCol) return;
+    let targetColId = isOverColumn ? overId : null;
+    
+    if (!targetColId) {
+      for (const col of columns) {
+        if (col.tasks.some(t => t.id === overId)) {
+          targetColId = col.id;
+          break;
+        }
+      }
+    }
+    
+    if (!targetColId) return;
+    const targetCol = columns.find(c => c.id === targetColId)!;
 
-    let newOrder: number;
+    let newOrder = 0;
     if (isOverColumn) {
       newOrder = targetCol.tasks.length;
     } else {
-      let idx = targetCol.tasks.findIndex((t) => t.id === overId);
-      if (idx === -1) idx = targetCol.tasks.length;
-      if (sourceCol.id === targetColId) {
-        const oldIdx = sourceCol.tasks.findIndex((t) => t.id === taskId);
-        if (oldIdx < idx) idx = Math.max(0, idx - 1);
-      }
-      newOrder = idx;
+      newOrder = targetCol.tasks.findIndex(t => t.id === overId);
+      if (newOrder === -1) newOrder = targetCol.tasks.length;
     }
 
     onTaskMove(taskId, targetColId, newOrder);
@@ -569,11 +552,12 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
       </div>
 
       <DragOverlay>
-        {activeTask && activeColumn ? (
+        {activeTask ? (
           <div style={{ transform: "scale(0.95)", boxShadow: "var(--shadow-float)" }}>
             <KanbanCardVisual
               task={activeTask}
-              accentColor={activeColumn.color ?? "#94a3b8"}
+              accentColor={activeColumn?.color ?? "#94a3b8"}
+              onTaskRightClick={onTaskRightClick} 
             />
           </div>
         ) : null}

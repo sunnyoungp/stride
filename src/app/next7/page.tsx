@@ -334,6 +334,12 @@ export default function Next7Page() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
+    if (task.parentTaskId) {
+      // Promotion logic
+      await updateTask(taskId, { dueDate: targetColId, parentTaskId: undefined });
+      return;
+    }
+
     const sourceColId = task.dueDate?.slice(0, 10) ?? "__overdue__";
     if (sourceColId === targetColId) {
       const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];

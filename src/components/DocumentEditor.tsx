@@ -318,8 +318,8 @@ export function DocumentEditor({ documentId }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8">
-      <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-4xl px-0 md:px-6 py-4 md:py-8">
+      <div className="flex items-start justify-between gap-4 px-4 md:px-0">
         <div className="flex-1">
           <input
             value={localTitle}
@@ -354,8 +354,8 @@ export function DocumentEditor({ documentId }: Props) {
         </span>
       </div>
 
-      <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)" }}>
-        {editor ? <EditorContent editor={editor} /> : null}
+      <div className="w-full md:rounded-xl p-4" style={{ border: "1px solid var(--border)", borderLeft: "none", borderRight: "none", md: { borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" } as any, background: "var(--bg-subtle)" }}>
+        {editor ? <EditorContent editor={editor} className="w-full" /> : null}
       </div>
     </div>
   );

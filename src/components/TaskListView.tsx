@@ -104,6 +104,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
   }, []);
   const [showLoading, setShowLoading]     = useState(true);
   const [contextMenu, setContextMenu]     = useState<{ task: Task; x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [subContextMenu, setSubContextMenu] = useState<{ id: string; title: string; x: number; y: number } | null>(null);
   const subMenuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -223,6 +225,14 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
     }
   }, [filterDate, filterDates, sectionIdFilter, rootIncompleteTasks, sortBy]);
 
+  const tasksWithSubs = useMemo(() => {
+    return filteredTasks.flatMap(t => {
+      const subs = tasks.filter(st => st.parentTaskId === t.id && (showCompleted || (st.status !== 'done' && st.status !== 'cancelled')));
+      const isExpanded = expandedSubs[t.id] ?? true;
+      return isExpanded ? [t, ...subs] : [t];
+    });
+  }, [filteredTasks, tasks, showCompleted, expandedSubs]);
+
   const filteredCompleted = useMemo(() => {
     let base = rootCompletedTasks;
     if (filterDates) base = base.filter((t) => !t.dueDate || filterDates.includes(dateOnly(t.dueDate ?? "")));
@@ -244,6 +254,13 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
       b.push(t);
       bySection.set(t.sectionId, b);
     }
+
+    const withSubs = (taskList: Task[]) => taskList.flatMap(t => {
+      const subs = tasks.filter(st => st.parentTaskId === t.id && (showCompleted || (st.status !== 'done' && st.status !== 'cancelled')));
+      const expanded = expandedSubs[t.id] ?? true;
+      return expanded ? [t, ...subs] : [t];
+    });
+
     const builtGroups = sections
       .slice()
       .sort((a, b) => a.order - b.order)
@@ -262,16 +279,16 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           icon: s.icon,
           section: s,
           accent: getSectionAccent(s),
-          mainTasks: bySubId.get(undefined) ?? [],
+          mainTasks: withSubs(bySubId.get(undefined) ?? []),
           subsections: sSubs
-            .map((sub) => ({ ...sub, items: bySubId.get(sub.id) ?? [] }))
+            .map((sub) => ({ ...sub, items: withSubs(bySubId.get(sub.id) ?? []) }))
             .filter((sub) => sub.items.length > 0 || sectionIdFilter === s.id),
           totalCount: sTasks.length,
         };
-      })
-      .filter((g) => sectionIdFilter ? g.key === sectionIdFilter : g.totalCount >= 0);
-    return { groups: builtGroups, unsorted: unsortedTasks };
-  }, [filteredTasks, sectionIdFilter, sections, subsections]);
+      });
+
+    return { groups: builtGroups, unsorted: withSubs(unsortedTasks) };
+  }, [sections, subsections, filteredTasks, sectionIdFilter, tasks, showCompleted, expandedSubs]);
 
   const handleDragStart = (e: DragStartEvent) => {
     setActiveId(e.active.id as string);
@@ -291,17 +308,32 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
       : over.id === "__unsorted__" ? undefined : (over.id as string);
 
     if (active.id !== over.id || draggedTask.sectionId !== targetSection) {
-      const oldIdx = filteredTasks.findIndex((t) => t.id === active.id);
-      let newIdx   = filteredTasks.findIndex((t) => t.id === over.id);
-      if (newIdx === -1) {
-        const last = filteredTasks.filter((t) => t.sectionId === targetSection).at(-1);
-        newIdx = last ? filteredTasks.findIndex((t) => t.id === last.id) : filteredTasks.length;
+      const oldIdx = tasksWithSubs.findIndex((t) => t.id === active.id);
+      let newIdx   = tasksWithSubs.findIndex((t) => t.id === over.id);
+      
+      const updates: any[] = [];
+      const parentTaskId = draggedTask.parentTaskId ? undefined : draggedTask.parentTaskId; // If it was a subtask, it might be promoted.
+      
+      // Promotion logic: if dragged subtask is dropped on or near a top-level task that is not its parent
+      let promotedPTaskId = draggedTask.parentTaskId;
+      if (draggedTask.parentTaskId) {
+          if (overTask && overTask.id !== draggedTask.parentTaskId) {
+              promotedPTaskId = undefined; // Promoting to standalone or moving to new parent? 
+              // For "dragging out", we'll just promote it for now.
+          }
       }
-      const reordered = arrayMove(filteredTasks, oldIdx, newIdx);
+
+      if (newIdx === -1) {
+        const last = tasksWithSubs.filter((t) => t.sectionId === targetSection).at(-1);
+        newIdx = last ? tasksWithSubs.findIndex((t) => t.id === last.id) : tasksWithSubs.length;
+      }
+      const reordered = arrayMove(tasksWithSubs, oldIdx, newIdx);
       await reorderTasks(
         reordered.map((t, i) => ({
-          id: t.id, order: i,
+          id: t.id, 
+          order: i,
           sectionId: t.id === active.id ? targetSection : t.sectionId,
+          parentTaskId: t.id === active.id ? promotedPTaskId : t.parentTaskId,
         })),
       );
     }
@@ -363,6 +395,22 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
       onTaskClick(task, { x: e.clientX, y: e.clientY });
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      const pos = { x: touch.clientX, y: touch.clientY };
+      longPressTimerRef.current = setTimeout(() => {
+        setContextMenu({ task, x: pos.x, y: pos.y });
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 600);
+    };
+
+    const handleTouchEnd = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
     return (
       <div key={task.id} className={activeId === task.id ? "opacity-0" : ""}>
         {/* Main row */}
@@ -370,6 +418,9 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           role="button"
           tabIndex={0}
           onClick={handleRowClick}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchEnd}
+          onTouchEnd={handleTouchEnd}
           onContextMenu={(e) => { e.preventDefault(); setContextMenu({ task, x: e.clientX, y: e.clientY }); }}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTaskClick(task, { x: 0, y: 0 }); }}
           data-task-id={task.id}
@@ -387,6 +438,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           style={{
             background: isSelected ? "var(--accent-bg)" : undefined,
             outline: isSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
+            paddingLeft: task.parentTaskId ? "48px" : "16px",
           }}
           onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "var(--accent-bg)" : ""; }}
@@ -460,103 +512,6 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
             )}
           </div>
         </div>
-
-        {/* Subtasks — seamless indent, no lines or backgrounds */}
-        {hasSubtasks && expanded && (
-          <div className="pb-2">
-            {subtaskItems.map((st) => {
-              const stDone    = st.status === "done";
-              const isEditing = editSubId === st.id;
-              const stSelected = selectedTaskIds.has(st.id);
-
-              const handleSubtaskClick = (e: React.MouseEvent) => {
-                e.stopPropagation();
-                if (e.shiftKey) {
-                  e.preventDefault();
-                  window.getSelection()?.removeAllRanges();
-                  if (anchorTaskIdRef.current) {
-                    const aIdx = flatVisibleOrder.findIndex((t) => t.id === anchorTaskIdRef.current);
-                    const bIdx = flatVisibleOrder.findIndex((t) => t.id === st.id);
-                    if (aIdx >= 0 && bIdx >= 0) {
-                      const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
-                      setSelectedTaskIds(new Set(flatVisibleOrder.slice(lo, hi + 1).map((t) => t.id)));
-                    }
-                  }
-                  return;
-                }
-                clearSelection();
-                anchorTaskIdRef.current = st.id;
-              };
-
-              return (
-                <div
-                  key={st.id}
-                  data-task-id={st.id}
-                  data-task-title={st.title}
-                  className="flex items-center gap-2.5 py-[6px] pr-4"
-                  style={{
-                    paddingLeft: "36px",
-                    background: stSelected ? "var(--accent-bg)" : undefined,
-                    outline: stSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
-                    cursor: "pointer",
-                  }}
-                  onClick={handleSubtaskClick}
-                  onMouseEnter={(e) => { if (!stSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = stSelected ? "var(--accent-bg)" : ""; }}
-                >
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); void updateTask(st.id, { status: stDone ? "todo" : "done" }); }}
-                    className="flex h-[14px] w-[14px] flex-none items-center justify-center rounded-[4px] transition-all duration-150"
-                    style={stDone
-                      ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
-                      : { border: "1.5px solid var(--border-strong)", background: "transparent" }
-                    }
-                  >
-                    {stDone && (
-                      <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
-                        <path d="M1 3L3 5L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </button>
-                  {isEditing ? (
-                    <input
-                      autoFocus
-                      value={editSubVal}
-                      onChange={(e) => setEditSubVal(e.target.value)}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === "Enter" || e.key === "Escape") {
-                          if (editSubVal.trim() && editSubVal.trim() !== st.title)
-                            void updateTask(st.id, { title: editSubVal.trim() });
-                          setEditSubId(null);
-                        }
-                      }}
-                      onBlur={() => {
-                        if (editSubVal.trim() && editSubVal.trim() !== st.title)
-                          void updateTask(st.id, { title: editSubVal.trim() });
-                        setEditSubId(null);
-                      }}
-                      className="flex-1 bg-transparent leading-snug outline-none"
-                      style={{ color: "var(--fg)", fontSize: "16px" }}
-                    />
-                  ) : (
-                    <span
-                      onClick={(e) => { e.stopPropagation(); setEditSubId(st.id); setEditSubVal(st.title); }}
-                      className="flex-1 cursor-text text-[13.5px] leading-snug"
-                      style={stDone
-                        ? { textDecoration: "line-through", color: "var(--fg-faint)" }
-                        : { color: "var(--fg-muted)" }
-                      }
-                    >
-                      {st.title || "(Untitled)"}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     );
   };
