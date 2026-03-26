@@ -55,23 +55,26 @@ function InboxPageContent() {
   const [sortPopoverAnchor, setSortPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const sortBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
-    if (saved === "kanban") setView("kanban");
+    try {
+      const raw = localStorage.getItem("viewState_inbox");
+      if (raw) {
+        const s = JSON.parse(raw) as { view?: string; groupBy?: GroupBy; sortBy?: SortBy; todayOnly?: boolean };
+        if (s.view === "kanban" || s.view === "list") setView(s.view);
+        if (s.groupBy) setGroupBy(s.groupBy);
+        if (s.sortBy) setSortBy(s.sortBy);
+        if (typeof s.todayOnly === "boolean") setTodayOnly(s.todayOnly);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
 
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "stride-tasks-view" && e.newValue) {
-        setView(e.newValue as "list" | "kanban");
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  const saveViewState = (overrides: Partial<{ view: "list" | "kanban"; groupBy: GroupBy; sortBy: SortBy; todayOnly: boolean }>) => {
+    const current = { view, groupBy, sortBy, todayOnly, ...overrides };
+    localStorage.setItem("viewState_inbox", JSON.stringify(current));
+  };
 
   const today = todayStr();
 
@@ -97,7 +100,7 @@ function InboxPageContent() {
 
   const handleViewChange = (v: "list" | "kanban") => {
     setView(v);
-    localStorage.setItem("stride-tasks-view", v);
+    saveViewState({ view: v });
   };
 
   const openSortPopover = () => {
@@ -180,7 +183,7 @@ function InboxPageContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button
             type="button"
-            onClick={() => setTodayOnly(v => !v)}
+            onClick={() => { const next = !todayOnly; setTodayOnly(next); saveViewState({ todayOnly: next }); }}
             className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150"
             style={todayOnly
               ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
@@ -269,8 +272,8 @@ function InboxPageContent() {
         <SortFilterPopover
           groupBy={groupBy}
           sortBy={sortBy}
-          onGroupByChange={setGroupBy}
-          onSortByChange={setSortBy}
+          onGroupByChange={(g) => { setGroupBy(g); saveViewState({ groupBy: g }); }}
+          onSortByChange={(s) => { setSortBy(s); saveViewState({ sortBy: s }); }}
           anchor={sortPopoverAnchor}
           onClose={() => setSortPopoverAnchor(null)}
         />

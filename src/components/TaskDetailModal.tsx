@@ -17,6 +17,28 @@ type Props = {
 
 type Panel = "none" | "date" | "section" | "more";
 
+const URL_REGEX = /https?:\/\/[^\s]+/g;
+
+function renderWithLinks(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  URL_REGEX.lastIndex = 0;
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const url = match[0];
+    parts.push(
+      <a key={match.index} href={url} target="_blank" rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        style={{ color: "var(--accent)", textDecoration: "underline", wordBreak: "break-all" }}
+      >{url}</a>
+    );
+    lastIndex = match.index + url.length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
 function dateOnly(v: string) {
   return v.includes("T") ? v.slice(0, 10) : v;
 }
@@ -70,6 +92,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const [pos, setPos]           = useState({ x: -9999, y: 0 }); // hidden until clamped
   const [titleDraft, setTitle]  = useState(task.title);
   const [notesDraft, setNotes]  = useState(task.notes ?? "");
+  const [notesFocused, setNotesFocused] = useState(false);
   const [panel, setPanel]       = useState<Panel>("none");
   const [newSubtask, setNewSub] = useState("");
   const [editSubId, setEditSubId]   = useState<string | null>(null);
@@ -277,11 +300,22 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
 
         {/* Notes */}
         <div className="px-4 pb-3">
+          {!notesFocused && notesDraft ? (
+            <div
+              onClick={() => { setNotesFocused(true); setTimeout(() => notesRef.current?.focus(), 0); }}
+              className="w-full cursor-text text-sm leading-relaxed"
+              style={{ color: "var(--fg-muted)", whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: 44 }}
+            >
+              {renderWithLinks(notesDraft)}
+            </div>
+          ) : (
           <textarea
             ref={notesRef}
             value={notesDraft}
             onChange={(e) => setNotes(e.target.value)}
+            onFocus={() => setNotesFocused(true)}
             onBlur={() => {
+              setNotesFocused(false);
               if (notesDraft !== task.notes) void updateTask(task.id, { notes: notesDraft });
             }}
             onKeyDown={(e) => {
@@ -312,6 +346,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
               fontSize: "16px",
             } as React.CSSProperties}
           />
+          )}
         </div>
 
         {/* ── Subtasks — always visible ── */}

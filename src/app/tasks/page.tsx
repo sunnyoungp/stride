@@ -253,8 +253,16 @@ export default function Page() {
   const sortBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
-    if (saved === "kanban") setView("kanban");
+    try {
+      const raw = localStorage.getItem("viewState_tasks");
+      if (raw) {
+        const s = JSON.parse(raw) as { view?: string; groupBy?: GroupBy; sortBy?: SortBy; todayOnly?: boolean };
+        if (s.view === "kanban" || s.view === "list") setView(s.view);
+        if (s.groupBy) setGroupBy(s.groupBy);
+        if (s.sortBy) setSortBy(s.sortBy);
+        if (typeof s.todayOnly === "boolean") setTodayOnly(s.todayOnly);
+      }
+    } catch {}
   }, []);
 
   const tasks = useTaskStore((s) => s.tasks);
@@ -263,17 +271,14 @@ export default function Page() {
 
   useEffect(() => { void loadTasks(); }, [loadTasks]);
 
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "stride-tasks-view" && e.newValue) setView(e.newValue as "list" | "kanban");
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  const saveViewState = (overrides: Partial<{ view: "list" | "kanban"; groupBy: GroupBy; sortBy: SortBy; todayOnly: boolean }>) => {
+    const current = { view, groupBy, sortBy, todayOnly, ...overrides };
+    localStorage.setItem("viewState_tasks", JSON.stringify(current));
+  };
 
   const handleViewChange = (v: "list" | "kanban") => {
     setView(v);
-    localStorage.setItem("stride-tasks-view", v);
+    saveViewState({ view: v });
   };
 
   const openSortPopover = () => {
@@ -295,7 +300,7 @@ export default function Page() {
           {/* Today toggle */}
           <button
             type="button"
-            onClick={() => setTodayOnly(v => !v)}
+            onClick={() => { const next = !todayOnly; setTodayOnly(next); saveViewState({ todayOnly: next }); }}
             className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150"
             style={todayOnly
               ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
@@ -351,8 +356,8 @@ export default function Page() {
         <SortFilterPopover
           groupBy={groupBy}
           sortBy={sortBy}
-          onGroupByChange={setGroupBy}
-          onSortByChange={setSortBy}
+          onGroupByChange={(g) => { setGroupBy(g); saveViewState({ groupBy: g }); }}
+          onSortByChange={(s) => { setSortBy(s); saveViewState({ sortBy: s }); }}
           anchor={sortPopoverAnchor}
           onClose={() => setSortPopoverAnchor(null)}
         />

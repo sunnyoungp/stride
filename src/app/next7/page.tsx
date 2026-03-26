@@ -214,8 +214,15 @@ export default function Next7Page() {
   const [sortPopoverAnchor, setSortPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const sortBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const saved = localStorage.getItem("stride-tasks-view") as "list" | "kanban" | null;
-    if (saved === "kanban") setView("kanban");
+    try {
+      const raw = localStorage.getItem("viewState_next7days");
+      if (raw) {
+        const s = JSON.parse(raw) as { view?: string; groupBy?: GroupBy; sortBy?: SortBy };
+        if (s.view === "kanban" || s.view === "list") setView(s.view);
+        if (s.groupBy) setGroupBy(s.groupBy);
+        if (s.sortBy) setSortBy(s.sortBy);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -275,9 +282,14 @@ export default function Next7Page() {
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
+  const saveViewState = (overrides: Partial<{ view: "list" | "kanban"; groupBy: GroupBy; sortBy: SortBy }>) => {
+    const current = { view, groupBy, sortBy, ...overrides };
+    localStorage.setItem("viewState_next7days", JSON.stringify(current));
+  };
+
   const handleViewChange = (v: "list" | "kanban") => {
     setView(v);
-    localStorage.setItem("stride-tasks-view", v);
+    saveViewState({ view: v });
   };
 
   const openSortPopover = () => {
@@ -487,8 +499,8 @@ export default function Next7Page() {
         <SortFilterPopover
           groupBy={groupBy}
           sortBy={sortBy}
-          onGroupByChange={setGroupBy}
-          onSortByChange={setSortBy}
+          onGroupByChange={(g) => { setGroupBy(g); saveViewState({ groupBy: g }); }}
+          onSortByChange={(s) => { setSortBy(s); saveViewState({ sortBy: s }); }}
           anchor={sortPopoverAnchor}
           onClose={() => setSortPopoverAnchor(null)}
         />
