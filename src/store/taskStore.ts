@@ -145,12 +145,6 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     const now = new Date().toISOString();
     const currentTasks = get().tasks;
 
-    let inheritedDueDate = data.dueDate;
-    if (data.parentTaskId) {
-      const parent = currentTasks.find((t) => t.id === data.parentTaskId);
-      if (parent?.dueDate) inheritedDueDate = parent.dueDate;
-    }
-
     const task: Task = {
       id: crypto.randomUUID(),
       title: data.title ?? "",
@@ -163,7 +157,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       ),
       tags: data.tags ?? [],
       sectionId: data.sectionId,
-      dueDate: inheritedDueDate,
+      dueDate: data.dueDate,
       scheduledStart: data.scheduledStart,
       scheduledEnd: data.scheduledEnd,
       rolledOver: data.rolledOver ?? false,
@@ -191,30 +185,15 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     if (!originalTask) return;
 
     const updatedAt = new Date().toISOString();
-    const subtaskIds = originalTask.subtaskIds ?? [];
-    const shouldSyncSubtasks = !!(changes.dueDate && subtaskIds.length > 0);
 
     const row = { ...taskChangesToRow(changes), updated_at: updatedAt };
     const { error } = await supabase.from("tasks").update(row).eq("id", id);
     if (error) console.error("Failed to update task:", error);
 
-    if (shouldSyncSubtasks && changes.dueDate) {
-      for (const subId of subtaskIds) {
-        await supabase
-          .from("tasks")
-          .update({ due_date: changes.dueDate, updated_at: updatedAt })
-          .eq("id", subId);
-      }
-    }
-
     set({
-      tasks: currentState.tasks.map((t) => {
-        if (t.id === id) return { ...t, ...changes, updatedAt };
-        if (shouldSyncSubtasks && subtaskIds.includes(t.id)) {
-          return { ...t, dueDate: changes.dueDate, updatedAt };
-        }
-        return t;
-      }),
+      tasks: currentState.tasks.map((t) =>
+        t.id === id ? { ...t, ...changes, updatedAt } : t
+      ),
     });
 
     if (changes.status === "done" && originalTask.recurrence) {

@@ -116,7 +116,10 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       if (error) console.error("Failed to delete linked tasks:", error);
     }
     const { error } = await supabase.from("documents").delete().eq("id", id);
-    if (error) console.error("Failed to delete document:", error);
+    if (error) {
+      console.error("Failed to delete document:", error);
+      throw new Error(error.message);
+    }
     set({ documents: get().documents.filter((d) => d.id !== id) });
 
     const { useTaskStore } = await import("./taskStore");

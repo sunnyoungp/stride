@@ -16,9 +16,13 @@ export interface FocusState {
 export interface FocusStore {
   isZenMode: boolean;
   isSetupModalOpen: boolean;
+  isMinimized: boolean;
   focusState: FocusState;
   toggleZenMode: () => void;
   setSetupModalOpen: (isOpen: boolean) => void;
+  toggleMinimized: () => void;
+  addTasksToPlaylist: (tasks: Task[]) => void;
+  removeTaskFromPlaylist: (taskId: string) => void;
   // Note: selectedTasks are the parents you picked in the CMD+J modal
   // allTasks are all tasks from useTaskStore.getState().tasks
   startFocusSession: (mode: FocusMode, selectedTasks: Task[], allTasks: Task[], durationInSeconds: number) => void;
@@ -31,22 +35,22 @@ export interface FocusStore {
 
 // HELPER: Improved logic to find subtasks by either parent ID or the parent's subtaskIds array
 const flattenTasksWithSubtasks = (selectedTasks: Task[], allTasks: Task[]): Task[] => {
+  const seen = new Set<string>();
   return selectedTasks.reduce((acc: Task[], parentTask) => {
-    // 1. Add the parent task first
-    acc.push(parentTask);
-    
-    // 2. Find all subtasks that belong to this parent
+    if (!seen.has(parentTask.id)) {
+      acc.push(parentTask);
+      seen.add(parentTask.id);
+    }
+
     const subtasks = allTasks.filter(t => {
       const isChildOfThisParent = t.parentTaskId === parentTask.id;
       const isInParentsList = parentTask.subtaskIds?.includes(t.id);
       const isNotDone = t.status !== 'done' && t.status !== 'cancelled';
-      
-      return (isChildOfThisParent || isInParentsList) && isNotDone;
+      return (isChildOfThisParent || isInParentsList) && isNotDone && !seen.has(t.id);
     });
 
-    // 3. Add the found subtasks to the playlist
-    acc.push(...subtasks);
-    
+    subtasks.forEach(t => { acc.push(t); seen.add(t.id); });
+
     return acc;
   }, []);
 };
@@ -64,18 +68,53 @@ const initialFocusState: FocusState = {
 export const useFocusStore = create<FocusStore>((set) => ({
   isZenMode: false,
   isSetupModalOpen: false,
+  isMinimized: false,
   focusState: initialFocusState,
 
   toggleZenMode: () => set((state) => ({ isZenMode: !state.isZenMode })),
   setSetupModalOpen: (isOpen) => set({ isSetupModalOpen: isOpen }),
+  toggleMinimized: () => set((state) => ({ isMinimized: !state.isMinimized })),
+
+  addTasksToPlaylist: (tasks) => set((state) => {
+    const existingIds = new Set(state.focusState.playlist.map(t => t.id));
+    const newTasks = tasks.filter(t => !existingIds.has(t.id));
+    if (newTasks.length === 0) return state;
+    return {
+      focusState: {
+        ...state.focusState,
+        playlist: [...state.focusState.playlist, ...newTasks],
+      },
+    };
+  }),
+
+  removeTaskFromPlaylist: (taskId) => set((state) => {
+    const { playlist, currentIndex } = state.focusState;
+    const taskIdx = playlist.findIndex(t => t.id === taskId);
+    if (taskIdx === -1) return state;
+    const newPlaylist = playlist.filter(t => t.id !== taskId);
+    let newIndex = currentIndex;
+    if (taskIdx < currentIndex) {
+      newIndex = currentIndex - 1; // item before current removed → shift back
+    } else if (taskIdx === currentIndex) {
+      newIndex = Math.min(currentIndex, newPlaylist.length - 1); // stay at same slot or last
+    }
+    return {
+      focusState: {
+        ...state.focusState,
+        playlist: newPlaylist,
+        currentIndex: Math.max(0, newIndex),
+      },
+    };
+  }),
 
   startFocusSession: (mode, selectedTasks, allTasks, durationInSeconds) => {
     // Process the list to include the subtask objects
     const flatPlaylist = flattenTasksWithSubtasks(selectedTasks, allTasks);
-    
+
     set({
       isSetupModalOpen: false,
       isZenMode: true,
+      isMinimized: false,
       focusState: {
         isActive: true,
         mode,
@@ -90,6 +129,7 @@ export const useFocusStore = create<FocusStore>((set) => ({
 
   endFocusSession: () => set({
     focusState: initialFocusState,
+    isMinimized: false,
   }),
 
   nextTask: () => set((state) => {

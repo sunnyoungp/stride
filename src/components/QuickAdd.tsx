@@ -14,6 +14,8 @@ function localDateString(d: Date) {
 function todayStr()    { return localDateString(new Date()); }
 function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return localDateString(d); }
 
+const LAST_SECTION_KEY = "stride-last-section";
+
 function parse(input: string): Pick<Task, "title" | "tags" | "dueDate"> {
   const tags: string[] = [];
   for (const m of input.matchAll(/#([a-zA-Z0-9_-]+)/g)) {
@@ -30,6 +32,7 @@ function parse(input: string): Pick<Task, "title" | "tags" | "dueDate"> {
     .replace(/#[a-zA-Z0-9_-]+/g, "")
     .replace(/@?tomorrow\b/gi, "")
     .replace(/@?today\b/gi, "")
+    .replace(/~[^\s~]*/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -74,8 +77,10 @@ export function QuickAdd() {
   const [open, setOpen]               = useState(false);
   const [mode, setMode]               = useState<"task" | "event">("task");
   const [value, setValue]             = useState("");
-  const [sectionId, setSectionId]     = useState("");
-  const [selectedDate, setSelectedDate] = useState<string | undefined>();
+  const [sectionId, setSectionId]     = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem(LAST_SECTION_KEY) ?? "") : ""
+  );
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(() => todayStr());
 
   // Event-mode fields
   const [eventTitle, setEventTitle]       = useState("");
@@ -89,11 +94,20 @@ export function QuickAdd() {
   const preview      = useMemo(() => (value.trim() ? parse(value) : null), [value]);
   const effectiveDate = selectedDate ?? preview?.dueDate;
 
+  // ~section matching
+  const tildeMatch = useMemo(() => {
+    const m = value.match(/~([^\s~]*)/);
+    if (!m || !m[1]) return null;
+    const typed = m[1].toLowerCase();
+    if (!typed) return null;
+    return sections.find((s) => s.title.toLowerCase().startsWith(typed)) ?? null;
+  }, [value, sections]);
+
   const close = () => {
     setOpen(false);
     setValue("");
-    setSectionId("");
-    setSelectedDate(undefined);
+    setSectionId(typeof window !== "undefined" ? (localStorage.getItem(LAST_SECTION_KEY) ?? "") : "");
+    setSelectedDate(todayStr());
     setMode("task");
     setEventTitle("");
     setEventDate(todayStr());
@@ -118,10 +132,12 @@ export function QuickAdd() {
     }
     const p = parse(value);
     if (!p.title) return;
+    const effectiveSectionId = sectionId || tildeMatch?.id || undefined;
+    if (effectiveSectionId) localStorage.setItem(LAST_SECTION_KEY, effectiveSectionId);
     void createTask({
       ...p,
       dueDate: effectiveDate,
-      sectionId: sectionId || undefined,
+      sectionId: effectiveSectionId,
     }).then(close);
   };
 
@@ -290,8 +306,19 @@ export function QuickAdd() {
                   </button>
                 )}
               </div>
+              {/* Tilde hint */}
+              {value.includes("~") && (
+                <div className="px-5 pb-1" style={{ borderTop: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: 11, color: tildeMatch ? "var(--accent)" : "var(--fg-faint)" }}>
+                    {tildeMatch
+                      ? `↩ Will assign to "${tildeMatch.title}"`
+                      : "Type ~sectionname to assign a section"}
+                  </span>
+                </div>
+              )}
+
               {/* Options */}
-              <div className="space-y-3 px-5 py-4" style={{ borderTop: "1px solid var(--border)" }}>
+              <div className="space-y-3 px-5 py-4" style={{ borderTop: value.includes("~") ? "none" : "1px solid var(--border)" }}>
                 <div className="flex items-center gap-3">
                   <span className="w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "var(--fg-faint)" }}>Date</span>
                   <div className="flex items-center gap-1.5">
@@ -379,8 +406,19 @@ export function QuickAdd() {
               )}
             </div>
 
+            {/* ── Tilde hint ── */}
+            {value.includes("~") && (
+              <div className="px-5 pb-1 pt-0" style={{ borderTop: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 11, color: tildeMatch ? "var(--accent)" : "var(--fg-faint)" }}>
+                  {tildeMatch
+                    ? `↩ Will assign to "${tildeMatch.title}"`
+                    : "Type ~sectionname to assign a section"}
+                </span>
+              </div>
+            )}
+
             {/* ── Options ── */}
-            <div className="space-y-3 px-5 py-4" style={{ borderTop: "1px solid var(--border)" }}>
+            <div className="space-y-3 px-5 py-4" style={{ borderTop: value.includes("~") ? "none" : "1px solid var(--border)" }}>
               {/* Date */}
               <div className="flex items-center gap-3">
                 <span className="w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "var(--fg-faint)" }}>Date</span>

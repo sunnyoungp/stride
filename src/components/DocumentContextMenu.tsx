@@ -68,8 +68,13 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
 
   const onDelete = async () => {
     if (confirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {
-      await deleteDocument(doc.id);
-      onClose();
+      try {
+        await deleteDocument(doc.id);
+        onClose();
+      } catch (err) {
+        console.error("Delete failed:", err);
+        alert("Failed to delete document. Please try again.");
+      }
     }
   };
 

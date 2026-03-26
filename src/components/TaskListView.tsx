@@ -92,9 +92,10 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
   const updateTask   = useTaskStore((s) => s.updateTask);
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
 
-  const sections        = useSectionStore((s) => s.sections);
-  const subsections     = useSectionStore((s) => s.subsections);
-  const createSection   = useSectionStore((s) => s.createSection);
+  const sections           = useSectionStore((s) => s.sections);
+  const subsections        = useSectionStore((s) => s.subsections);
+  const createSection      = useSectionStore((s) => s.createSection);
+  const deleteSubsection   = useSectionStore((s) => s.deleteSubsection);
 
   const [activeId, setActiveId]           = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -103,8 +104,23 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
   }, []);
   const [showLoading, setShowLoading]     = useState(true);
   const [contextMenu, setContextMenu]     = useState<{ task: Task; x: number; y: number } | null>(null);
+  const [subContextMenu, setSubContextMenu] = useState<{ id: string; title: string; x: number; y: number } | null>(null);
+  const subMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!subContextMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (subMenuRef.current && !subMenuRef.current.contains(e.target as Node)) setSubContextMenu(null);
+    };
+    window.addEventListener("pointerdown", handler);
+    return () => window.removeEventListener("pointerdown", handler);
+  }, [subContextMenu]);
   const [collapsed, setCollapsed]         = useState<Record<string, boolean>>({});
-  const [expandedSubs, setExpandedSubs]   = useState<Record<string, boolean>>({});
+  const [expandedSubs, setExpandedSubs]   = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem("stride-subtask-collapse");
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    } catch { return {}; }
+  });
   const [editSubId, setEditSubId]         = useState<string | null>(null);
   const [editSubVal, setEditSubVal]       = useState("");
   const [addingSection, setAddingSection] = useState(false);
@@ -317,9 +333,21 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
     const isSelected   = selectedTaskIds.has(task.id);
 
     const handleRowClick = (e: React.MouseEvent) => {
-      if (e.shiftKey) {
+      if (e.shiftKey || e.metaKey) {
         e.preventDefault();
         window.getSelection()?.removeAllRanges();
+      }
+      // Cmd+click: toggle individual task
+      if (e.metaKey) {
+        setSelectedTaskIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(task.id)) { next.delete(task.id); } else { next.add(task.id); anchorTaskIdRef.current = task.id; }
+          return next;
+        });
+        return;
+      }
+      // Shift+click: range select
+      if (e.shiftKey) {
         if (anchorTaskIdRef.current) {
           const aIdx = flatVisibleOrder.findIndex((t) => t.id === anchorTaskIdRef.current);
           const bIdx = flatVisibleOrder.findIndex((t) => t.id === task.id);
@@ -416,7 +444,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
             {hasSubtasks && (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setExpandedSubs((p) => ({ ...p, [task.id]: !expanded })); }}
+                onClick={(e) => { e.stopPropagation(); setExpandedSubs((p) => { const next = { ...p, [task.id]: !expanded }; try { localStorage.setItem("stride-subtask-collapse", JSON.stringify(next)); } catch {} return next; }); }}
                 className="flex h-5 w-5 flex-none items-center justify-center rounded-md transition-all duration-150 hover:bg-[var(--bg-hover)]"
                 style={{ color: "var(--fg-faint)" }}
                 title={expanded ? "Collapse subtasks" : "Expand subtasks"}
@@ -613,6 +641,10 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                     <button
                       type="button"
                       onClick={() => setCollapsed((p) => ({ ...p, [`sub_${sub.id}`]: !subCollapsed }))}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setSubContextMenu({ id: sub.id, title: sub.title, x: e.clientX, y: e.clientY });
+                      }}
                       className="flex w-full items-center gap-2 px-4 py-2 transition-colors duration-150 hover:bg-[var(--bg-hover)]"
                       style={{
                         borderTop: "1px solid var(--border)",
@@ -811,6 +843,36 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
 
       {selectedTaskIds.size >= 2 && (
         <SelectionActionBar selectedIds={selectedTaskIds} onClear={clearSelection} />
+      )}
+
+      {subContextMenu && (
+        <div
+          ref={subMenuRef}
+          style={{
+            position: "fixed",
+            left: subContextMenu.x,
+            top: subContextMenu.y,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-mid)",
+            boxShadow: "var(--shadow-lg)",
+            zIndex: 9999,
+          }}
+          className="w-[180px] select-none rounded-xl p-1"
+        >
+          <button
+            type="button"
+            className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
+            style={{ color: "#ef4444" }}
+            onClick={() => {
+              if (confirm(`Delete subsection "${subContextMenu.title}"? Tasks inside will be moved to the main section.`)) {
+                void deleteSubsection(subContextMenu.id);
+              }
+              setSubContextMenu(null);
+            }}
+          >
+            Delete Subsection
+          </button>
+        </div>
       )}
 
       <DragOverlay

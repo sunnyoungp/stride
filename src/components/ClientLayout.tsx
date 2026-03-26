@@ -14,6 +14,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 import { FocusSetupModal } from "@/components/FocusSetupModal";
 import { FocusTunnel } from "@/components/FocusTunnel";
+import { FocusPill } from "@/components/FocusPill";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MobileFABs } from "@/components/MobileFABs";
 
@@ -22,6 +23,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const hideSidebar = pathname === "/login";
     const isZenMode = useFocusStore((state) => state.isZenMode);
     const focusState = useFocusStore((state) => state.focusState);
+    const isMinimized = useFocusStore((state) => state.isMinimized);
     const setUser = useAuthStore((state) => state.setUser);
 
     useEffect(() => {
@@ -41,7 +43,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (focusState.isActive) {
         return (
             <ThemeProvider>
-                <FocusTunnel />
+                {/* Always keep FocusTunnel mounted to preserve timer state; hide via CSS when minimized */}
+                <div className={isMinimized ? "hidden" : ""}>
+                    <FocusTunnel />
+                </div>
+
+                {/* Minimized: show normal app layout + floating pill */}
+                {isMinimized && (
+                    <>
+                        <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
+                            {!hideSidebar && (
+                                <aside className="h-screen flex-none border-r border-[var(--border)] hidden md:block md:w-14 lg:w-[220px]">
+                                    <Sidebar />
+                                </aside>
+                            )}
+                            <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)] min-w-0 flex flex-col md:pb-0" style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom))" }}>
+                                {children}
+                            </main>
+                            <BottomTabBar />
+                            <MobileFABs />
+                        </div>
+                        <FocusPill />
+                    </>
+                )}
+
                 <GlobalSearch />
                 <QuickAdd />
                 <SettingsApplier />

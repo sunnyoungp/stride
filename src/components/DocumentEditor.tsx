@@ -7,7 +7,6 @@ import TaskList from "@tiptap/extension-task-list";
 import type { JSONContent } from "@tiptap/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { FontSizeTextStyle, FontSizeKeyboardExtension, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { useDocumentStore } from "@/store/documentStore";
@@ -104,7 +103,6 @@ export function DocumentEditor({ documentId }: Props) {
         TaskList,
         CustomTaskItem.configure({ nested: true }),
         XChecklistExtension,
-        DragHandleExtension,
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
       ],

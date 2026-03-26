@@ -16,7 +16,7 @@ import { TaskContextMenu } from "@/components/TaskContextMenu";
 type SelectionCtx = {
   selectedIds: Set<string>;
   orderedIds: string[];
-  handleRowClick: (taskId: string, shiftKey: boolean, pos: { x: number; y: number }, openModal: (task: Task, pos: { x: number; y: number }) => void, task: Task) => void;
+  handleRowClick: (taskId: string, shiftKey: boolean, metaKey: boolean, pos: { x: number; y: number }, openModal: (task: Task, pos: { x: number; y: number }) => void, task: Task) => void;
   clearSelection: () => void;
 };
 
@@ -213,19 +213,27 @@ export function TaskSelectionProvider({ orderedTaskIds, children }: TaskSelectio
     (
       taskId: string,
       shiftKey: boolean,
+      metaKey: boolean,
       pos: { x: number; y: number },
       openModal: (task: Task, pos: { x: number; y: number }) => void,
       task: Task
     ) => {
+      // Cmd+click: toggle individual task without affecting others
+      if (metaKey) {
+        const next = new Set(selectedIds);
+        if (next.has(taskId)) { next.delete(taskId); } else { next.add(taskId); setAnchorId(taskId); }
+        setSelectedIds(next);
+        return;
+      }
+      // Shift+click: range select
       if (shiftKey && anchorId && orderedTaskIds.includes(anchorId) && orderedTaskIds.includes(taskId)) {
         const aIdx = orderedTaskIds.indexOf(anchorId);
         const bIdx = orderedTaskIds.indexOf(taskId);
         const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
-        const range = new Set(orderedTaskIds.slice(lo, hi + 1));
-        setSelectedIds(range);
+        setSelectedIds(new Set(orderedTaskIds.slice(lo, hi + 1)));
         return;
       }
-      // Regular click: if already in selection, deselect; otherwise clear and set anchor
+      // Regular click: open modal
       if (selectedIds.has(taskId) && !shiftKey) {
         clearSelection();
         openModal(task, pos);
@@ -334,7 +342,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
   const isSelected = selection?.selectedIds.has(task.id) ?? false;
 
   const handleClick = (e: React.MouseEvent) => {
-    if (e.shiftKey) {
+    if (e.shiftKey || e.metaKey) {
       e.preventDefault();
       window.getSelection()?.removeAllRanges();
     }
@@ -342,6 +350,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
       selection.handleRowClick(
         task.id,
         e.shiftKey,
+        e.metaKey,
         { x: e.clientX, y: e.clientY },
         (t, pos) => onClick?.(t, pos),
         task
