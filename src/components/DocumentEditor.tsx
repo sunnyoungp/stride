@@ -97,18 +97,6 @@ export function DocumentEditor({ documentId }: Props) {
 
   const syncedBadge = Boolean(doc?.linkedTaskIds && doc.linkedTaskIds.length > 0);
 
-  const [editorFontSize, setEditorFontSize] = useState(FONT_SIZE_DEFAULT);
-  useEffect(() => {
-    if (!editor) return;
-    const update = () => setEditorFontSize(getCurrentFontSize(editor));
-    editor.on("selectionUpdate", update);
-    editor.on("transaction", update);
-    return () => {
-      editor.off("selectionUpdate", update);
-      editor.off("transaction", update);
-    };
-  }, [editor]);
-
   const editor = useEditor(
     {
       extensions: [
@@ -277,6 +265,18 @@ export function DocumentEditor({ documentId }: Props) {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
   }, []);
+
+  const [editorFontSize, setEditorFontSize] = useState(FONT_SIZE_DEFAULT);
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => setEditorFontSize(getCurrentFontSize(editor));
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
 
   if (!doc) {
     return (
