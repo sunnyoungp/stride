@@ -29,7 +29,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RING_R; // ≈ 628.3
 
 export function FocusTunnel() {
   const {
-    focusState, endFocusSession, toggleZenMode, nextTask, prevTask,
+    focusState, clearSession, nextTask, prevTask,
     setTimeRemaining, togglePause, addTasksToPlaylist, removeTaskFromPlaylist, toggleMinimized,
   } = useFocusStore();
   const updateTask = useTaskStore(state => state.updateTask);
@@ -173,7 +173,7 @@ export function FocusTunnel() {
     setLastDoneTask(null);
   };
 
-  const handleLeave = () => { endFocusSession(); toggleZenMode(); };
+  const handleLeave = () => clearSession();
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -288,7 +288,7 @@ export function FocusTunnel() {
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: "52px", fontWeight: 300, fontFamily: "var(--font-mono, monospace)", letterSpacing: "-2px", color: "var(--fg)", lineHeight: 1 }}>
+                  <span style={{ fontSize: "52px", fontWeight: 300, fontFamily: "var(--font-geist-sans, sans-serif)", letterSpacing: "-1px", color: "var(--fg)", lineHeight: 1 }}>
                     {formatTime(timeRemaining)}
                   </span>
                   <span style={{ fontSize: "10px", color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.12em" }}>

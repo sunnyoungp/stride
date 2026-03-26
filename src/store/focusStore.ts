@@ -26,6 +26,8 @@ export interface FocusStore {
   // Note: selectedTasks are the parents you picked in the CMD+J modal
   // allTasks are all tasks from useTaskStore.getState().tasks
   startFocusSession: (mode: FocusMode, selectedTasks: Task[], allTasks: Task[], durationInSeconds: number) => void;
+  /** Atomically wipes all session state — call on ESC and Leave. Never call on minimize. */
+  clearSession: () => void;
   endFocusSession: () => void;
   nextTask: () => void;
   prevTask: () => void;
@@ -127,8 +129,15 @@ export const useFocusStore = create<FocusStore>((set) => ({
     });
   },
 
+  clearSession: () => set({
+    focusState: initialFocusState,
+    isZenMode: false,
+    isMinimized: false,
+  }),
+
   endFocusSession: () => set({
     focusState: initialFocusState,
+    isZenMode: false,
     isMinimized: false,
   }),
 
