@@ -13,17 +13,22 @@ export function SettingsApplier() {
     const accent = localStorage.getItem("stride-accent");
     if (accent) document.documentElement.style.setProperty("--accent", accent);
 
-    const fontSize = localStorage.getItem("stride-font-size") ?? "14px";
-    document.documentElement.style.setProperty("--font-size-base", fontSize);
+    // Interface font size (sidebar, nav, labels) — new key, falls back to legacy
+    const uiFont = localStorage.getItem("stride-font-ui") ?? localStorage.getItem("stride-font-size") ?? "14px";
+    document.documentElement.style.setProperty("--font-size-ui", uiFont);
+    document.documentElement.style.setProperty("--font-size-base", uiFont); // legacy alias
+
+    // Task content font size (task list titles, kanban cards)
+    const tasksFont = localStorage.getItem("stride-font-tasks") ?? "15px";
+    document.documentElement.style.setProperty("--font-size-tasks", tasksFont);
+
+    // Notes editor font size is handled per-editor via --font-size-notes default
 
     const sidebarWidth = localStorage.getItem("stride-sidebar-width") ?? "220px";
     document.documentElement.style.setProperty("--sidebar-width", sidebarWidth);
 
     const compact = localStorage.getItem("stride-compact") === "true";
     document.documentElement.setAttribute("data-compact", String(compact));
-
-    const noteBase = parseInt(fontSize, 10) || 14;
-    document.documentElement.style.setProperty("--note-font-size", `${noteBase + 3}px`);
   }, []);
 
   return null;

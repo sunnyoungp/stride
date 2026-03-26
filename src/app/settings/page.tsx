@@ -204,7 +204,7 @@ function AppearanceCard() {
   const { currentTheme, setTheme } = useTheme();
   const [accent,       setAccentState] = useState(() => ls("stride-accent",        "#e8603c"));
   const [font,         setFontState]   = useState(() => ls("stride-font",          "geist"));
-  const [fontSize,     setFontSize]    = useState(() => ls("stride-font-size",     "14px"));
+  const [fontSize,     setFontSize]    = useState(() => ls("stride-font-ui",       "14px"));
   const [sidebarWidth, setSidebarW]    = useState(() => ls("stride-sidebar-width", "220"));
   const [compact,      setCompact]     = useState(() => ls("stride-compact",       "false") === "true");
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -229,8 +229,9 @@ function AppearanceCard() {
 
   const applyFontSize = (sz: string) => {
     setFontSize(sz);
-    void saveSettings("stride-font-size", sz);
-    setCSSVar("--font-size-base", sz);
+    void saveSettings("stride-font-ui", sz);
+    setCSSVar("--font-size-ui", sz);
+    setCSSVar("--font-size-base", sz); // legacy alias
   };
 
   const applySidebarWidth = (w: string) => {
@@ -325,7 +326,7 @@ function AppearanceCard() {
         />
       </SettingRow>
 
-      <SettingRow label="Font size">
+      <SettingRow label="Interface Font Size">
         <PillGroup
           options={[{ label: "Small", value: "13px" }, { label: "Medium", value: "14px" }, { label: "Large", value: "16px" }]}
           value={fontSize}
@@ -564,7 +565,6 @@ function ShortcutsCard() {
 
 function DailyNoteCard() {
   const [linked,       setLinked]       = useState(() => ls("stride-note-linked-mode", "true") === "true");
-  const [noteFontSize, setNoteFontSize] = useState(() => ls("stride-note-font-size",   "14px"));
   const [autoCreate,   setAutoCreate]   = useState(() => ls("stride-note-auto-create", "true") === "true");
   const [weekStart,    setWeekStart]    = useState(() => ls("stride-week-start",        "sunday"));
 
@@ -572,13 +572,6 @@ function DailyNoteCard() {
     <SettingCard id="daily-note" title="Daily Note">
       <SettingRow label="Link checklist to Task Manager" description="New checkboxes automatically create tasks">
         <Toggle value={linked} onChange={(v) => { setLinked(v); void saveSettings("stride-note-linked-mode", String(v)); }} />
-      </SettingRow>
-      <SettingRow label="Editor font size">
-        <PillGroup
-          options={[{ label: "Small", value: "13px" }, { label: "Medium", value: "14px" }, { label: "Large", value: "16px" }]}
-          value={noteFontSize}
-          onChange={(v) => { setNoteFontSize(v); void saveSettings("stride-note-font-size", v); setCSSVar("--note-font-size", v); }}
-        />
       </SettingRow>
       <SettingRow label="Auto-create today's note on open">
         <Toggle value={autoCreate} onChange={(v) => { setAutoCreate(v); void saveSettings("stride-note-auto-create", String(v)); }} />

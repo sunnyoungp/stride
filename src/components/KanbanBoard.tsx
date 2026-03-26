@@ -134,7 +134,7 @@ function KanbanCardVisual({
         <div
           style={{
             flex: 1,
-            fontSize: 14,
+            fontSize: "var(--font-size-tasks)",
             fontWeight: 500,
             color: "var(--fg)",
             overflow: "hidden",
@@ -360,7 +360,7 @@ function InlineInputCard({ onCommit, onCancel }: { onCommit: (title: string) => 
           if (e.key === "Escape") { e.preventDefault(); onCancel(); }
         }}
         placeholder="Task name"
-        style={{ width: "100%", background: "transparent", border: "none", outline: "none", fontSize: 14, color: "var(--fg)" }}
+        style={{ width: "100%", background: "transparent", border: "none", outline: "none", fontSize: "var(--font-size-tasks)", color: "var(--fg)" }}
       />
     </div>
   );

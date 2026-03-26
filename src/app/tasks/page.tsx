@@ -251,6 +251,7 @@ export default function Page() {
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortPopoverAnchor, setSortPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const sortBtnRef = useRef<HTMLButtonElement>(null);
+  const [taskFontSize, setTaskFontSize] = useState<"S" | "M" | "L">("M");
 
   useEffect(() => {
     try {
@@ -263,7 +264,20 @@ export default function Page() {
         if (typeof s.todayOnly === "boolean") setTodayOnly(s.todayOnly);
       }
     } catch {}
+    try {
+      const stored = localStorage.getItem("stride-font-tasks");
+      if (stored === "13px") setTaskFontSize("S");
+      else if (stored === "17px") setTaskFontSize("L");
+      else setTaskFontSize("M");
+    } catch {}
   }, []);
+
+  const applyTaskFontSize = (size: "S" | "M" | "L") => {
+    const px = size === "S" ? "13px" : size === "L" ? "17px" : "15px";
+    setTaskFontSize(size);
+    localStorage.setItem("stride-font-tasks", px);
+    document.documentElement.style.setProperty("--font-size-tasks", px);
+  };
 
   const tasks = useTaskStore((s) => s.tasks);
   const loadTasks = useTaskStore((s) => s.loadTasks);
@@ -297,6 +311,21 @@ export default function Page() {
       >
         <h1 className="text-[15px] font-semibold" style={{ color: "var(--fg)" }}>Tasks</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {/* Font size S/M/L toggle */}
+          {(["S", "M", "L"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => applyTaskFontSize(s)}
+              className="rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-150"
+              style={taskFontSize === s
+                ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
+                : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
+              }
+            >
+              {s}
+            </button>
+          ))}
           {/* Today toggle */}
           <button
             type="button"

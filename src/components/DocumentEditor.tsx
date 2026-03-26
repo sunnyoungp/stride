@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
+import { FontSizeTextStyle, FontSizeKeyboardExtension, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { StrideDocument, Task } from "@/types/index";
@@ -96,6 +97,18 @@ export function DocumentEditor({ documentId }: Props) {
 
   const syncedBadge = Boolean(doc?.linkedTaskIds && doc.linkedTaskIds.length > 0);
 
+  const [editorFontSize, setEditorFontSize] = useState(FONT_SIZE_DEFAULT);
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => setEditorFontSize(getCurrentFontSize(editor));
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
   const editor = useEditor(
     {
       extensions: [
@@ -104,6 +117,8 @@ export function DocumentEditor({ documentId }: Props) {
         CustomTaskItem.configure({ nested: true }),
         XChecklistExtension,
         DragHandleExtension,
+        FontSizeTextStyle,
+        FontSizeKeyboardExtension,
       ],
       immediatelyRender: false,
       content: doc?.content ? safeParseJson(doc.content) ?? undefined : undefined,
@@ -294,7 +309,20 @@ export function DocumentEditor({ documentId }: Props) {
         ) : null}
       </div>
 
-      <div className="mt-6 rounded-xl p-4" style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)" }}>
+      {/* Minimal font-size toolbar */}
+      <div className="mt-6 mb-2 flex items-center gap-3">
+        <span
+          title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
+          style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
+        >
+          {editorFontSize}px
+        </span>
+        <span style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none" }}>
+          Cmd+= / Cmd+- to resize · Cmd+0 to reset
+        </span>
+      </div>
+
+      <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)" }}>
         {editor ? <EditorContent editor={editor} /> : null}
       </div>
     </div>

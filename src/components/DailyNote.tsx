@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/db/index";
 import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
+import { FontSizeTextStyle, FontSizeKeyboardExtension, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { DailyNote, Task } from "@/types/index";
@@ -630,8 +631,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     window.dispatchEvent(new StorageEvent("storage", { key: "stride-note-linked-mode", newValue: String(next) }));
   };
 
-  // Note font-size: global stride-font-size + 5px
-  const [noteFontSize,  setNoteFontSize]  = useState("17px");
+  const [editorFontSize, setEditorFontSize] = useState(FONT_SIZE_DEFAULT);
+
   useEffect(() => {
     // Read persisted settings on mount (client-only, avoids SSR mismatch)
     const primary = localStorage.getItem("stride-note-linked-mode");
@@ -640,12 +641,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     } else {
       setIsLinked(localStorage.getItem("dailynote-linked-mode") === "true");
     }
-    const base = localStorage.getItem("stride-font-size");
-    if (base) setNoteFontSize(`${(parseInt(base, 10) || 14) + 5}px`);
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "stride-note-linked-mode") setIsLinked(e.newValue === "true");
-      if (e.key === "stride-font-size" && e.newValue) setNoteFontSize(`${(parseInt(e.newValue, 10) || 14) + 3}px`);
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -894,6 +892,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         DragHandleExtension,
         Placeholder.configure({ placeholder: "Start writing…" }),
         slashCommandExtension,
+        FontSizeTextStyle,
+        FontSizeKeyboardExtension,
       ],
       immediatelyRender: false,
       content: note?.content ? safeParseJson(note.content) ?? undefined : undefined,
@@ -1088,6 +1088,15 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
 
   // Keep editorRef current
   useEffect(() => { editorRef.current = editor ?? null; }, [editor]);
+
+  // Track font size at cursor for toolbar readout
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => setEditorFontSize(getCurrentFontSize(editor));
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => { editor.off("selectionUpdate", update); editor.off("transaction", update); };
+  }, [editor]);
 
 
   // Apply/clear selection highlights directly on the ProseMirror DOM
@@ -1315,7 +1324,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-8 py-8" style={{ fontSize: noteFontSize }}>
+    <div className="mx-auto w-full max-w-2xl px-8 py-8">
       {/* Section label + sync-mode toggle */}
       {!hideHeader && (
         <>
@@ -1323,6 +1332,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--fg-faint)" }}>
               Daily Note
             </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
+                style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
+              >
+                {editorFontSize}px
+              </span>
             <button
               type="button"
               onClick={toggleLinked}
@@ -1342,6 +1358,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
               {isLinked ? <LinkIcon /> : <UnlinkIcon />}
               {isLinked ? "Linked" : "Independent"}
             </button>
+            </div>
           </div>
 
           {/* Divider */}
