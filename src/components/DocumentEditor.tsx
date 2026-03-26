@@ -354,7 +354,10 @@ export function DocumentEditor({ documentId }: Props) {
         </span>
       </div>
 
-      <div className="w-full md:rounded-xl p-4" style={{ border: "1px solid var(--border)", borderLeft: "none", borderRight: "none", md: { borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" } as any, background: "var(--bg-subtle)" }}>
+      <div 
+        className="w-full md:rounded-xl p-4 border-y md:border-x" 
+        style={{ borderColor: "var(--border)", background: "var(--bg-subtle)" }}
+      >
         {editor ? <EditorContent editor={editor} className="w-full" /> : null}
       </div>
     </div>
