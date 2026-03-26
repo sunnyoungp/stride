@@ -54,6 +54,8 @@ function InboxPageContent() {
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortPopoverAnchor, setSortPopoverAnchor] = useState<{ x: number; y: number } | null>(null);
   const sortBtnRef = useRef<HTMLButtonElement>(null);
+  const [taskFontSize, setTaskFontSize] = useState<"S" | "M" | "L">("M");
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem("viewState_inbox");
@@ -65,7 +67,20 @@ function InboxPageContent() {
         if (typeof s.todayOnly === "boolean") setTodayOnly(s.todayOnly);
       }
     } catch {}
+    try {
+      const stored = localStorage.getItem("stride-font-tasks");
+      if (stored === "13px") setTaskFontSize("S");
+      else if (stored === "17px") setTaskFontSize("L");
+      else setTaskFontSize("M");
+    } catch {}
   }, []);
+
+  const applyTaskFontSize = (size: "S" | "M" | "L") => {
+    const px = size === "S" ? "13px" : size === "L" ? "17px" : "15px";
+    setTaskFontSize(size);
+    localStorage.setItem("stride-font-tasks", px);
+    document.documentElement.style.setProperty("--font-size-tasks", px);
+  };
 
   useEffect(() => {
     void loadTasks();
@@ -181,6 +196,18 @@ function InboxPageContent() {
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {(["S", "M", "L"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => applyTaskFontSize(s)}
+              className="rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-150"
+              style={taskFontSize === s
+                ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
+                : { background: "var(--bg-hover)", color: "var(--fg-muted)" }
+              }
+            >{s}</button>
+          ))}
           <button
             type="button"
             onClick={() => { const next = !todayOnly; setTodayOnly(next); saveViewState({ todayOnly: next }); }}

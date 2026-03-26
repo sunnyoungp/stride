@@ -303,10 +303,10 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li > label {
   flex-shrink: 0;
   user-select: none;
-  /* Align checkbox to first line of text regardless of font size */
+  /* Match editor leading-7 (1.75rem) so checkbox centers on the first text line */
   display: flex;
   align-items: center;
-  height: calc(var(--font-size-notes, 15px) * 1.5);
+  height: 1.75rem;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {

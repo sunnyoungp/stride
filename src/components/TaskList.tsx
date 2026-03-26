@@ -399,7 +399,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
           e.currentTarget.style.background = isSelected ? "var(--accent-bg)" : "transparent";
         }}
       >
-        {/* Circular checkbox */}
+        {/* Checkbox */}
         <button
           type="button"
           onClick={(e) => {
@@ -410,7 +410,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
             flexShrink: 0,
             width: 17,
             height: 17,
-            borderRadius: "50%",
+            borderRadius: 4,
             border: `1.5px solid ${isDone ? "var(--accent)" : "var(--border-strong)"}`,
             background: isDone ? "var(--accent)" : "transparent",
             cursor: "pointer",
@@ -430,9 +430,9 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
 
         {/* Title */}
         <span
+          className="task-title-text"
           style={{
             flex: 1,
-            fontSize: 13,
             lineHeight: 1.4,
             color: isDone ? "var(--fg-faint)" : "var(--fg)",
             textDecoration: isDone ? "line-through" : "none",

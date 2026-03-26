@@ -1324,46 +1324,39 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-8 py-8">
-      {/* Section label + sync-mode toggle */}
+    <div className="group relative mx-auto w-full max-w-2xl px-8 py-8">
+      {/* Floating controls — subtle, only visible on hover */}
       {!hideHeader && (
-        <>
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--fg-faint)" }}>
-              Daily Note
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
-                style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
-              >
-                {editorFontSize}px
-              </span>
-            <button
-              type="button"
-              onClick={toggleLinked}
-              title={isLinked
-                ? "Linked mode: checklist items sync as tasks. Click to switch to independent."
-                : "Independent mode: checklist items are local only. Click to link to task manager."}
-              style={{
-                display: "flex", alignItems: "center", gap: 5,
-                padding: "3px 8px", borderRadius: 8,
-                border: "1px solid var(--border)",
-                background: isLinked ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--bg-subtle)",
-                color: isLinked ? "var(--accent)" : "var(--fg-faint)",
-                fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
-            >
-              {isLinked ? <LinkIcon /> : <UnlinkIcon />}
-              {isLinked ? "Linked" : "Independent"}
-            </button>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="mb-5 h-px" style={{ background: "var(--border)" }} />
-        </>
+        <div
+          className="absolute flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          style={{ top: 20, right: 32, zIndex: 10 }}
+        >
+          <span
+            title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
+            style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
+          >
+            {editorFontSize}px
+          </span>
+          <button
+            type="button"
+            onClick={toggleLinked}
+            title={isLinked
+              ? "Linked mode: checklist items sync as tasks. Click to switch to independent."
+              : "Independent mode: checklist items are local only. Click to link to task manager."}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "3px 8px", borderRadius: 8,
+              border: "1px solid var(--border)",
+              background: isLinked ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--bg-subtle)",
+              color: isLinked ? "var(--accent)" : "var(--fg-faint)",
+              fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {isLinked ? <LinkIcon /> : <UnlinkIcon />}
+            {isLinked ? "Linked" : "Independent"}
+          </button>
+        </div>
       )}
 
       {/* Editor */}
