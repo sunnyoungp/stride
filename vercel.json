@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/documents/:path+",
+      "destination": "/documents/placeholder"
+    }
+  ]
+}
