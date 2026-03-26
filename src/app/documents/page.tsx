@@ -1,11 +1,33 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { DocumentList } from "@/components/DocumentList";
+import { DocumentEditor } from "@/components/DocumentEditor";
 
-export default function Page() {
+function DocumentsContent() {
+  const params = useSearchParams();
+  const docId = params.get("id");
+
+  if (docId) {
+    return (
+      <div className="mobile-scroll-content h-full overflow-auto">
+        <DocumentEditor documentId={docId} />
+      </div>
+    );
+  }
+
   return (
     <div className="mobile-scroll-content h-full overflow-auto">
       <DocumentList />
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <DocumentsContent />
+    </Suspense>
   );
 }
