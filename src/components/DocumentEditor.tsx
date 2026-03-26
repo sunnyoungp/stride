@@ -81,6 +81,13 @@ export function DocumentEditor({ documentId }: Props) {
   const docInState = documents.find((d) => d.id === documentId) ?? null;
   const [doc, setDoc] = useState<StrideDocument | null>(docInState);
 
+  // Local title state — decoupled from the store so keystrokes are instant
+  const [localTitle, setLocalTitle] = useState(docInState?.title ?? "");
+  const titleSaveTimerRef = useRef<number | null>(null);
+  // Track the doc ID we last synced the title from, so we only overwrite localTitle
+  // when the document itself changes (navigation), not on every store update.
+  const lastSyncedDocIdRef = useRef<string | null>(null);
+
   const saveTimerRef = useRef<number | null>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
 
@@ -92,7 +99,33 @@ export function DocumentEditor({ documentId }: Props) {
   useEffect(() => {
     const next = documents.find((d) => d.id === documentId) ?? null;
     setDoc(next);
+    // Only reset localTitle when navigating to a different document
+    if (next && next.id !== lastSyncedDocIdRef.current) {
+      setLocalTitle(next.title ?? "");
+      lastSyncedDocIdRef.current = next.id;
+    }
   }, [documents, documentId]);
+
+  // Flush any pending title save on unmount
+  useEffect(() => {
+    return () => {
+      if (titleSaveTimerRef.current) window.clearTimeout(titleSaveTimerRef.current);
+    };
+  }, []);
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalTitle(value);
+    if (titleSaveTimerRef.current) window.clearTimeout(titleSaveTimerRef.current);
+    titleSaveTimerRef.current = window.setTimeout(() => {
+      if (doc) void updateDocument(doc.id, { title: value });
+    }, 600);
+  };
+
+  const handleTitleBlur = () => {
+    if (titleSaveTimerRef.current) window.clearTimeout(titleSaveTimerRef.current);
+    if (doc) void updateDocument(doc.id, { title: localTitle });
+  };
 
   const syncedBadge = Boolean(doc?.linkedTaskIds && doc.linkedTaskIds.length > 0);
 
@@ -289,8 +322,9 @@ export function DocumentEditor({ documentId }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <input
-            value={doc.title}
-            onChange={(e) => void updateDocument(doc.id, { title: e.target.value })}
+            value={localTitle}
+            onChange={handleTitleChange}
+            onBlur={handleTitleBlur}
             className="w-full bg-transparent text-3xl font-bold tracking-tight outline-none"
             style={{ color: "var(--fg)" }}
             placeholder="Untitled"
