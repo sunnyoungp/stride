@@ -55,9 +55,11 @@
   --section-personal-fg: #16a34a;
   --section-health-fg:   #dc2626;
   
-  /* sidebar / content surface layering */
-  --sidebar-bg:  #E8E5E2;  /* macOS Finder-style medium gray — clearly behind content */
-  --content-bg:  #FFFFFF;  /* content area "raised" above sidebar */
+  /* three-layer floating panel depth */
+  --color-app-root-bg: #D0CEC8;  /* canvas behind both panels — slightly darker than sidebar */
+  --sidebar-bg:  #E8E5E2;        /* floating sidebar panel — mid layer */
+  --content-bg:  #FFFFFF;        /* floating content panel — top layer */
+  --shadow-panel: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
 
   /* FONT SIZES — three independent tokens */
   --font-size-tasks: 15px;  /* task titles in list view and kanban cards */
@@ -90,9 +92,11 @@
   --accent-bg:    rgba(232, 96, 60, 0.11);
   --accent-bg-strong: rgba(232, 96, 60, 0.20);
 
-  /* sidebar / content surface layering */
-  --sidebar-bg:  #1C1C1E;  /* macOS-style dark sidebar */
-  --content-bg:  #242424;  /* content area slightly lighter than sidebar */
+  /* three-layer floating panel depth */
+  --color-app-root-bg: #090806;  /* canvas behind both panels — darkest layer */
+  --sidebar-bg:  #1C1C1E;        /* floating sidebar panel — mid layer */
+  --content-bg:  #242424;        /* floating content panel — top layer */
+  --shadow-panel: 0 4px 24px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20);
 
   --border:       rgba(245, 235, 225, 0.07);
   --border-mid:   rgba(245, 235, 225, 0.11);

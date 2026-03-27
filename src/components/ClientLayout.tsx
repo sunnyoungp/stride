@@ -18,6 +18,10 @@ import { FocusPill } from "@/components/FocusPill";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MobileFABs } from "@/components/MobileFABs";
 
+// Floating panel shadow — used on both sidebar and content cards
+const PANEL_SHADOW = "var(--shadow-panel)";
+const PANEL_RADIUS = 12;
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const hideSidebar = pathname === "/login";
@@ -51,16 +55,32 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {/* Minimized: show normal app layout + floating pill */}
                 {isMinimized && (
                     <>
-                        <div className="flex h-screen w-screen overflow-hidden text-[var(--fg)]" style={{ background: "var(--content-bg)" }}>
+                        {/* Root canvas — carries the app background behind the floating panels */}
+                        <div
+                            className="flex h-screen w-screen overflow-hidden md:p-3 md:gap-3"
+                            style={{ background: "var(--color-app-root-bg)" }}
+                        >
                             {!hideSidebar && (
                                 <aside
-                                    className={`h-screen flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
-                                    style={{ background: "var(--sidebar-bg)", borderRight: "1px solid rgba(0,0,0,0.08)" }}
+                                    className={`flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
+                                    style={{
+                                        background: "var(--sidebar-bg)",
+                                        borderRadius: PANEL_RADIUS,
+                                        boxShadow: PANEL_SHADOW,
+                                    }}
                                 >
                                     <Sidebar />
                                 </aside>
                             )}
-                            <main className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0" style={{ background: "var(--content-bg)", paddingBottom: "calc(56px + env(safe-area-inset-bottom))" }}>
+                            <main
+                                className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
+                                style={{
+                                    background: "var(--content-bg)",
+                                    borderRadius: PANEL_RADIUS,
+                                    boxShadow: PANEL_SHADOW,
+                                    paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
+                                }}
+                            >
                                 {children}
                             </main>
                             <BottomTabBar />
@@ -81,19 +101,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     return (
         <ThemeProvider>
-            <div className="flex h-screen w-screen overflow-hidden text-[var(--fg)]" style={{ background: "var(--content-bg)" }}>
-                {/* Sidebar: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
+            {/* Root canvas — carries the app background behind the floating panels */}
+            <div
+                className="flex h-screen w-screen overflow-hidden md:p-3 md:gap-3"
+                style={{ background: "var(--color-app-root-bg)" }}
+            >
+                {/* Sidebar floating card: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
                 {!hideSidebar && (
                     <aside
-                        className={`h-screen flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
-                        style={{ background: "var(--sidebar-bg)", borderRight: "1px solid rgba(0,0,0,0.08)" }}
+                        className={`flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
+                        style={{
+                            background: "var(--sidebar-bg)",
+                            borderRadius: PANEL_RADIUS,
+                            boxShadow: PANEL_SHADOW,
+                        }}
                     >
                         <Sidebar />
                     </aside>
                 )}
 
-                {/* Main content: flex-1, overflow hidden — each page handles its own scroll */}
-                <main className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0" style={{ background: "var(--content-bg)", paddingBottom: "calc(56px + env(safe-area-inset-bottom))" }}>
+                {/* Content floating card: flex-1, overflow hidden — each page handles its own scroll */}
+                <main
+                    className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
+                    style={{
+                        background: "var(--content-bg)",
+                        borderRadius: PANEL_RADIUS,
+                        boxShadow: PANEL_SHADOW,
+                        paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
+                    }}
+                >
                     {children}
                 </main>
 

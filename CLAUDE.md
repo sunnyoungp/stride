@@ -47,6 +47,14 @@ All colors, spacing, and surfaces MUST use these variables. Never use Tailwind c
 /* Shadows */
 --shadow-lg           standard elevated shadow
 --shadow-float        floating element shadow (modals, popovers)
+--shadow-panel        floating card shadow (sidebar + content panels)
+                      Light: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)
+                      Dark:  0 4px 24px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20)
+
+/* Layout depth — three-layer floating panel system */
+--color-app-root-bg   root canvas behind both panels (darkest/most muted layer)
+--sidebar-bg          floating sidebar panel background (mid layer)
+--content-bg          floating content panel background (top/lightest layer)
 
 /* Priority */
 --priority-high
@@ -246,6 +254,41 @@ Mobile inputs MUST use `fontSize: "16px"` to prevent iOS zoom.
 ```tsx
 <div className="h-px" style={{ background: "var(--border)" }} />
 ```
+
+---
+
+## Layout — Floating Panel System
+
+The app uses a **two-panel floating card layout** on desktop (md+). Both panels hover above a root canvas background.
+
+### Structure
+```
+Root canvas  (var(--color-app-root-bg))  — darkest, behind everything
+  ├─ Sidebar card  (var(--sidebar-bg))   — 12px margin, border-radius 12px, --shadow-panel
+  └─ Content card  (var(--content-bg))   — 12px margin, border-radius 12px, --shadow-panel
+```
+
+### ClientLayout panel rules
+- Outer wrapper: `md:p-3 md:gap-3`, `background: var(--color-app-root-bg)`
+- Both `<aside>` and `<main>`: `borderRadius: 12`, `boxShadow: "var(--shadow-panel)"`, `overflow: hidden`
+- On mobile (< 768px): full-bleed, no card effect, no padding/radius
+- Do NOT add `h-screen` to the aside — it fills the parent flex container naturally via `align-items: stretch`
+- Do NOT add `borderRight` to the sidebar — the gap between panels acts as the separator
+
+### Nav item active state
+- Active pill: `borderRadius: 6px`, 4px horizontal inset from sidebar edges
+- Font: 13px, weight 400 inactive / 500 active
+- Icons: 16px, `var(--fg-faint)` inactive, `var(--accent)` active
+- Row height: 28–32px (use `h-8`)
+
+### Sidebar section labels
+- 11px, fontWeight 400, `var(--fg-faint)` — quiet dividers only, no uppercase
+
+### CSS variables — defined per theme × mode in `themes.ts` + `globals.css`
+- `--color-app-root-bg`: canvas behind panels (most muted)
+- `--sidebar-bg`: sidebar panel background
+- `--content-bg`: content panel background
+- `--shadow-panel`: floating card elevation shadow
 
 ---
 
