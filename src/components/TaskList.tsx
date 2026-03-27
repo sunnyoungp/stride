@@ -263,6 +263,27 @@ export function TaskSelectionProvider({ orderedTaskIds, children }: TaskSelectio
   );
 }
 
+// ── Notes preview helper ──────────────────────────────────────────────────────
+
+function stripMd(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/~~(.*?)~~/g, "$1")
+    .replace(/`(.*?)`/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .trim();
+}
+
+export function getNotesPreview(notes: string, maxLen = 60): string {
+  if (!notes?.trim()) return "";
+  const firstLine = stripMd(notes).split("\n").find((l) => l.trim()) ?? "";
+  return firstLine.length > maxLen ? firstLine.slice(0, maxLen) + "…" : firstLine;
+}
+
 // ── Date helpers (shared across all list views) ───────────────────────────────
 
 export function localDateStr(d: Date): string {
@@ -437,21 +458,39 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
           )}
         </button>
 
-        {/* Title */}
-        <span
-          className="task-title-text"
-          style={{
-            flex: 1,
-            lineHeight: 1.4,
-            color: isDone ? "var(--fg-faint)" : "var(--fg)",
-            textDecoration: isDone ? "line-through" : "none",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {task.title || "(Untitled)"}
-        </span>
+        {/* Title + notes preview */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span
+            className="task-title-text"
+            style={{
+              display: "block",
+              lineHeight: 1.4,
+              color: isDone ? "var(--fg-faint)" : "var(--fg)",
+              textDecoration: isDone ? "line-through" : "none",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {task.title || "(Untitled)"}
+          </span>
+          {(() => {
+            const preview = getNotesPreview(task.notes);
+            return preview ? (
+              <span style={{
+                display: "block",
+                fontSize: 11,
+                color: "var(--fg-faint)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                marginTop: 1,
+              }}>
+                {preview}
+              </span>
+            ) : null;
+          })()}
+        </div>
 
         {/* Right side: due chip + priority flag */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>

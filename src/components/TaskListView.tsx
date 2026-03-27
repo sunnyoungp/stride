@@ -19,7 +19,7 @@ import { useSectionStore } from "@/store/sectionStore";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { useDragStore } from "@/store/dragStore";
-import { AddTaskRow, friendlyDate, isOverdue, PriorityFlag, SelectionActionBar } from "@/components/TaskList";
+import { AddTaskRow, friendlyDate, getNotesPreview, isOverdue, PriorityFlag, SelectionActionBar } from "@/components/TaskList";
 import type { SortBy } from "@/components/SortFilterPopover";
 
 type Props = {
@@ -410,7 +410,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
             )}
           </button>
 
-          {/* Title */}
+          {/* Title + notes preview */}
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5 min-w-0">
               <span
@@ -425,8 +425,15 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
               {task.rolledOver && (
                 <span className="text-[11px] opacity-40 flex-none" title={`Rolled over from ${task.rolledOverFrom}`}>↩</span>
               )}
-            
             </div>
+            {(() => {
+              const preview = getNotesPreview(task.notes);
+              return preview ? (
+                <div className="truncate text-[11px] mt-0.5" style={{ color: "var(--fg-faint)" }}>
+                  {preview}
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {/* Right side: chips + collapse chevron */}

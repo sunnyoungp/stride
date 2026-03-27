@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTaskStore } from "@/store/taskStore";
+import { getNotesPreview } from "@/components/TaskList";
 import type { Task } from "@/types/index";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -195,6 +196,23 @@ function KanbanCardVisual({
           )}
         </button>
       </div>
+
+      {/* Notes preview */}
+      {(() => {
+        const preview = getNotesPreview(task.notes, 80);
+        return preview ? (
+          <div style={{
+            marginTop: 4,
+            fontSize: 11,
+            color: "var(--fg-faint)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>
+            {preview}
+          </div>
+        ) : null;
+      })()}
 
       {/* Source document indicator */}
       {task.sourceDocumentId && (
