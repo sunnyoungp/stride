@@ -672,32 +672,13 @@ function TaskRowsWithSubtasks({
               <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
             </div>
             {subtasks.length > 0 && (
-              <div style={{ position: "relative" }}>
-                {/* Vertical connector line */}
-                <div style={{
-                  position: "absolute",
-                  left: 29,
-                  top: 0,
-                  bottom: 8,
-                  width: 1.5,
-                  background: "var(--border-mid)",
-                  borderRadius: 1,
-                }} />
+              <div>
                 {subtasks.map((subtask) => (
                   <div
                     key={subtask.id}
-                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20, position: "relative" }}
+                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20 }}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
-                    {/* Horizontal connector arm */}
-                    <div style={{
-                      position: "absolute",
-                      left: 29,
-                      top: "50%",
-                      width: 12,
-                      height: 1.5,
-                      background: "var(--border-mid)",
-                      borderRadius: 1,
-                    }} />
                     <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />
                   </div>
                 ))}

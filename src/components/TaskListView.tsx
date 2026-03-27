@@ -470,19 +470,9 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           </div>
         </div>
 
-        {/* Subtasks — indented with connector line, due date chip, right-click menu */}
+        {/* Subtasks — indented, lightweight */}
         {hasSubtasks && expanded && (
-          <div style={{ position: "relative" }}>
-            {/* Vertical connector line alongside all subtasks */}
-            <div style={{
-              position: "absolute",
-              left: 29,
-              top: 0,
-              bottom: 8,
-              width: 1.5,
-              background: "var(--border-mid)",
-              borderRadius: 1,
-            }} />
+          <div>
             {subtaskItems.map((st) => {
               const stDone    = st.status === "done";
               const isEditing = editSubId === st.id;
@@ -524,31 +514,21 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    paddingLeft: 44,
+                    paddingLeft: 40,
                     paddingRight: 16,
-                    paddingTop: 6,
-                    paddingBottom: 6,
+                    paddingTop: 5,
+                    paddingBottom: 5,
                     background: stSelected ? "var(--accent-bg)" : undefined,
                     outline: stSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
                     cursor: "pointer",
-                    position: "relative",
                     gap: 8,
                   }}
                   onClick={handleSubtaskClick}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onContextMenu={(e) => { e.preventDefault(); setContextMenu({ task: st, x: e.clientX, y: e.clientY }); }}
                   onMouseEnter={(e) => { if (!stSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = stSelected ? "var(--accent-bg)" : ""; }}
                 >
-                  {/* Horizontal connector arm */}
-                  <div style={{
-                    position: "absolute",
-                    left: 29,
-                    top: "50%",
-                    width: 12,
-                    height: 1.5,
-                    background: "var(--border-mid)",
-                    borderRadius: 1,
-                  }} />
 
                   <button
                     type="button"

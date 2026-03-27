@@ -259,16 +259,78 @@ function KanbanCardVisual({
   );
 }
 
+// ── KanbanSubtaskRow ─────────────────────────────────────────────────────────
+// Compact non-card row for subtasks whose parent is in the same column.
+
+function KanbanSubtaskRowVisual({ task, style }: { task: Task; style?: CSSProperties }) {
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const isDone = task.status === "done";
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 6,
+        paddingBottom: 6,
+        cursor: "grab",
+        userSelect: "none",
+        ...style,
+      }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          void updateTask(task.id, { status: isDone ? "todo" : "done" });
+        }}
+        className="flex flex-none items-center justify-center rounded-[4px] transition-all duration-150"
+        style={{
+          width: 14,
+          height: 14,
+          flexShrink: 0,
+          ...(isDone
+            ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
+            : { border: "1.5px solid var(--border-strong)", background: "transparent" }),
+        }}
+      >
+        {isDone && (
+          <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
+            <path d="M1 3L3 5L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </button>
+      <span
+        style={{
+          flex: 1,
+          fontSize: 13,
+          color: isDone ? "var(--fg-faint)" : "var(--fg-muted)",
+          textDecoration: isDone ? "line-through" : "none",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {task.title || "(Untitled)"}
+      </span>
+    </div>
+  );
+}
+
 function KanbanCard({
   task,
   accentColor,
   allTasks,
+  columnTaskIds,
   onTaskClick,
   onTaskRightClick,
 }: {
   task: Task;
   accentColor: string;
   allTasks: Task[];
+  columnTaskIds: string[];
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
 }) {
@@ -277,11 +339,36 @@ function KanbanCard({
 
   const [hovered, setHovered] = useState(false);
 
+  const isSameColumnSubtask = !!task.parentTaskId && columnTaskIds.includes(task.parentTaskId);
+
   const wrapperStyle: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
   };
+
+  if (isSameColumnSubtask) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          ...wrapperStyle,
+          borderRadius: 8,
+          background: hovered ? "var(--bg-hover)" : "transparent",
+          transition: "background 120ms ease",
+          marginTop: -4,
+        }}
+        {...attributes}
+        {...listeners}
+        onClick={(e) => onTaskClick(task, { x: e.clientX, y: e.clientY })}
+        onContextMenu={(e) => { e.preventDefault(); onTaskRightClick(task, { x: e.clientX, y: e.clientY }); }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <KanbanSubtaskRowVisual task={task} />
+      </div>
+    );
+  }
 
   const cardStyle: CSSProperties = {
     boxShadow: hovered ? "0 4px 12px rgba(0,0,0,0.11)" : "0 1px 3px rgba(0,0,0,0.07)",
@@ -424,6 +511,7 @@ function KanbanColumnView({
                 task={task}
                 accentColor={color}
                 allTasks={allTasks}
+                columnTaskIds={taskIds}
                 onTaskClick={onTaskClick}
                 onTaskRightClick={onTaskRightClick}
               />

@@ -179,34 +179,18 @@ function DroppableDateGroup({
             const parentInSameGroup = isSubtask && tasks.some((t) => t.id === task.parentTaskId);
 
             if (isSubtask) {
-              // Subtask rendering: connector if parent in same group, parent link label if not
+              // Subtask rendering: indented if parent in same group, parent link label if not
               return (
                 <div
                   key={task.id}
                   style={{
                     borderTop: idx > 0 ? "1px solid var(--border)" : undefined,
-                    position: "relative",
                   }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   {parentInSameGroup ? (
-                    // Indented with connector line
-                    <div style={{ paddingLeft: 20, position: "relative" }}>
-                      <div style={{
-                        position: "absolute",
-                        left: 29,
-                        top: 0,
-                        bottom: "50%",
-                        width: 1.5,
-                        background: "var(--border-mid)",
-                      }} />
-                      <div style={{
-                        position: "absolute",
-                        left: 29,
-                        top: "50%",
-                        width: 10,
-                        height: 1.5,
-                        background: "var(--border-mid)",
-                      }} />
+                    // Indented — simple left padding, no connector line
+                    <div style={{ paddingLeft: 20 }}>
                       <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
                     </div>
                   ) : (
