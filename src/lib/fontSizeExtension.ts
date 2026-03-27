@@ -27,7 +27,7 @@ export const FontSizeTextStyle = TextStyle.extend({
         },
         renderHTML: (attrs) => {
           if (!attrs.fontSize) return {};
-          return { style: `font-size: ${attrs.fontSize}px` };
+          return { style: `font-size: ${attrs.fontSize}px; line-height: 1.5` };
         },
       },
     };

@@ -574,9 +574,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                   ) : (
                     <span
                       onClick={(e) => { e.stopPropagation(); setEditSubId(st.id); setEditSubVal(st.title); }}
-                      className="flex-1 leading-snug truncate"
+                      className="task-title-text flex-1 leading-snug truncate"
                       style={{
-                        fontSize: 13,
                         cursor: "text",
                         ...(stDone
                           ? { textDecoration: "line-through", color: "var(--fg-faint)" }

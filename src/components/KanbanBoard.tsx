@@ -79,11 +79,17 @@ function KanbanCardVisual({
   task,
   accentColor,
   allTasks,
+  inlineSubtasks,
+  onSubtaskClick,
+  onSubtaskRightClick,
   style,
 }: {
   task: Task;
   accentColor: string;
   allTasks: Task[];
+  inlineSubtasks?: Task[];
+  onSubtaskClick?: (task: Task, pos: { x: number; y: number }) => void;
+  onSubtaskRightClick?: (task: Task, pos: { x: number; y: number }) => void;
   style?: CSSProperties;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -91,7 +97,7 @@ function KanbanCardVisual({
   const isDone = task.status === "done";
   const pColor = priorityColor(task.priority);
 
-  // Parent link: shown when this card is a subtask
+  // Parent link: shown only for orphan subtasks (parent in a different column)
   const parentTask = task.parentTaskId
     ? allTasks.find((t) => t.id === task.parentTaskId)
     : null;
@@ -255,66 +261,64 @@ function KanbanCardVisual({
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-// ── KanbanSubtaskRow ─────────────────────────────────────────────────────────
-// Compact non-card row for subtasks whose parent is in the same column.
-
-function KanbanSubtaskRowVisual({ task, style }: { task: Task; style?: CSSProperties }) {
-  const updateTask = useTaskStore((s) => s.updateTask);
-  const isDone = task.status === "done";
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        paddingLeft: 12,
-        paddingRight: 12,
-        paddingTop: 6,
-        paddingBottom: 6,
-        cursor: "grab",
-        userSelect: "none",
-        ...style,
-      }}
-    >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          void updateTask(task.id, { status: isDone ? "todo" : "done" });
-        }}
-        className="flex flex-none items-center justify-center rounded-[4px] transition-all duration-150"
-        style={{
-          width: 14,
-          height: 14,
-          flexShrink: 0,
-          ...(isDone
-            ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
-            : { border: "1.5px solid var(--border-strong)", background: "transparent" }),
-        }}
-      >
-        {isDone && (
-          <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
-            <path d="M1 3L3 5L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </button>
-      <span
-        style={{
-          flex: 1,
-          fontSize: 13,
-          color: isDone ? "var(--fg-faint)" : "var(--fg-muted)",
-          textDecoration: isDone ? "line-through" : "none",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {task.title || "(Untitled)"}
-      </span>
+      {/* Inline subtasks — rendered inside the card boundary */}
+      {inlineSubtasks && inlineSubtasks.length > 0 && (
+        <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 6 }}>
+          {inlineSubtasks.map((st) => {
+            const stDone = st.status === "done";
+            return (
+              <div
+                key={st.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                  cursor: "pointer",
+                  borderRadius: 6,
+                }}
+                onClick={(e) => { e.stopPropagation(); onSubtaskClick?.(st, { x: e.clientX, y: e.clientY }); }}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onSubtaskRightClick?.(st, { x: e.clientX, y: e.clientY }); }}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); void updateTask(st.id, { status: stDone ? "todo" : "done" }); }}
+                  className="flex flex-none items-center justify-center rounded-[4px] transition-all duration-150"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    flexShrink: 0,
+                    ...(stDone
+                      ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
+                      : { border: "1.5px solid var(--border-strong)", background: "transparent" }),
+                  }}
+                >
+                  {stDone && (
+                    <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
+                      <path d="M1 3L3 5L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: "var(--font-size-tasks)",
+                    color: stDone ? "var(--fg-faint)" : "var(--fg-muted)",
+                    textDecoration: stDone ? "line-through" : "none",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {st.title || "(Untitled)"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -323,14 +327,14 @@ function KanbanCard({
   task,
   accentColor,
   allTasks,
-  columnTaskIds,
+  inlineSubtasks,
   onTaskClick,
   onTaskRightClick,
 }: {
   task: Task;
   accentColor: string;
   allTasks: Task[];
-  columnTaskIds: string[];
+  inlineSubtasks?: Task[];
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
 }) {
@@ -339,36 +343,11 @@ function KanbanCard({
 
   const [hovered, setHovered] = useState(false);
 
-  const isSameColumnSubtask = !!task.parentTaskId && columnTaskIds.includes(task.parentTaskId);
-
   const wrapperStyle: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
   };
-
-  if (isSameColumnSubtask) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={{
-          ...wrapperStyle,
-          borderRadius: 8,
-          background: hovered ? "var(--bg-hover)" : "transparent",
-          transition: "background 120ms ease",
-          marginTop: -4,
-        }}
-        {...attributes}
-        {...listeners}
-        onClick={(e) => onTaskClick(task, { x: e.clientX, y: e.clientY })}
-        onContextMenu={(e) => { e.preventDefault(); onTaskRightClick(task, { x: e.clientX, y: e.clientY }); }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <KanbanSubtaskRowVisual task={task} />
-      </div>
-    );
-  }
 
   const cardStyle: CSSProperties = {
     boxShadow: hovered ? "0 4px 12px rgba(0,0,0,0.11)" : "0 1px 3px rgba(0,0,0,0.07)",
@@ -389,7 +368,15 @@ function KanbanCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <KanbanCardVisual task={task} accentColor={accentColor} allTasks={allTasks} style={cardStyle} />
+      <KanbanCardVisual
+        task={task}
+        accentColor={accentColor}
+        allTasks={allTasks}
+        inlineSubtasks={inlineSubtasks}
+        onSubtaskClick={onTaskClick}
+        onSubtaskRightClick={onTaskRightClick}
+        style={cardStyle}
+      />
     </div>
   );
 }
@@ -449,8 +436,25 @@ function KanbanColumnView({
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: column.id });
   const color = column.color ?? "#94a3b8";
-  const taskIds = useMemo(() => column.tasks.map((t) => t.id), [column.tasks]);
   const [addingAt, setAddingAt] = useState<"top" | "bottom" | null>(null);
+
+  // Separate top-level cards (parents + orphan subtasks) from same-column subtasks
+  const columnTaskIdSet = useMemo(() => new Set(column.tasks.map((t) => t.id)), [column.tasks]);
+  const topLevelTasks = useMemo(
+    () => column.tasks.filter((t) => !t.parentTaskId || !columnTaskIdSet.has(t.parentTaskId)),
+    [column.tasks, columnTaskIdSet]
+  );
+  const taskIds = useMemo(() => topLevelTasks.map((t) => t.id), [topLevelTasks]);
+  const subtasksByParent = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    for (const t of column.tasks) {
+      if (t.parentTaskId && columnTaskIdSet.has(t.parentTaskId)) {
+        const existing = map.get(t.parentTaskId) ?? [];
+        map.set(t.parentTaskId, [...existing, t]);
+      }
+    }
+    return map;
+  }, [column.tasks, columnTaskIdSet]);
 
   const commit = (title: string) => {
     if (title && onAddTask) onAddTask(column.id, title);
@@ -500,18 +504,18 @@ function KanbanColumnView({
           <InlineInputCard onCommit={commit} onCancel={() => setAddingAt(null)} />
         )}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {column.tasks.length === 0 && addingAt !== "top" ? (
+          {topLevelTasks.length === 0 && addingAt !== "top" ? (
             <div style={{ textAlign: "center", color: "var(--fg-faint)", fontSize: 13, fontStyle: "italic", padding: "16px 0" }}>
               No tasks
             </div>
           ) : (
-            column.tasks.map((task) => (
+            topLevelTasks.map((task) => (
               <KanbanCard
                 key={task.id}
                 task={task}
                 accentColor={color}
                 allTasks={allTasks}
-                columnTaskIds={taskIds}
+                inlineSubtasks={subtasksByParent.get(task.id)}
                 onTaskClick={onTaskClick}
                 onTaskRightClick={onTaskRightClick}
               />

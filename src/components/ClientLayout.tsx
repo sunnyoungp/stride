@@ -53,7 +53,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     <>
                         <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
                             {!hideSidebar && (
-                                <aside className="h-screen flex-none border-r border-[var(--border)] hidden md:block md:w-14 lg:w-[220px]">
+                                <aside
+                                    className={`h-screen flex-none border-r border-[var(--border)] transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0 border-none" : "md:w-14 lg:w-[220px] opacity-100"}`}
+                                >
                                     <Sidebar />
                                 </aside>
                             )}
