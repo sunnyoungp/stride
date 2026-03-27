@@ -2,7 +2,7 @@
 
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
-import type { Node as PmNode } from "@tiptap/pm/model";
+import type { Node as PmNode } from "prosemirror-model";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
@@ -19,6 +19,11 @@ import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { FontSizeTextStyle, FontSizeKeyboardExtension, ParagraphWithLineHeight, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { type SlashCmd, type SlashMenuState, createSlashCommandExtension } from "@/lib/slashCommands";
 import { SlashCommandMenu } from "@/components/SlashCommandMenu";
+import { EditorBubbleMenu } from "@/components/EditorBubbleMenu";
+import { FormatPanel } from "@/components/FormatPanel";
+import Color from "@tiptap/extension-color";
+import Link from "@tiptap/extension-link";
+import { TextStyle } from "@tiptap/extension-text-style";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { DailyNote, Task } from "@/types/index";
@@ -567,17 +572,37 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   useEffect(() => { noteRef.current         = note;       }, [note]);
   useEffect(() => { isLinkedRef.current     = isLinked;   }, [isLinked]);
 
+  const [formatPanelOpen, setFormatPanelOpen] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("stride-format-panel-open") === "true";
+    return false;
+  });
+  const toggleFormatPanel = () => {
+    setFormatPanelOpen(prev => {
+      const next = !prev;
+      localStorage.setItem("stride-format-panel-open", String(next));
+      return next;
+    });
+  };
+
   // Escape clears multi-select
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dnSelectedPosesRef.current.size > 0) {
-        setDnSelectedPoses(new Set());
-        dnAnchorPosRef.current = null;
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        toggleFormatPanel();
+      } else if (e.key === "Escape") {
+        if (formatPanelOpen) {
+          // If FormatPanel is open, Escape will be handled by FormatPanel itself or here,
+          // but let's be safe.
+        } else if (dnSelectedPosesRef.current.size > 0) {
+          setDnSelectedPoses(new Set());
+          dnAnchorPosRef.current = null;
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [formatPanelOpen]);
 
   // Select all blocks whose DOM rects intersect with the lasso rectangle
   const selectBlocksInRect = useCallback((rect: { x1: number; y1: number; x2: number; y2: number }) => {
@@ -719,6 +744,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         DragHandleExtension,
         Placeholder.configure({ placeholder: "Start writing…" }),
         slashCommandExtension,
+        TextStyle,
+        Color,
+        Link.configure({ openOnClick: false }),
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
       ],
@@ -726,7 +754,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       content: note?.content ? safeParseJson(note.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
-          class: "min-h-[200px] outline-none leading-7 text-[var(--fg)]",
+          class: "min-h-[200px] outline-none  text-[var(--fg)]",
         },
         handleDOMEvents: {
           // Shift+click range selection for all block types
@@ -1166,6 +1194,20 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           </span>
           <button
             type="button"
+            data-format-trigger
+            onClick={toggleFormatPanel}
+            className="flex items-center justify-center w-[25px] h-[25px] rounded-lg transition-colors border"
+            style={{
+              background: formatPanelOpen ? "var(--bg-active)" : "var(--bg-subtle)",
+              borderColor: formatPanelOpen ? "var(--accent)" : "var(--border)",
+              color: formatPanelOpen ? "var(--accent)" : "var(--fg-muted)"
+            }}
+            title="Format Panel (Cmd+Shift+F)"
+          >
+            <span className="text-[12px] font-bold font-serif leading-none">Aa</span>
+          </button>
+          <button
+            type="button"
             onClick={toggleLinked}
             title={isLinked
               ? "Linked mode: checklist items sync as tasks. Click to switch to independent."
@@ -1198,7 +1240,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         }}
         style={{ position: "relative" }}
       >
-        {editor ? <EditorContent editor={editor} /> : null}
+        {editor ? (
+          <>
+            <EditorContent editor={editor} />
+            <EditorBubbleMenu editor={editor} />
+            <FormatPanel editor={editor} isOpen={formatPanelOpen} onClose={() => setFormatPanelOpen(false)} documentId={note.id} />
+          </>
+        ) : null}
       </div>
 
 

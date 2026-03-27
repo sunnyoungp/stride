@@ -213,8 +213,7 @@ export function MiniCalendar({
         {DAY_LABELS.map(l => (
           <div key={l} style={{
             textAlign: "center", fontSize: 9, fontWeight: 600,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-            color: "var(--fg-faint)", padding: "4px 0",
+            textTransform: "uppercase", color: "var(--fg-faint)", padding: "4px 0",
           }}>
             {l}
           </div>

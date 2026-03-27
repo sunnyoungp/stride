@@ -178,7 +178,7 @@ export default function Page() {
               onDrop={(e) => { e.currentTarget.removeAttribute("data-drag-over"); handleTaskPanelDrop(e); }}
             >
               <div style={{ padding: "16px 16px 0", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-faint, #999)" }}>
+                <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint, #999)" }}>
                   {selectedDate === today ? "Today's Focus" : "Tasks"}
                 </h2>
                 {selectedDateTaskCount > 0 && <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{selectedDateTaskCount}</span>}
@@ -339,7 +339,7 @@ export default function Page() {
               style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
             >
               <div style={{ flexShrink: 0, display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "20px 24px 12px" }}>
-                <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--fg-faint, #999)" }}>
+                <h2 style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint, #999)" }}>
                   {selectedDate === today ? "Today's Focus" : "Tasks"}
                 </h2>
                 {selectedDateTaskCount > 0 && (

@@ -201,7 +201,7 @@ export function FocusTunnel() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", background: "var(--bg)" }}>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center" }}>
-          <h1 style={{ fontSize: "13px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "32px" }}>All Tasks Clear</h1>
+          <h1 style={{ fontSize: "13px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", marginBottom: "32px" }}>All Tasks Clear</h1>
           <button onClick={handleLeave} style={{ padding: "12px 48px", background: "var(--accent)", color: "#fff", borderRadius: "9999px", border: "none", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}>Return</button>
         </motion.div>
       </div>
@@ -212,7 +212,7 @@ export function FocusTunnel() {
     <div className="relative flex flex-col h-screen w-screen transition-colors duration-1000" style={{ background: "var(--bg)" }}>
       {/* ESC label */}
       <div className="absolute top-10 right-10 z-[100] pointer-events-none">
-        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.2em", opacity: 0.5 }}>Esc to exit</span>
+        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", opacity: 0.5 }}>Esc to exit</span>
       </div>
 
       {/* ── Timer ring ──────────────────────────────────────────────────────────── */}
@@ -220,7 +220,7 @@ export function FocusTunnel() {
         <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 70, display: "flex", flexDirection: "column", alignItems: "center" }}>
           {/* Round counter + settings */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", position: "relative" }}>
-            <span style={{ fontSize: "11px", color: "var(--fg-faint)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+            <span style={{ fontSize: "11px", color: "var(--fg-faint)", textTransform: "uppercase" }}>
               {timerPhase === 'break' ? 'Break time' : `Round ${roundsCompleted + 1}`}
             </span>
             <button
@@ -288,10 +288,10 @@ export function FocusTunnel() {
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: "52px", fontWeight: 300, fontFamily: "var(--font-geist-sans, sans-serif)", letterSpacing: "-1px", color: "var(--fg)", lineHeight: 1 }}>
+                  <span style={{ fontSize: "52px", fontWeight: 300, fontFamily: "var(--font-geist-sans, sans-serif)", color: "var(--fg)", lineHeight: 1 }}>
                     {formatTime(timeRemaining)}
                   </span>
-                  <span style={{ fontSize: "10px", color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                  <span style={{ fontSize: "10px", color: "var(--fg-faint)", textTransform: "uppercase", }}>
                     {timerPhase === 'break' ? 'Break' : isPaused ? 'Paused' : 'Focus'}
                   </span>
                 </>
@@ -343,7 +343,7 @@ export function FocusTunnel() {
                         </button>
                         <div className="flex-1 min-w-0">
                           <h2
-                            className={`font-medium tracking-tight transition-all duration-500 ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${isChecking ? 'line-through opacity-50' : ''}`}
+                            className={`font-medium transition-all duration-500 ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${isChecking ? 'line-through opacity-50' : ''}`}
                             style={{ color: isChecking ? "var(--fg-muted)" : style.textColor }}
                           >
                             {task.title}
@@ -418,7 +418,7 @@ export function FocusTunnel() {
         <button
           onClick={handleLeave}
           className="pointer-events-auto backdrop-blur-3xl rounded-full transition-all"
-          style={{ padding: "16px 40px", background: "rgba(var(--bg-card-rgb, 255,255,255), 0.7)", border: "1px solid var(--border)", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.3em", color: "var(--fg-faint)", opacity: isVaultLocked ? 0.2 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer" }}
+          style={{ padding: "16px 40px", background: "rgba(var(--bg-card-rgb, 255,255,255), 0.7)", border: "1px solid var(--border)", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", color: "var(--fg-faint)", opacity: isVaultLocked ? 0.2 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer" }}
           onMouseEnter={e => { if (!isVaultLocked) e.currentTarget.style.color = "var(--accent)"; }}
           onMouseLeave={e => { e.currentTarget.style.color = "var(--fg-faint)"; }}
         >
@@ -460,7 +460,7 @@ export function FocusTunnel() {
             >
               {/* Panel header */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--fg)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Session Playlist</span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--fg)", textTransform: "uppercase", }}>Session Playlist</span>
                 <button
                   onClick={() => setPanelOpen(false)}
                   className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg-hover)]"
@@ -497,7 +497,7 @@ export function FocusTunnel() {
                 >
                   <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                      <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Today</span>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg)", textTransform: "uppercase", }}>Today</span>
                       <span style={{ fontSize: "10px", color: "var(--fg-faint)", padding: "1px 8px", borderRadius: "9999px", border: "1px solid var(--border)" }}>{todayTasks.length}</span>
                     </div>
                     {/* Quick-add input */}
@@ -546,7 +546,7 @@ export function FocusTunnel() {
                   className={`flex flex-col min-h-0 md:flex-1 ${panelTab === 'playlist' ? 'flex' : 'hidden md:flex'}`}
                 >
                   <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Playlist</span>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg)", textTransform: "uppercase", }}>Playlist</span>
                     <span style={{ fontSize: "10px", color: "var(--fg-faint)", padding: "1px 8px", borderRadius: "9999px", border: "1px solid var(--border)" }}>{playlist.length}</span>
                   </div>
 

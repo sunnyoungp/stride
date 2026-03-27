@@ -972,7 +972,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
           >
             <div style={{ width: 260, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
               <div style={{ padding: "10px 16px 6px", flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)" }}>
                   Routines
                 </span>
               </div>
@@ -997,7 +997,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
           >
             <div ref={taskPanelRef} style={{ width: 260, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
               <div style={{ padding: "10px 16px 6px", flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)" }}>
                   Unscheduled
                 </span>
               </div>
@@ -1103,7 +1103,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
               overflow: "hidden",
             }}>
               <div style={{ padding: "4px 16px 10px", flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)" }}>
                   Routines
                 </span>
               </div>
@@ -1120,7 +1120,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
               overflow: "hidden",
             }}>
               <div style={{ padding: "4px 16px 10px", flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)" }}>
                   Unscheduled Tasks
                 </span>
               </div>

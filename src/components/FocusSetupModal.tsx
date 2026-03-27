@@ -82,8 +82,7 @@ export function FocusSetupModal() {
         }}>
           <h2 style={{
             fontSize: "12px", fontWeight: 700, color: "var(--fg)",
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>Setup Focus</h2>
+            textTransform: "uppercase", }}>Setup Focus</h2>
           <button
             onClick={() => setSetupModalOpen(false)}
             style={{
@@ -105,7 +104,7 @@ export function FocusSetupModal() {
           <section>
             <h3 style={{
               fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)",
-              textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "16px",
+              textTransform: "uppercase", marginBottom: "16px",
             }}>Session Mode</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
               <ModeCard
@@ -136,7 +135,7 @@ export function FocusSetupModal() {
           <section style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "350px" }}>
             <h3 style={{
               fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)",
-              textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "16px",
+              textTransform: "uppercase", marginBottom: "16px",
             }}>Playlist Configuration</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", flex: 1, minHeight: 0 }}>
 
@@ -331,8 +330,7 @@ function AvailableTaskRow({ task, onClick }: { task: Task; onClick: () => void }
       <Plus className="w-3.5 h-3.5 shrink-0" style={{ color: hovered ? "var(--fg)" : "var(--fg-faint)" }} strokeWidth={2.5} />
       <span style={{
         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        fontSize: "13px", fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.01em",
-      }}>
+        fontSize: "13px", fontWeight: 500, color: "var(--fg)", }}>
         {task.title}
       </span>
     </motion.div>
@@ -371,7 +369,7 @@ function PlaylistItemRow({ task, onRemove }: { task: Task; onRemove: () => void 
         style={{
           flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           fontSize: "13px", fontWeight: 600, color: "var(--fg)",
-          letterSpacing: "-0.01em", cursor: "pointer",
+          cursor: "pointer",
         }}
       >
         {task.title}

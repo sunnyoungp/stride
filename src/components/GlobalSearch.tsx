@@ -484,7 +484,7 @@ export function GlobalSearch() {
                 <div style={{
                   padding: "10px 20px 4px",
                   fontSize: 11, fontWeight: 600, textTransform: "uppercase",
-                  letterSpacing: "0.08em", color: "var(--fg-faint)",
+                  color: "var(--fg-faint)",
                 }}>
                   {group.label}
                 </div>

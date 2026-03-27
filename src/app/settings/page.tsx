@@ -203,7 +203,7 @@ function ThemeTile({ theme, active, onSelect }: { theme: typeof THEMES[number]; 
 function AppearanceCard() {
   const { currentTheme, setTheme } = useTheme();
   const [accent,       setAccentState] = useState(() => ls("stride-accent",        "#e8603c"));
-  const [font,         setFontState]   = useState(() => ls("stride-font",          "geist"));
+  const [font,         setFontState]   = useState(() => ls("stride-font-preference", "system"));
   const [fontSize,     setFontSize]    = useState(() => ls("stride-font-ui",       "14px"));
   const [sidebarWidth, setSidebarW]    = useState(() => ls("stride-sidebar-width", "220"));
   const [compact,      setCompact]     = useState(() => ls("stride-compact",       "false") === "true");
@@ -217,14 +217,23 @@ function AppearanceCard() {
 
   const applyFont = (f: string) => {
     setFontState(f);
-    void saveSettings("stride-font", f);
+    void saveSettings("stride-font-preference", f);
     const fontMap: Record<string, string> = {
-      geist: "var(--font-geist-sans)",
+      system: "-apple-system, BlinkMacSystemFont, sans-serif",
       inter: "Inter, sans-serif",
-      system: "system-ui, sans-serif",
-      georgia: "Georgia, serif",
+      serif: "Georgia, serif",
+      mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     };
-    setCSSVar("--font-body", fontMap[f] ?? "var(--font-geist-sans)");
+    
+    if (f === "inter" && !document.getElementById("inter-font")) {
+      const link = document.createElement("link");
+      link.id = "inter-font";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap";
+      document.head.appendChild(link);
+    }
+    
+    setCSSVar("--font-app", fontMap[f] ?? fontMap.system);
   };
 
   const applyFontSize = (sz: string) => {
@@ -250,7 +259,7 @@ function AppearanceCard() {
     <SettingCard id="appearance" title="Appearance">
       <div style={{ paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
         <div style={{ marginBottom: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--fg-faint)" }}>Dark</span>
+          <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--fg-faint)" }}>Dark</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           {DARK_THEMES.map(theme => (
@@ -258,7 +267,7 @@ function AppearanceCard() {
           ))}
         </div>
         <div style={{ marginTop: 14, marginBottom: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--fg-faint)" }}>Light</span>
+          <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--fg-faint)" }}>Light</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           {LIGHT_THEMES.map(theme => (
@@ -316,10 +325,10 @@ function AppearanceCard() {
       <SettingRow label="Font">
         <PillGroup
           options={[
-            { label: "Geist",     value: "geist" },
-            { label: "Inter",     value: "inter" },
-            { label: "System UI", value: "system" },
-            { label: "Georgia",   value: "georgia" },
+            { label: "System", value: "system" },
+            { label: "Inter",  value: "inter" },
+            { label: "Serif",  value: "serif" },
+            { label: "Mono",   value: "mono" },
           ]}
           value={font}
           onChange={applyFont}
@@ -487,7 +496,7 @@ function ShortcutsCard() {
     <SettingCard id="shortcuts" title="Keyboard Shortcuts">
       <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 150px 28px", gap: "0 12px", marginBottom: 4 }}>
         {["Action", "Default", "Custom", ""].map((h) => (
-          <div key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.07em", paddingBottom: 8, borderBottom: "1px solid var(--border)" }}>
+          <div key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-faint)", textTransform: "uppercase", paddingBottom: 8, borderBottom: "1px solid var(--border)" }}>
             {h}
           </div>
         ))}
@@ -1046,7 +1055,7 @@ export default function SettingsPage() {
         padding: "24px 0",
         overflowY: "auto",
       }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "0 16px 12px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", padding: "0 16px 12px" }}>
           Settings
         </div>
         {CATEGORIES.map((cat) => (
@@ -1085,7 +1094,7 @@ export default function SettingsPage() {
         }}
       >
         <AccountBadge />
-        <h1 style={{ fontSize: 28, fontWeight: 300, color: "var(--fg)", marginBottom: 32, letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: 28, fontWeight: 300, color: "var(--fg)", marginBottom: 32, }}>
           Settings
         </h1>
 

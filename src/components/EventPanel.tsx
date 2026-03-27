@@ -558,7 +558,7 @@ export function EventPanel(props: EventPanelProps) {
       }}>
         <span style={{
           fontSize: 10, fontWeight: 600, textTransform: "uppercase",
-          letterSpacing: "0.1em", color: "var(--fg-faint)",
+          color: "var(--fg-faint)",
         }}>
           {props.mode === "create" ? "New Event" : "Event"}
         </span>

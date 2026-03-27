@@ -5,6 +5,8 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import type { JSONContent } from "@tiptap/core";
+import type { Editor } from "@tiptap/core";
+import type { Node as PmNode } from "prosemirror-model";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +15,11 @@ import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { FontSizeTextStyle, FontSizeKeyboardExtension, ParagraphWithLineHeight, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { type SlashCmd, type SlashMenuState, createSlashCommandExtension } from "@/lib/slashCommands";
 import { SlashCommandMenu } from "@/components/SlashCommandMenu";
+import { EditorBubbleMenu } from "@/components/EditorBubbleMenu";
+import { FormatPanel } from "@/components/FormatPanel";
+import Color from "@tiptap/extension-color";
+import Link from "@tiptap/extension-link";
+import { TextStyle } from "@tiptap/extension-text-style";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { StrideDocument, Task } from "@/types/index";
@@ -108,6 +115,29 @@ export function DocumentEditor({ documentId }: Props) {
     }
   }, [documents, documentId]);
 
+  const [formatPanelOpen, setFormatPanelOpen] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("stride-format-panel-open") === "true";
+    return false;
+  });
+  const toggleFormatPanel = () => {
+    setFormatPanelOpen(prev => {
+      const next = !prev;
+      localStorage.setItem("stride-format-panel-open", String(next));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        toggleFormatPanel();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // Flush any pending title save on unmount
   useEffect(() => {
     return () => {
@@ -143,6 +173,9 @@ export function DocumentEditor({ documentId }: Props) {
         CustomTaskItem.configure({ nested: true }),
         XChecklistExtension,
         slashCommandExtension,
+        TextStyle,
+        Color,
+        Link.configure({ openOnClick: false }),
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
       ],
@@ -150,7 +183,7 @@ export function DocumentEditor({ documentId }: Props) {
       content: doc?.content ? safeParseJson(doc.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
-          class: "min-h-[360px] outline-none leading-7 text-[var(--fg)]",
+          class: "min-h-[360px] outline-none  text-[var(--fg)]",
         },
       },
       onUpdate: ({ editor }) => {
@@ -333,7 +366,7 @@ export function DocumentEditor({ documentId }: Props) {
             value={localTitle}
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
-            className="w-full bg-transparent font-bold tracking-tight outline-none"
+            className="w-full bg-transparent font-bold outline-none"
             style={{ color: "var(--fg)", fontSize: 30, lineHeight: 1.2 }}
             placeholder="Untitled"
           />
@@ -342,11 +375,28 @@ export function DocumentEditor({ documentId }: Props) {
           </div>
         </div>
 
-        {syncedBadge ? (
-          <div className="mt-1 rounded-lg px-3 py-1 text-xs font-medium flex-shrink-0" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
-            Synced to Tasks
-          </div>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {syncedBadge ? (
+            <div className="mt-1 rounded-lg px-3 py-1 text-xs font-medium flex-shrink-0" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+              Synced to Tasks
+            </div>
+          ) : null}
+          <button
+            type="button"
+            data-format-trigger
+            onClick={toggleFormatPanel}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors border"
+            style={{
+              background: formatPanelOpen ? "var(--bg-active)" : "var(--bg-subtle)",
+              borderColor: formatPanelOpen ? "var(--accent)" : "var(--border)",
+              color: formatPanelOpen ? "var(--accent)" : "var(--fg-muted)",
+              marginTop: "4px"
+            }}
+            title="Format Panel (Cmd+Shift+F)"
+          >
+            <span className="text-[14px] font-bold font-serif leading-none">Aa</span>
+          </button>
+        </div>
       </div>
 
       {/* Font-size hint */}
@@ -363,7 +413,13 @@ export function DocumentEditor({ documentId }: Props) {
       </div>
 
       {/* Editor — full-bleed, no card wrapper */}
-      {editor ? <EditorContent editor={editor} /> : null}
+      {editor ? (
+        <>
+          <EditorContent editor={editor} />
+          <EditorBubbleMenu editor={editor} />
+          <FormatPanel editor={editor} isOpen={formatPanelOpen} onClose={() => setFormatPanelOpen(false)} documentId={doc.id} />
+        </>
+      ) : null}
 
       {/* Slash command menu */}
       {slashMenu && slashMenu.items.length > 0 && createPortal(

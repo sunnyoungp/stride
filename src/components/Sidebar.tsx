@@ -380,7 +380,7 @@ function DeletedSectionsPopover({ onClose }: { onClose: () => void }) {
         boxShadow: "var(--shadow-lg)",
       }}
     >
-      <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--fg-faint)" }}>
+      <div className="px-2 py-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>
         Recently deleted
       </div>
       {deletedSections.length === 0 && (
@@ -661,7 +661,7 @@ export function Sidebar() {
               <line x1="5" y1="9.5" x2="11" y2="9.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </div>
-          <span className="text-[18px] font-bold tracking-tight" style={{ color: "var(--fg)", letterSpacing: "-0.02em" }}>
+          <span className="text-[18px] font-bold" style={{ color: "var(--fg)", }}>
             Stride
           </span>
         </div>

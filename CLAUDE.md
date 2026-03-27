@@ -74,17 +74,18 @@ All colors, spacing, and surfaces MUST use these variables. Never use Tailwind c
 9999px — fully round pills, avatars
 ```
 
-### Typography scale
-```
-10px / text-[10px]   — labels, uppercase tags
-11px / text-[11px]   — meta info, timestamps, badges
-12px / text-xs       — secondary actions, chips
-13px / text-[13px]   — column headers, section titles
-14px / text-sm       — body, menu items, list items
-16px / text-base     — input text (mobile: always 16px to prevent zoom)
-24px / text-2xl      — page titles
-30px / text-3xl      — document titles
-```
+### Typography scale & rules
+- **Line Height:** ALL line heights must be unitless multipliers (`1.15` for document body, `1.3` for UI). NEVER use fixed px/rem (e.g., no `leading-7`).
+- **Letter Spacing:** Headings use `-0.01em` tracking. Body uses `0` (normal). NEVER use loose or tight tracking classes (`tracking-wide`, `tracking-[0.08em]`).
+- **Paragraph Spacing:** Documents use `0.75em` margin-bottom for paragraphs.
+- **Font Family:** Globally uses `--font-app` (derived from `stride-font-preference` in Settings: system, inter, serif, mono).
+- **Hierarchy:** 
+  - 28px — Page/document title
+  - 18px — Section heading
+  - 15px — Editor base body & UI item titles
+  - 13px — Secondary labels
+  - 12px — Caption/hint text
+  - 10px / text-[10px] — smallest uppercase tags
 
 ---
 
@@ -355,6 +356,16 @@ Root canvas  (var(--color-app-root-bg))  — darkest, behind everything
   - Missing or wrong imports after refactoring
   - TypeScript type errors (build fails on type errors even if dev server runs)
   - The "middleware" file convention is deprecated — use "proxy" instead
+
+## Editor & Text Formatting
+
+- **Inline Toolbar (`EditorBubbleMenu`)**: For quick inline styling (Bold, Italic, Link, Color). Uses TipTap `BubbleMenu`. Positioned securely above text selections.
+- **Format Panel (`FormatPanel`)**: For block-level changes (Headers, Lists) and font scaling.
+  - Overlays the document from the right.
+  - Open state is stored persistently in `localStorage` under `stride-format-panel-open`.
+  - Document-specific font selection is stored in `stride-doc-font-[id]`.
+
+---
 
 ## Deployment Hygiene
 

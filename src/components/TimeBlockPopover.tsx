@@ -132,13 +132,13 @@ export function TimeBlockPopover({ timeBlock, position, onClose }: Props) {
       {!timeBlock.allDay && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>Start</div>
+            <div className="text-[10px] font-semibold uppercase mb-1" style={labelStyle}>Start</div>
             <input type="datetime-local" value={toLocalInputValue(timeBlock.startTime)}
               onChange={(e) => void updateTimeBlock(timeBlock.id, { startTime: fromLocalInputValue(e.target.value) })}
               className={inputClass} style={inputStyle} />
           </div>
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>End</div>
+            <div className="text-[10px] font-semibold uppercase mb-1" style={labelStyle}>End</div>
             <input type="datetime-local" value={toLocalInputValue(timeBlock.endTime)}
               onChange={(e) => void updateTimeBlock(timeBlock.id, { endTime: fromLocalInputValue(e.target.value) })}
               className={inputClass} style={inputStyle} />
@@ -147,7 +147,7 @@ export function TimeBlockPopover({ timeBlock, position, onClose }: Props) {
       )}
       {timeBlock.allDay && (
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={labelStyle}>Date</div>
+          <div className="text-[10px] font-semibold uppercase mb-1" style={labelStyle}>Date</div>
           <input type="date" value={toDateInputValue(timeBlock.startTime)}
             onChange={(e) => { if (e.target.value) void updateTimeBlock(timeBlock.id, allDayTimes(e.target.value)); }}
             className={inputClass} style={inputStyle} />

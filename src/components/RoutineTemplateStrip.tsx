@@ -53,7 +53,7 @@ export function RoutineTemplateStrip({ onManageTemplates }: Props) {
     <div>
       {/* Header */}
       <div style={{ padding: "8px 12px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--fg-faint)" }}>
+        <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)" }}>
           Routines
         </span>
         <button

@@ -193,7 +193,7 @@ function EditForm({
 
       {/* Duration */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-faint)", marginBottom: 6 }}>Duration</div>
+        <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 6 }}>Duration</div>
         <DurationSelector value={durMins} onChange={setDurMins} />
       </div>
 
@@ -208,13 +208,13 @@ function EditForm({
 
       {/* Color */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-faint)", marginBottom: 6 }}>Color</div>
+        <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 6 }}>Color</div>
         <ColorRow value={color} onChange={setColor} />
       </div>
 
       {/* Days */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-faint)", marginBottom: 6 }}>Days (optional)</div>
+        <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 6 }}>Days (optional)</div>
         <div style={{ display: "flex", gap: 4 }}>
           {DAYS.map((d) => {
             const checked = dow.includes(d.value);
@@ -374,7 +374,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <div style={{ borderTop: "1px solid var(--border)", padding: "16px 20px 4px" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--fg-faint)", marginBottom: 12 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 12 }}>
         New Routine
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -394,7 +394,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
 
         {/* Duration */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-faint)", marginBottom: 6 }}>Duration</div>
+          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 6 }}>Duration</div>
           <DurationSelector value={durMins} onChange={setDurMins} />
         </div>
 
@@ -409,13 +409,13 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
 
         {/* Color */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-faint)", marginBottom: 6 }}>Color</div>
+          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 6 }}>Color</div>
           <ColorRow value={color} onChange={setColor} />
         </div>
 
         {/* Days */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-faint)", marginBottom: 6 }}>Days (optional)</div>
+          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", color: "var(--fg-faint)", marginBottom: 6 }}>Days (optional)</div>
           <div style={{ display: "flex", gap: 4 }}>
             {DAYS.map((d) => {
               const checked = dow.includes(d.value);

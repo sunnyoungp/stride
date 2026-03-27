@@ -414,7 +414,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5 min-w-0">
               <span
-                className="task-title-text leading-snug truncate"
+                className="task-title-text truncate"
                 style={isDone
                   ? { textDecoration: "line-through", color: "var(--fg-faint)" }
                   : { color: "var(--fg)" }
@@ -568,13 +568,13 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                           void updateTask(st.id, { title: editSubVal.trim() });
                         setEditSubId(null);
                       }}
-                      className="flex-1 bg-transparent leading-snug outline-none"
+                      className="flex-1 bg-transparent outline-none"
                       style={{ color: "var(--fg)", fontSize: "16px" }}
                     />
                   ) : (
                     <span
                       onClick={(e) => { e.stopPropagation(); setEditSubId(st.id); setEditSubVal(st.title); }}
-                      className="task-title-text flex-1 leading-snug truncate"
+                      className="task-title-text flex-1 truncate"
                       style={{
                         cursor: "text",
                         ...(stDone
@@ -637,7 +637,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
             style={!isCollapsed ? { borderBottom: "1px solid var(--border)" } : {}}
           >
             <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: accent }} />
-            {icon && <span className="text-sm leading-none">{icon}</span>}
+            {icon && <span className="text-sm">{icon}</span>}
             <span className="flex-1 text-[13px] font-semibold" style={{ color: "var(--fg)" }}>
               {title}
             </span>
@@ -694,7 +694,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                         borderBottom: subCollapsed ? "none" : "1px solid var(--border)",
                       }}
                     >
-                      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--fg-faint)" }}>
+                      <span className="text-[11px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>
                         {sub.title}
                       </span>
                       <span className="ml-auto text-[10px] tabular-nums" style={{ color: "var(--fg-faint)" }}>

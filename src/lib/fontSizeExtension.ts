@@ -29,7 +29,7 @@ export const FontSizeTextStyle = TextStyle.extend({
         renderHTML: (attrs) => {
           if (!attrs.fontSize) return {};
           const px = parseInt(String(attrs.fontSize), 10);
-          const lh = isNaN(px) ? "" : `; line-height: ${(px * 1.15).toFixed(1)}px`;
+          const lh = isNaN(px) ? "" : `; line-height: 1.15`;
           return { style: `font-size: ${attrs.fontSize}px${lh}` };
         },
       },
@@ -81,7 +81,7 @@ export const FontSizeKeyboardExtension = Extension.create({
       "Mod-=": () => {
         const cur = getCurrentFontSize(this.editor);
         const next = Math.min(FONT_SIZE_MAX, cur + FONT_SIZE_STEP);
-        const lh = `${(next * 1.15).toFixed(1)}px`;
+        const lh = "1.15";
         this.editor.chain().focus()
           .setMark("textStyle", { fontSize: String(next) })
           .updateAttributes("paragraph", { lineHeight: lh })
@@ -91,7 +91,7 @@ export const FontSizeKeyboardExtension = Extension.create({
       "Mod--": () => {
         const cur = getCurrentFontSize(this.editor);
         const next = Math.max(FONT_SIZE_MIN, cur - FONT_SIZE_STEP);
-        const lh = `${(next * 1.15).toFixed(1)}px`;
+        const lh = "1.15";
         this.editor.chain().focus()
           .setMark("textStyle", { fontSize: String(next) })
           .updateAttributes("paragraph", { lineHeight: lh })

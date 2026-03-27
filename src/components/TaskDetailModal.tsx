@@ -288,7 +288,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
             }}
             rows={1}
             placeholder="Task title"
-            className="w-full resize-none bg-transparent font-semibold leading-snug outline-none"
+            className="w-full resize-none bg-transparent font-semibold outline-none"
             style={{
               fontSize: "16px",
               color: isDone ? "var(--fg-faint)" : "var(--fg)",
@@ -303,7 +303,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           {!notesFocused && notesDraft ? (
             <div
               onClick={() => { setNotesFocused(true); setTimeout(() => notesRef.current?.focus(), 0); }}
-              className="w-full cursor-text text-sm leading-relaxed"
+              className="w-full cursor-text text-sm"
               style={{ color: "var(--fg-muted)", whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: 44 }}
             >
               {renderWithLinks(notesDraft)}
@@ -338,7 +338,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
             }}
             placeholder="Notes… (type 'x Task name' + Enter to add a subtask)"
             rows={2}
-            className="w-full resize-none bg-transparent text-sm leading-relaxed outline-none"
+            className="w-full resize-none bg-transparent text-sm outline-none"
             style={{
               color: "var(--fg-muted)",
               fieldSizing: "content",
@@ -505,7 +505,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
             {task.sectionId && sectionSubsections.length > 0 && (
               <>
                 <div className="mx-2 my-1 h-px" style={{ background: "var(--border)" }} />
-                <p className="px-3 py-1 text-[10px] uppercase tracking-widest" style={{ color: "var(--fg-faint)" }}>Subsection</p>
+                <p className="px-3 py-1 text-[10px] uppercase" style={{ color: "var(--fg-faint)" }}>Subsection</p>
                 <button
                   onClick={() => void updateTask(task.id, { subsectionId: undefined })}
                   className="flex w-full items-center rounded-lg px-3 py-1.5 text-xs text-left transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
@@ -537,7 +537,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           >
             {/* Repeat */}
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--fg-faint)" }}>Repeat</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Repeat</p>
               <select
                 value={task.recurrence?.frequency ?? "none"}
                 onChange={(e) => {
@@ -557,7 +557,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
 
             {/* Project */}
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--fg-faint)" }}>Project</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Project</p>
               <select
                 value={task.projectId ?? ""}
                 onChange={(e) => void updateTask(task.id, { projectId: e.target.value || undefined })}
@@ -571,7 +571,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
 
             {/* Tags */}
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--fg-faint)" }}>Tags</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Tags</p>
               <div className="flex flex-wrap gap-1.5">
                 {task.tags.map((tag) => (
                   <span
@@ -594,7 +594,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
             {/* Source doc */}
             {task.sourceDocumentId && (
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--fg-faint)" }}>Source</p>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Source</p>
                 <Link
                   href={`/documents?id=${task.sourceDocumentId}`}
                   onClick={() => { save(); onClose(); }}

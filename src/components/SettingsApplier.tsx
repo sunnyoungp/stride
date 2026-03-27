@@ -22,6 +22,25 @@ export function SettingsApplier() {
     const tasksFont = localStorage.getItem("stride-font-tasks") ?? "15px";
     document.documentElement.style.setProperty("--font-size-tasks", tasksFont);
 
+    // Apply font family lazily
+    const fontPref = localStorage.getItem("stride-font-preference") ?? "system";
+    const fontMap: Record<string, string> = {
+      system: "-apple-system, BlinkMacSystemFont, sans-serif",
+      inter: "Inter, sans-serif",
+      serif: "Georgia, serif",
+      mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    };
+    
+    if (fontPref === "inter" && !document.getElementById("inter-font")) {
+      const link = document.createElement("link");
+      link.id = "inter-font";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap";
+      document.head.appendChild(link);
+    }
+    
+    document.documentElement.style.setProperty("--font-app", fontMap[fontPref] || fontMap.system);
+
     // Notes editor font size is handled per-editor via --font-size-notes default
 
     const sidebarWidth = localStorage.getItem("stride-sidebar-width") ?? "220px";
