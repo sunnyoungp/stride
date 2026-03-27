@@ -346,6 +346,25 @@ Root canvas  (var(--color-app-root-bg))  — darkest, behind everything
 - Never make a feature that only works via right-click with no mobile fallback
 - Never use `font-size` smaller than 16px on mobile inputs
 
+## Before Every Commit
+
+- Run `npm run build` locally before pushing to verify the build passes
+- Never push code that hasn't been built locally first
+- Common build failures to watch for:
+  - Conflicting route + page at the same path (Next.js forbids both `route.ts` and `page.tsx` in the same directory)
+  - Missing or wrong imports after refactoring
+  - TypeScript type errors (build fails on type errors even if dev server runs)
+  - The "middleware" file convention is deprecated — use "proxy" instead
+
+## Deployment Hygiene
+
+- App router handler files must be named `route.ts`
+- Page files must be named `page.tsx`
+- These cannot coexist at the same directory path
+- This is a static export (`output: 'export'`) — `route.ts` API route handlers will not work and must never be added
+
+---
+
 ## Tauri Desktop App
 
 This app is wrapped in Tauri for desktop distribution.
