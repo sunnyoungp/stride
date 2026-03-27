@@ -31,7 +31,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
   return (
     <BubbleMenu
       editor={editor}
-      tippyOptions={{ duration: 100, placement: "top" }}
+      options={{ placement: "top" }}
       className="flex items-center gap-1.5 p-1.5"
       style={{
         background: "var(--bg-card)",
