@@ -5,7 +5,7 @@
  * Used by: TaskListView, inbox/page, next7/page, and anywhere else tasks are listed.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import type { Task, TaskPriority } from "@/types/index";
 import { useTaskStore } from "@/store/taskStore";
@@ -331,34 +331,17 @@ type TaskRowProps = {
   onRightClick?: (task: Task, pos: { x: number; y: number }) => void;
   /** If true, renders without context menu (caller manages it externally) */
   noContextMenu?: boolean;
+  isStandaloneSubtask?: boolean;
+  parentTitle?: string;
 };
 
-export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowProps) {
+export function TaskRow({ task, onClick, onRightClick, noContextMenu, isStandaloneSubtask, parentTitle }: TaskRowProps) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const selection = useContext(SelectionContext);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-
   const isDone = task.status === "done";
   const chip = task.dueDate ? dueDateChip(task.dueDate) : null;
   const isSelected = selection?.selectedIds.has(task.id) ?? false;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (noContextMenu) return;
-    const touch = e.touches[0];
-    const pos = { x: touch.clientX, y: touch.clientY };
-    longPressTimer.current = setTimeout(() => {
-      setContextMenu(pos);
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 600);
-  };
-
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.shiftKey || e.metaKey) {
@@ -388,9 +371,6 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
         role="button"
         tabIndex={0}
         onClick={handleClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchEnd}
-        onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => {
           e.preventDefault();
           if (onRightClick) {
@@ -460,20 +440,26 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
         </button>
 
         {/* Title */}
-        <span
-          className="task-title-text"
-          style={{
-            flex: 1,
-            lineHeight: 1.4,
-            color: isDone ? "var(--fg-faint)" : "var(--fg)",
-            textDecoration: isDone ? "line-through" : "none",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {task.title || "(Untitled)"}
-        </span>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <span
+            className="task-title-text"
+            style={{
+              lineHeight: 1.4,
+              color: isDone ? "var(--fg-faint)" : "var(--fg)",
+              textDecoration: isDone ? "line-through" : "none",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {task.title || "(Untitled)"}
+          </span>
+          {isStandaloneSubtask && parentTitle && (
+            <span style={{ fontSize: 11, color: "var(--fg-faint)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              ↳ parent: {parentTitle}
+            </span>
+          )}
+        </div>
 
         {/* Right side: due chip + priority flag */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -635,19 +621,25 @@ function TaskRowsWithSubtasks({
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
 }) {
   const allTasks = useTaskStore((s) => s.tasks);
+  
+  const topLevelTasks = useMemo(() => {
+    return tasks.filter((t: Task) => !t.parentTaskId || !tasks.some(pt => pt.id === t.parentTaskId));
+  }, [tasks]);
 
   return (
     <>
-      {tasks.map((task, idx) => {
+      {topLevelTasks.map((task: Task, idx: number) => {
         const subtasks = task.subtaskIds?.length
           ? allTasks.filter(
               (t) => t.parentTaskId === task.id && t.status !== "done" && t.status !== "cancelled"
             )
           : [];
+        const isStandalone = !!task.parentTaskId;
+        const parentTitle = isStandalone ? allTasks.find(t => t.id === task.parentTaskId)?.title : undefined;
         return (
           <React.Fragment key={task.id}>
             <div style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}>
-              <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+              <TaskRow task={task} isStandaloneSubtask={isStandalone} parentTitle={parentTitle} onClick={onTaskClick} onRightClick={onTaskRightClick} />
             </div>
             {subtasks.map((subtask) => (
               <div

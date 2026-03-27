@@ -83,7 +83,7 @@ function TasksPageInner({
 
   const incompleteTasks = useMemo(() => {
     let base = tasks
-      .filter((t) => !t.parentTaskId && t.status !== "done" && t.status !== "cancelled");
+      .filter((t) => t.status !== "done" && t.status !== "cancelled");
     if (todayOnly) base = base.filter((t) => !t.dueDate || t.dueDate.slice(0, 10) === today);
     return applySortBy(base, sortBy);
   }, [tasks, todayOnly, today, sortBy]);
@@ -159,48 +159,39 @@ function TasksPageInner({
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Promotion logic: if a subtask is moved in Kanban, it becomes a standalone task
-    const parentTaskId = task.parentTaskId ? null : undefined; 
-
     if (sectionIdFilter && sectionIdFilter !== "unsorted") {
       const newSubId = targetColId === "__general__" ? undefined : targetColId;
       const isIntraCol = (task.subsectionId ?? "__general__") === (newSubId ?? "__general__");
-      if (isIntraCol && !task.parentTaskId) {
+      if (isIntraCol) {
         const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
         const old = colTasks.findIndex((t) => t.id === taskId);
         if (old === -1) return;
         const reordered = arrayMove([...colTasks], old, newOrder);
         await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
       } else {
-        await updateTask(taskId, { subsectionId: newSubId, order: newOrder, parentTaskId: undefined });
+        await updateTask(taskId, { subsectionId: newSubId, order: newOrder });
       }
     } else if (groupBy === "list") {
       const newSecId = targetColId === "__unsorted__" ? undefined : targetColId;
       const isIntraCol = (task.sectionId ?? "__unsorted__") === (newSecId ?? "__unsorted__");
-      if (isIntraCol && !task.parentTaskId) {
+      if (isIntraCol) {
         const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
         const old = colTasks.findIndex((t) => t.id === taskId);
         if (old === -1) return;
         const reordered = arrayMove([...colTasks], old, newOrder);
         await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
       } else {
-        await reorderTasks([{ id: taskId, order: newOrder, sectionId: newSecId, parentTaskId: undefined }]);
+        await reorderTasks([{ id: taskId, order: newOrder, sectionId: newSecId }]);
       }
     } else {
       // For non-list groupings, only allow same-column reorder
       const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
       const isInCol = colTasks.some((t) => t.id === taskId);
-      if (!isInCol && !task.parentTaskId) return;
-      
-      if (task.parentTaskId) {
-        // Promotion in non-list view
-        await updateTask(taskId, { parentTaskId: undefined, order: newOrder });
-      } else {
-        const old = colTasks.findIndex((t) => t.id === taskId);
-        if (old === -1) return;
-        const reordered = arrayMove([...colTasks], old, newOrder);
-        await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
-      }
+      if (!isInCol) return;
+      const old = colTasks.findIndex((t) => t.id === taskId);
+      if (old === -1) return;
+      const reordered = arrayMove([...colTasks], old, newOrder);
+      await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
     }
   };
 

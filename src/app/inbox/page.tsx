@@ -94,7 +94,7 @@ function InboxPageContent() {
   const today = todayStr();
 
   const incompleteTasks = useMemo(() => {
-    let base = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId);
+    let base = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
     if (todayOnly) base = base.filter((t) => !t.dueDate || t.dueDate.slice(0, 10) === today);
     return base;
   }, [tasks, todayOnly, today]);
@@ -140,15 +140,6 @@ function InboxPageContent() {
   };
 
   const handleTaskMove = async (taskId: string, targetColId: string, newOrder: number) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-
-    if (task.parentTaskId) {
-      // Direct promotion: any subtask move in Kanban promotes it
-      await reorderTasks([{ id: taskId, order: newOrder, parentTaskId: undefined }]);
-      return;
-    }
-
     const sourceIsSameAsTarget =
       (targetColId === "no-date" && noDateTasks.some((t) => t.id === taskId)) ||
       (targetColId === "no-section" && noSectionTasks.some((t) => t.id === taskId));
@@ -159,15 +150,8 @@ function InboxPageContent() {
       if (oldIdx === -1) return;
       const reordered = arrayMove([...colTasks], oldIdx, newOrder);
       await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
-    } else {
-      // Cross-column: update date/section (simplified for now)
-      if (targetColId === "no-date") {
-        await reorderTasks([{ id: taskId, order: newOrder, parentTaskId: undefined }]);
-      } else if (targetColId === "no-section") {
-        // If it was moved to "No Section", it might have a date already, but "No Section" column in Inbox implies it has a date but no section.
-        // This logic is specific to how Inbox defines these columns.
-      }
     }
+    // Cross-column: do nothing (groups are read-only for now)
   };
 
   const kanbanColumns = useMemo(

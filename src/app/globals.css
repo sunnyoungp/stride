@@ -130,14 +130,6 @@ body {
   font-size: var(--font-size-ui, 14px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  html, body {
-    width: 100%;
-    overflow-x: hidden;
-  }
 }
 
 /* Smooth transitions on interactive elements */

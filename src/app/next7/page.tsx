@@ -257,7 +257,7 @@ export default function Next7Page() {
   }, [today]);
 
   const incompleteTasks = useMemo(
-    () => tasks.filter((t) => t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId),
+    () => tasks.filter((t) => t.status !== "done" && t.status !== "cancelled"),
     [tasks]
   );
 
@@ -333,12 +333,6 @@ export default function Next7Page() {
     if (targetColId === "__overdue__") return;
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
-
-    if (task.parentTaskId) {
-      // Promotion logic
-      await updateTask(taskId, { dueDate: targetColId, parentTaskId: undefined });
-      return;
-    }
 
     const sourceColId = task.dueDate?.slice(0, 10) ?? "__overdue__";
     if (sourceColId === targetColId) {

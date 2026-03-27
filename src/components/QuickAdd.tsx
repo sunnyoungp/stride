@@ -64,7 +64,7 @@ export function QuickAdd() {
   const createTimeBlock   = useTimeBlockStore((s) => s.createTimeBlock);
   const sections          = useSectionStore((s) => s.sections);
   const isMobile          = useIsMobile();
-  const { height: vpHeight, offsetTop: vpOffset } = useVisualViewport();
+  const { height: vpHeight } = useVisualViewport();
   const [windowHeight, setWindowHeight] = useState(0);
   useEffect(() => {
     setWindowHeight(window.innerHeight);
@@ -72,7 +72,7 @@ export function QuickAdd() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-  const keyboardHeight = Math.max(0, windowHeight - vpHeight - vpOffset);
+  const keyboardHeight = Math.max(0, windowHeight - vpHeight);
 
   const [open, setOpen]               = useState(false);
   const [mode, setMode]               = useState<"task" | "event">("task");
