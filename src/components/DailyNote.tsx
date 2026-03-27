@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/db/index";
 import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
-import { FontSizeTextStyle, FontSizeKeyboardExtension, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
+import { FontSizeTextStyle, FontSizeKeyboardExtension, ParagraphWithLineHeight, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { DailyNote, Task } from "@/types/index";
@@ -885,7 +885,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   const editor = useEditor(
     {
       extensions: [
-        StarterKit,
+        StarterKit.configure({ paragraph: false }),
+        ParagraphWithLineHeight,
         TaskList,
         TaskItemWithId,
         XChecklistExtension,

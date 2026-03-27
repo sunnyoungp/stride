@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 import { TextStyle } from "@tiptap/extension-text-style";
+import { Paragraph } from "@tiptap/extension-paragraph";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,9 @@ export const FontSizeTextStyle = TextStyle.extend({
         },
         renderHTML: (attrs) => {
           if (!attrs.fontSize) return {};
-          return { style: `font-size: ${attrs.fontSize}px; line-height: 1.5` };
+          const px = parseInt(String(attrs.fontSize), 10);
+          const lh = isNaN(px) ? "" : `; line-height: ${(px * 1.15).toFixed(1)}px`;
+          return { style: `font-size: ${attrs.fontSize}px${lh}` };
         },
       },
     };
@@ -46,9 +49,29 @@ export function getCurrentFontSize(editor: Editor): number {
   return FONT_SIZE_DEFAULT;
 }
 
+// ── ParagraphWithLineHeight ────────────────────────────────────────────────────
+// Extends the base Paragraph node to support a lineHeight style attribute.
+// Use this instead of Paragraph from StarterKit in editors that use font sizing.
+
+export const ParagraphWithLineHeight = Paragraph.extend({
+  addAttributes() {
+    return {
+      lineHeight: {
+        default: null,
+        parseHTML: (el) => (el as HTMLElement).style.lineHeight || null,
+        renderHTML: (attrs) => {
+          if (!attrs.lineHeight) return {};
+          return { style: `line-height: ${attrs.lineHeight}` };
+        },
+      },
+    };
+  },
+});
+
 // ── FontSizeKeyboardExtension ──────────────────────────────────────────────────
 // Intercepts Cmd+= (increase), Cmd+- (decrease), Cmd+0 (reset).
-// Works on selection or as stored mark for next typed characters.
+// Sets font-size on the text mark and line-height on the containing paragraph(s)
+// so both block-level spacing and inline rendering scale together.
 
 export const FontSizeKeyboardExtension = Extension.create({
   name: "fontSizeKeyboard",
@@ -58,17 +81,28 @@ export const FontSizeKeyboardExtension = Extension.create({
       "Mod-=": () => {
         const cur = getCurrentFontSize(this.editor);
         const next = Math.min(FONT_SIZE_MAX, cur + FONT_SIZE_STEP);
-        this.editor.chain().focus().setMark("textStyle", { fontSize: String(next) }).run();
+        const lh = `${(next * 1.15).toFixed(1)}px`;
+        this.editor.chain().focus()
+          .setMark("textStyle", { fontSize: String(next) })
+          .updateAttributes("paragraph", { lineHeight: lh })
+          .run();
         return true;
       },
       "Mod--": () => {
         const cur = getCurrentFontSize(this.editor);
         const next = Math.max(FONT_SIZE_MIN, cur - FONT_SIZE_STEP);
-        this.editor.chain().focus().setMark("textStyle", { fontSize: String(next) }).run();
+        const lh = `${(next * 1.15).toFixed(1)}px`;
+        this.editor.chain().focus()
+          .setMark("textStyle", { fontSize: String(next) })
+          .updateAttributes("paragraph", { lineHeight: lh })
+          .run();
         return true;
       },
       "Mod-0": () => {
-        this.editor.chain().focus().unsetMark("textStyle").run();
+        this.editor.chain().focus()
+          .unsetMark("textStyle")
+          .updateAttributes("paragraph", { lineHeight: null })
+          .run();
         return true;
       },
     };

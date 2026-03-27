@@ -8,7 +8,7 @@ import type { JSONContent } from "@tiptap/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
-import { FontSizeTextStyle, FontSizeKeyboardExtension, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
+import { FontSizeTextStyle, FontSizeKeyboardExtension, ParagraphWithLineHeight, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { StrideDocument, Task } from "@/types/index";
@@ -132,7 +132,8 @@ export function DocumentEditor({ documentId }: Props) {
   const editor = useEditor(
     {
       extensions: [
-        StarterKit,
+        StarterKit.configure({ paragraph: false }),
+        ParagraphWithLineHeight,
         TaskList,
         CustomTaskItem.configure({ nested: true }),
         XChecklistExtension,
