@@ -543,8 +543,7 @@ export function Sidebar() {
       <div
         className="flex h-full w-14 flex-col items-center overflow-y-auto overflow-x-hidden select-none py-4 gap-1"
         style={{
-          background: "var(--bg-sidebar)",
-          boxShadow: "2px 0 16px rgba(30,20,10,0.06)",
+          background: "var(--sidebar-bg)",
           zIndex: 10,
           position: "relative",
         }}
@@ -582,11 +581,13 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               title={item.label}
-              className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+              className="flex h-8 w-8 items-center justify-center rounded-md transition-all duration-150 ease-out"
               style={{
                 background: active ? "var(--bg-active)" : "transparent",
                 color: active ? "var(--accent)" : "var(--fg-faint)",
               }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
             >
               {item.icon}
             </Link>
@@ -643,8 +644,7 @@ export function Sidebar() {
     <div
       className="flex h-full w-[220px] flex-col overflow-y-auto overflow-x-hidden select-none"
       style={{
-        background: "var(--bg-sidebar)",
-        boxShadow: "2px 0 16px rgba(30,20,10,0.06)",
+        background: "var(--sidebar-bg)",
         zIndex: 10,
         position: "relative",
       }}
@@ -672,7 +672,9 @@ export function Sidebar() {
         <button
           type="button"
           onClick={openSearch}
-          className="flex w-full h-9 items-center gap-2.5 rounded-xl px-3 text-[13px] transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+          className="flex w-full h-8 items-center gap-2.5 rounded-md px-3 text-[13px] transition-all duration-150 ease-out"
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
           style={{ color: "var(--fg-faint)" }}
         >
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
@@ -689,20 +691,23 @@ export function Sidebar() {
       </div>
 
       {/* ── Primary nav ── */}
-      <nav className="flex flex-col gap-1 px-2 flex-none">
+      <nav className="flex flex-col gap-0.5 px-1 flex-none">
         {visibleNavItems.map((item) => {
           const active = isActive(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-[13.5px] font-[470] transition-all duration-150 ease-out"
+              className="flex h-8 w-full items-center gap-2.5 rounded-md px-3 text-[13px] transition-all duration-150 ease-out"
               style={{
+                fontWeight: active ? 500 : 400,
                 background: active ? "var(--bg-active)" : "transparent",
                 color: active ? "var(--accent)" : "var(--fg-muted)",
               }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? "var(--bg-active)" : "transparent"; }}
             >
-              <span className="flex-none" style={{ color: active ? "var(--accent)" : "var(--fg-faint)" }}>
+              <span className="flex-none" style={{ fontSize: 16, color: active ? "var(--accent)" : "var(--fg-faint)" }}>
                 {item.icon}
               </span>
               {item.label}
@@ -714,7 +719,7 @@ export function Sidebar() {
       {/* ── Sections ── */}
       <div className="mt-5 flex-none px-4">
         <div className="mb-2.5 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--fg-faint)" }}>
+          <span className="text-[11px]" style={{ color: "var(--fg-faint)", fontWeight: 400 }}>
             Sections
           </span>
           <div className="flex items-center gap-1">
@@ -944,7 +949,7 @@ export function Sidebar() {
         return (
           <div className="mt-5 flex-none px-4">
             <div className="mb-2.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--fg-faint)" }}>
+              <span className="text-[11px]" style={{ color: "var(--fg-faint)", fontWeight: 400 }}>
                 Pinned
               </span>
             </div>

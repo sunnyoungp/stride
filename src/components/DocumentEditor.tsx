@@ -5,10 +5,14 @@ import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import type { JSONContent } from "@tiptap/core";
+import type { SuggestionProps } from "@tiptap/suggestion";
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { FontSizeTextStyle, FontSizeKeyboardExtension, ParagraphWithLineHeight, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
+import { type SlashCmd, type SlashMenuState, createSlashCommandExtension } from "@/lib/slashCommands";
+import { SlashCommandMenu } from "@/components/SlashCommandMenu";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { StrideDocument, Task } from "@/types/index";
@@ -41,14 +45,6 @@ function safeParseJson(value: string): JSONContent | null {
   } catch {
     return null;
   }
-}
-
-function extractText(node: any): string {
-  if (!node || typeof node !== "object") return "";
-  if (node.type === "text" && typeof node.text === "string") return node.text;
-  const content = node.content;
-  if (!Array.isArray(content)) return "";
-  return content.map(extractText).join("");
 }
 
 
@@ -91,6 +87,12 @@ export function DocumentEditor({ documentId }: Props) {
   const saveTimerRef = useRef<number | null>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
 
+  // Slash command state
+  const [slashMenu, setSlashMenu] = useState<SlashMenuState>(null);
+  const slashMenuRef = useRef<SlashMenuState>(null);
+  const slashPropsRef = useRef<SuggestionProps<SlashCmd, SlashCmd> | null>(null);
+  useEffect(() => { slashMenuRef.current = slashMenu; }, [slashMenu]);
+
   useEffect(() => {
     void loadDocuments();
     void loadTasks();
@@ -129,6 +131,9 @@ export function DocumentEditor({ documentId }: Props) {
 
   const syncedBadge = Boolean(doc?.linkedTaskIds && doc.linkedTaskIds.length > 0);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const slashCommandExtension = useMemo(() => createSlashCommandExtension(slashPropsRef, slashMenuRef, setSlashMenu), []);
+
   const editor = useEditor(
     {
       extensions: [
@@ -137,6 +142,7 @@ export function DocumentEditor({ documentId }: Props) {
         TaskList,
         CustomTaskItem.configure({ nested: true }),
         XChecklistExtension,
+        slashCommandExtension,
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
       ],
@@ -319,31 +325,32 @@ export function DocumentEditor({ documentId }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8">
-      <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-[680px] px-6 py-10">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 mb-8">
         <div className="flex-1">
           <input
             value={localTitle}
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
-            className="w-full bg-transparent text-3xl font-bold tracking-tight outline-none"
-            style={{ color: "var(--fg)" }}
+            className="w-full bg-transparent font-bold tracking-tight outline-none"
+            style={{ color: "var(--fg)", fontSize: 30, lineHeight: 1.2 }}
             placeholder="Untitled"
           />
-          <div className="mt-1 text-xs" style={{ color: "var(--fg-faint)" }}>
+          <div className="mt-1.5 text-xs" style={{ color: "var(--fg-faint)" }}>
             Updated {formatUpdatedAt(doc.updatedAt)}
           </div>
         </div>
 
         {syncedBadge ? (
-          <div className="mt-2 rounded-lg px-3 py-1 text-xs font-medium" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+          <div className="mt-1 rounded-lg px-3 py-1 text-xs font-medium flex-shrink-0" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
             Synced to Tasks
           </div>
         ) : null}
       </div>
 
-      {/* Minimal font-size toolbar */}
-      <div className="mt-6 mb-2 flex items-center gap-3">
+      {/* Font-size hint */}
+      <div className="mb-4 flex items-center gap-3">
         <span
           title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
           style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
@@ -351,14 +358,27 @@ export function DocumentEditor({ documentId }: Props) {
           {editorFontSize}px
         </span>
         <span style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none" }}>
-          Cmd+= / Cmd+- to resize · Cmd+0 to reset
+          Cmd+= / Cmd+- to resize · Cmd+0 to reset · Type / for commands
         </span>
       </div>
 
-      <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)" }}>
-        {editor ? <EditorContent editor={editor} /> : null}
-      </div>
+      {/* Editor — full-bleed, no card wrapper */}
+      {editor ? <EditorContent editor={editor} /> : null}
+
+      {/* Slash command menu */}
+      {slashMenu && slashMenu.items.length > 0 && createPortal(
+        <SlashCommandMenu
+          items={slashMenu.items}
+          activeIndex={slashMenu.activeIndex}
+          rect={slashMenu.rect}
+          onSelect={(cmd) => {
+            slashPropsRef.current?.command(cmd);
+            setSlashMenu(null);
+          }}
+          onClose={() => setSlashMenu(null)}
+        />,
+        document.body,
+      )}
     </div>
   );
 }
-

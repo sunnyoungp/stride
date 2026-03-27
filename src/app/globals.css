@@ -55,6 +55,10 @@
   --section-personal-fg: #16a34a;
   --section-health-fg:   #dc2626;
   
+  /* sidebar / content surface layering */
+  --sidebar-bg:  #E8E5E2;  /* macOS Finder-style medium gray — clearly behind content */
+  --content-bg:  #FFFFFF;  /* content area "raised" above sidebar */
+
   /* FONT SIZES — three independent tokens */
   --font-size-tasks: 15px;  /* task titles in list view and kanban cards */
   --font-size-notes: 15px;  /* TipTap editor body text (DailyNote + DocumentEditor) */
@@ -85,6 +89,10 @@
   --accent-fg:    #ffffff;
   --accent-bg:    rgba(232, 96, 60, 0.11);
   --accent-bg-strong: rgba(232, 96, 60, 0.20);
+
+  /* sidebar / content surface layering */
+  --sidebar-bg:  #1C1C1E;  /* macOS-style dark sidebar */
+  --content-bg:  #242424;  /* content area slightly lighter than sidebar */
 
   --border:       rgba(245, 235, 225, 0.07);
   --border-mid:   rgba(245, 235, 225, 0.11);
@@ -482,4 +490,9 @@ a, button, input, select, textarea {
   .mobile-scroll-content {
     padding-bottom: calc(56px + env(safe-area-inset-bottom) + 16px) !important;
   }
+}
+
+/* ── Mobile: prevent iOS auto-zoom on focused inputs ── */
+@media (max-width: 768px) {
+  input, textarea, [contenteditable] { font-size: 16px !important; }
 }

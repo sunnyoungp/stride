@@ -5,6 +5,7 @@ export const THEMES = [
   {
     id: 'neutral-dark', name: 'Neutral', description: 'Soft near-black, easy on the eyes', type: 'dark' as const,
     '--bg': '#111214', '--bg-subtle': '#18191d', '--bg-card': '#1e2026', '--bg-sidebar': '#0f1012',
+    '--sidebar-bg': '#0f1012', '--content-bg': '#1e2026',
     '--bg-hover': 'rgba(220,225,240,0.05)', '--bg-active': 'rgba(232,96,60,0.12)',
     '--fg': '#e8eaed', '--fg-muted': '#848a97', '--fg-faint': '#3e434f', '--fg-placeholder': '#2c313b',
     '--accent': '#e8603c', '--accent-hover': '#eb7052', '--accent-fg': '#ffffff',
@@ -25,6 +26,7 @@ export const THEMES = [
   {
     id: 'cool-dark', name: 'Cool', description: 'Blue-gray dark, electric blue accent', type: 'dark' as const,
     '--bg': '#0e0f13', '--bg-subtle': '#16181f', '--bg-card': '#1c1e27', '--bg-sidebar': '#121318',
+    '--sidebar-bg': '#121318', '--content-bg': '#1c1e27',
     '--bg-hover': 'rgba(220,225,240,0.05)', '--bg-active': 'rgba(77,159,255,0.12)',
     '--fg': '#eceef2', '--fg-muted': '#7c8090', '--fg-faint': '#3c404e', '--fg-placeholder': '#2a2d38',
     '--accent': '#4d9fff', '--accent-hover': '#70b5ff', '--accent-fg': '#ffffff',
@@ -45,6 +47,7 @@ export const THEMES = [
   {
     id: 'warm-dark', name: 'Warm', description: 'Original warm near-black, coral accent', type: 'dark' as const,
     '--bg': '#110e0a', '--bg-subtle': '#1a1612', '--bg-card': '#201c17', '--bg-sidebar': '#161210',
+    '--sidebar-bg': '#161210', '--content-bg': '#201c17',
     '--bg-hover': 'rgba(245,235,225,0.05)', '--bg-active': 'rgba(232,96,60,0.10)',
     '--fg': '#f0e8e0', '--fg-muted': '#8f8078', '--fg-faint': '#4f4640', '--fg-placeholder': '#382f28',
     '--accent': '#e8603c', '--accent-hover': '#eb7052', '--accent-fg': '#ffffff',
@@ -65,6 +68,7 @@ export const THEMES = [
   {
     id: 'midnight-blue', name: 'Midnight', description: 'Deep navy, electric blue accent', type: 'dark' as const,
     '--bg': '#080c14', '--bg-subtle': '#0d1422', '--bg-card': '#111b2e', '--bg-sidebar': '#090d18',
+    '--sidebar-bg': '#090d18', '--content-bg': '#111b2e',
     '--bg-hover': 'rgba(100,160,255,0.05)', '--bg-active': 'rgba(77,159,255,0.12)',
     '--fg': '#dde8f8', '--fg-muted': '#6680a8', '--fg-faint': '#2e3e58', '--fg-placeholder': '#1a2538',
     '--accent': '#4d9fff', '--accent-hover': '#70b5ff', '--accent-fg': '#ffffff',
@@ -85,6 +89,7 @@ export const THEMES = [
   {
     id: 'ocean', name: 'Ocean', description: 'Teal-green depths, aqua accent', type: 'dark' as const,
     '--bg': '#071419', '--bg-subtle': '#0d1f24', '--bg-card': '#12262d', '--bg-sidebar': '#081619',
+    '--sidebar-bg': '#081619', '--content-bg': '#12262d',
     '--bg-hover': 'rgba(45,212,191,0.05)', '--bg-active': 'rgba(45,212,191,0.12)',
     '--fg': '#c8eee6', '--fg-muted': '#4d8a7e', '--fg-faint': '#1e3c38', '--fg-placeholder': '#0f2228',
     '--accent': '#2dd4bf', '--accent-hover': '#5eead4', '--accent-fg': '#042f2e',
@@ -105,6 +110,7 @@ export const THEMES = [
   {
     id: 'forest', name: 'Forest', description: 'Deep green, lime accent', type: 'dark' as const,
     '--bg': '#080f09', '--bg-subtle': '#0d1a0f', '--bg-card': '#112215', '--bg-sidebar': '#090f0a',
+    '--sidebar-bg': '#090f0a', '--content-bg': '#112215',
     '--bg-hover': 'rgba(107,207,127,0.05)', '--bg-active': 'rgba(107,207,127,0.12)',
     '--fg': '#d4eeda', '--fg-muted': '#4d7e58', '--fg-faint': '#1e3325', '--fg-placeholder': '#0f1f14',
     '--accent': '#6bcf7f', '--accent-hover': '#86d997', '--accent-fg': '#052e10',
@@ -125,6 +131,7 @@ export const THEMES = [
   {
     id: 'aurora', name: 'Aurora', description: 'Dark purple, neon violet accent', type: 'dark' as const,
     '--bg': '#080a12', '--bg-subtle': '#0e1020', '--bg-card': '#131528', '--bg-sidebar': '#090b14',
+    '--sidebar-bg': '#090b14', '--content-bg': '#131528',
     '--bg-hover': 'rgba(167,139,250,0.05)', '--bg-active': 'rgba(167,139,250,0.12)',
     '--fg': '#e8e0ff', '--fg-muted': '#7868cc', '--fg-faint': '#2d2a52', '--fg-placeholder': '#1a1840',
     '--accent': '#a78bfa', '--accent-hover': '#c4b5fd', '--accent-fg': '#1e0a4e',
@@ -145,6 +152,7 @@ export const THEMES = [
   {
     id: 'sunset', name: 'Sunset', description: 'Warm dark amber, gold accent', type: 'dark' as const,
     '--bg': '#110a04', '--bg-subtle': '#1c1008', '--bg-card': '#24150a', '--bg-sidebar': '#130b05',
+    '--sidebar-bg': '#130b05', '--content-bg': '#24150a',
     '--bg-hover': 'rgba(251,191,36,0.05)', '--bg-active': 'rgba(245,158,11,0.12)',
     '--fg': '#fce8d2', '--fg-muted': '#a06840', '--fg-faint': '#3d2010', '--fg-placeholder': '#261408',
     '--accent': '#f59e0b', '--accent-hover': '#fbbf24', '--accent-fg': '#1c0a00',
@@ -168,6 +176,7 @@ export const THEMES = [
   {
     id: 'neutral-light', name: 'Neutral', description: 'Original warm cream, coral accent', type: 'light' as const,
     '--bg': '#faf7f4', '--bg-subtle': '#f4efe9', '--bg-card': '#ffffff', '--bg-sidebar': '#faf7f4',
+    '--sidebar-bg': '#E8E5E2', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(30,20,10,0.04)', '--bg-active': 'rgba(232,96,60,0.07)',
     '--fg': '#1a1310', '--fg-muted': '#6b5f57', '--fg-faint': '#a8998f', '--fg-placeholder': '#c8b8ae',
     '--accent': '#e8603c', '--accent-hover': '#d44e2a', '--accent-fg': '#ffffff',
@@ -188,6 +197,7 @@ export const THEMES = [
   {
     id: 'sakura', name: 'Sakura', description: 'Blush pink, rose accent', type: 'light' as const,
     '--bg': '#fdf5f7', '--bg-subtle': '#f7e8ed', '--bg-card': '#ffffff', '--bg-sidebar': '#faeef2',
+    '--sidebar-bg': '#EAE0E4', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(232,71,106,0.04)', '--bg-active': 'rgba(232,71,106,0.08)',
     '--fg': '#2a1018', '--fg-muted': '#9e6070', '--fg-faint': '#d4a0ae', '--fg-placeholder': '#e8c0cc',
     '--accent': '#e8476a', '--accent-hover': '#d03058', '--accent-fg': '#ffffff',
@@ -208,6 +218,7 @@ export const THEMES = [
   {
     id: 'lavender', name: 'Lavender', description: 'Soft purple, violet accent', type: 'light' as const,
     '--bg': '#f8f6ff', '--bg-subtle': '#f0ecff', '--bg-card': '#ffffff', '--bg-sidebar': '#f4f1ff',
+    '--sidebar-bg': '#E6E3EE', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(124,58,237,0.04)', '--bg-active': 'rgba(124,58,237,0.08)',
     '--fg': '#1e1530', '--fg-muted': '#7a6a9e', '--fg-faint': '#c0b4e0', '--fg-placeholder': '#d8d0f0',
     '--accent': '#7c3aed', '--accent-hover': '#6d28d9', '--accent-fg': '#ffffff',
@@ -228,6 +239,7 @@ export const THEMES = [
   {
     id: 'matcha', name: 'Matcha', description: 'Sage green, earthy accent', type: 'light' as const,
     '--bg': '#f4f8f2', '--bg-subtle': '#e8f2e4', '--bg-card': '#ffffff', '--bg-sidebar': '#eef4ea',
+    '--sidebar-bg': '#E3E9E0', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(61,140,64,0.04)', '--bg-active': 'rgba(61,140,64,0.08)',
     '--fg': '#131e10', '--fg-muted': '#5a7854', '--fg-faint': '#aac4a4', '--fg-placeholder': '#c8dcc4',
     '--accent': '#3d8c40', '--accent-hover': '#2e7031', '--accent-fg': '#ffffff',
@@ -248,6 +260,7 @@ export const THEMES = [
   {
     id: 'peach', name: 'Peach', description: 'Warm cream, tangerine accent', type: 'light' as const,
     '--bg': '#fff8f3', '--bg-subtle': '#feeee4', '--bg-card': '#ffffff', '--bg-sidebar': '#fff3ec',
+    '--sidebar-bg': '#EDE6DF', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(234,108,32,0.04)', '--bg-active': 'rgba(234,108,32,0.08)',
     '--fg': '#2a1206', '--fg-muted': '#9e6040', '--fg-faint': '#d4a888', '--fg-placeholder': '#e8c8a8',
     '--accent': '#ea6c20', '--accent-hover': '#d45a10', '--accent-fg': '#ffffff',
@@ -268,6 +281,7 @@ export const THEMES = [
   {
     id: 'sky', name: 'Sky', description: 'Pale blue, cobalt accent', type: 'light' as const,
     '--bg': '#f4f8fd', '--bg-subtle': '#e6f0fa', '--bg-card': '#ffffff', '--bg-sidebar': '#edf4fb',
+    '--sidebar-bg': '#DFE8F0', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(29,111,216,0.04)', '--bg-active': 'rgba(29,111,216,0.08)',
     '--fg': '#0c1a2e', '--fg-muted': '#5070a0', '--fg-faint': '#a0bcd8', '--fg-placeholder': '#c0d4e8',
     '--accent': '#1d6fd8', '--accent-hover': '#1558b8', '--accent-fg': '#ffffff',
@@ -288,6 +302,7 @@ export const THEMES = [
   {
     id: 'lemon', name: 'Lemon', description: 'Bright white, yellow pop accent', type: 'light' as const,
     '--bg': '#fefdf0', '--bg-subtle': '#faf8d8', '--bg-card': '#ffffff', '--bg-sidebar': '#fcfbe8',
+    '--sidebar-bg': '#E8E8DC', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(202,138,4,0.04)', '--bg-active': 'rgba(202,138,4,0.10)',
     '--fg': '#1a1800', '--fg-muted': '#7a7420', '--fg-faint': '#c8c480', '--fg-placeholder': '#dcd890',
     '--accent': '#ca8a04', '--accent-hover': '#a16207', '--accent-fg': '#ffffff',
@@ -308,6 +323,7 @@ export const THEMES = [
   {
     id: 'candy', name: 'Candy', description: 'Pastel white, magenta accent', type: 'light' as const,
     '--bg': '#fef6fb', '--bg-subtle': '#f8edf6', '--bg-card': '#ffffff', '--bg-sidebar': '#faf0f8',
+    '--sidebar-bg': '#EDE0EE', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(217,70,239,0.04)', '--bg-active': 'rgba(217,70,239,0.08)',
     '--fg': '#2d1a2e', '--fg-muted': '#8e6a8f', '--fg-faint': '#c9a8ca', '--fg-placeholder': '#dfc2e0',
     '--accent': '#d946ef', '--accent-hover': '#c026d3', '--accent-fg': '#ffffff',
@@ -328,6 +344,7 @@ export const THEMES = [
   {
     id: 'cotton-candy', name: 'Cotton candy', description: 'Multi-pastel, purple + mint', type: 'light' as const,
     '--bg': '#fdf6ff', '--bg-subtle': '#f5e8ff', '--bg-card': '#ffffff', '--bg-sidebar': '#faf0ff',
+    '--sidebar-bg': '#E8E0EE', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(192,38,211,0.04)', '--bg-active': 'rgba(192,38,211,0.08)',
     '--fg': '#220a30', '--fg-muted': '#9060a8', '--fg-faint': '#d0a8e8', '--fg-placeholder': '#e0c8f4',
     '--accent': '#c026d3', '--accent-hover': '#a21caf', '--accent-fg': '#ffffff',
@@ -348,6 +365,7 @@ export const THEMES = [
   {
     id: 'rosewood', name: 'Rosewood', description: 'Deep mauve, crimson accent', type: 'light' as const,
     '--bg': '#faf4f4', '--bg-subtle': '#f2e4e4', '--bg-card': '#ffffff', '--bg-sidebar': '#f6eded',
+    '--sidebar-bg': '#E8E0E0', '--content-bg': '#FFFFFF',
     '--bg-hover': 'rgba(185,28,28,0.04)', '--bg-active': 'rgba(185,28,28,0.08)',
     '--fg': '#220a0a', '--fg-muted': '#9e5858', '--fg-faint': '#d4a4a4', '--fg-placeholder': '#e8c0c0',
     '--accent': '#b91c1c', '--accent-hover': '#991b1b', '--accent-fg': '#ffffff',

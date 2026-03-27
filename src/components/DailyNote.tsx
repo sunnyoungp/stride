@@ -1,10 +1,8 @@
 "use client";
 
 import { EditorContent, useEditor } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
-import Suggestion from "@tiptap/suggestion";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
@@ -19,6 +17,8 @@ import { db } from "@/db/index";
 import { DragHandleExtension } from "@/lib/dragHandleExtension";
 import { XChecklistExtension } from "@/lib/xChecklistExtension";
 import { FontSizeTextStyle, FontSizeKeyboardExtension, ParagraphWithLineHeight, getCurrentFontSize, FONT_SIZE_DEFAULT } from "@/lib/fontSizeExtension";
+import { type SlashCmd, type SlashMenuState, createSlashCommandExtension } from "@/lib/slashCommands";
+import { SlashCommandMenu } from "@/components/SlashCommandMenu";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { DailyNote, Task } from "@/types/index";
@@ -454,110 +454,6 @@ function NoteItemContextMenu({
   );
 }
 
-// ─── Slash Command Menu ────────────────────────────────────────────────────────
-
-type SlashCmd = {
-  id: string;
-  label: string;
-  desc: string;
-  icon: string;
-  run: (editor: Editor) => void;
-};
-
-const ALL_SLASH_CMDS: SlashCmd[] = [
-  { id: "text",    label: "Text",          desc: "Plain paragraph",               icon: "¶",  run: (e) => e.chain().focus().setParagraph().run() },
-  { id: "h1",      label: "Heading 1",     desc: "Large section header",          icon: "H1", run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
-  { id: "h2",      label: "Heading 2",     desc: "Medium section header",         icon: "H2", run: (e) => e.chain().focus().toggleHeading({ level: 2 }).run() },
-  { id: "h3",      label: "Heading 3",     desc: "Small section header",          icon: "H3", run: (e) => e.chain().focus().toggleHeading({ level: 3 }).run() },
-  { id: "bullet",  label: "Bullet List",   desc: "Unordered list",                icon: "•",  run: (e) => e.chain().focus().toggleBulletList().run() },
-  { id: "ordered", label: "Numbered List", desc: "Ordered list",                  icon: "1.", run: (e) => e.chain().focus().toggleOrderedList().run() },
-  { id: "task",    label: "Task",          desc: "Trackable checklist item",      icon: "☑",  run: (e) => e.chain().focus().toggleTaskList().run() },
-  { id: "quote",   label: "Blockquote",    desc: "Highlighted quote block",       icon: "❝",  run: (e) => e.chain().focus().toggleBlockquote().run() },
-  { id: "code",    label: "Code Block",    desc: "Code with syntax highlighting", icon: "<>", run: (e) => e.chain().focus().toggleCodeBlock().run() },
-  { id: "divider", label: "Divider",       desc: "Horizontal rule",               icon: "—",  run: (e) => e.chain().focus().setHorizontalRule().run() },
-];
-
-type SlashMenuState = { items: SlashCmd[]; activeIndex: number; rect: DOMRect } | null;
-
-function SlashCommandMenu({
-  items, activeIndex, rect, onSelect, onClose,
-}: {
-  items: SlashCmd[];
-  activeIndex: number;
-  rect: DOMRect;
-  onSelect: (cmd: SlashCmd) => void;
-  onClose: () => void;
-}) {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ x: rect.left, y: rect.bottom + 6 });
-
-  useEffect(() => {
-    const el = menuRef.current;
-    if (!el) return;
-    const menuH = el.offsetHeight;
-    const menuW = el.offsetWidth;
-    const vvH = window.visualViewport?.height ?? window.innerHeight;
-    let x = rect.left;
-    let y = rect.bottom + 6;
-    if (y + menuH > vvH - 8) y = rect.top - menuH - 6;
-    x = Math.max(8, Math.min(x, window.innerWidth - menuW - 8));
-    setPos({ x, y });
-  }, [rect]);
-
-  useEffect(() => {
-    const h = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) onClose(); };
-    const t = setTimeout(() => document.addEventListener("pointerdown", h), 50);
-    return () => { clearTimeout(t); document.removeEventListener("pointerdown", h); };
-  }, [onClose]);
-
-  const activeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { activeRef.current?.scrollIntoView({ block: "nearest" }); }, [activeIndex]);
-
-  if (items.length === 0) return null;
-
-  return createPortal(
-    <div
-      ref={menuRef}
-      style={{
-        position: "fixed", left: pos.x, top: pos.y, zIndex: 9999,
-        background: "var(--bg-card)", border: "1px solid var(--border-mid)",
-        borderRadius: 12, boxShadow: "var(--shadow-float)",
-        width: 280, maxHeight: 320, overflowY: "auto", padding: 4,
-      }}
-    >
-      {items.map((cmd, i) => (
-        <button
-          key={cmd.id}
-          ref={i === activeIndex ? activeRef : undefined}
-          type="button"
-          onPointerDown={(e) => { e.preventDefault(); onSelect(cmd); }}
-          style={{
-            width: "100%", display: "flex", alignItems: "center", gap: 10,
-            padding: "6px 10px", borderRadius: 8, border: "none",
-            cursor: "pointer", textAlign: "left",
-            background: i === activeIndex ? "var(--bg-active)" : "transparent",
-            transition: "background 100ms",
-          }}
-          onMouseEnter={(e) => { if (i !== activeIndex) e.currentTarget.style.background = "var(--bg-hover)"; }}
-          onMouseLeave={(e) => { if (i !== activeIndex) e.currentTarget.style.background = "transparent"; }}
-        >
-          <span style={{
-            width: 28, height: 28, borderRadius: 6, background: "var(--bg-subtle)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", flexShrink: 0,
-          }}>
-            {cmd.icon}
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "var(--fg)" }}>{cmd.label}</span>
-            <span style={{ display: "block", fontSize: 11, color: "var(--fg-faint)" }}>{cmd.desc}</span>
-          </span>
-        </button>
-      ))}
-    </div>,
-    document.body,
-  );
-}
 
 // ─── Sync-mode toggle icons ───────────────────────────────────────────────────
 
@@ -809,78 +705,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }, []); // stable — reads only refs
 
   // Slash command TipTap extension — created once, captures stable refs/setters
-  const slashCommandExtension = useMemo(() =>
-    Extension.create({
-      name: "slashCommand",
-      addProseMirrorPlugins() {
-        return [
-          Suggestion<SlashCmd, SlashCmd>({
-            editor: this.editor,
-            char: "/",
-            allowSpaces: false,
-            startOfLine: false,
-            decorationClass: "slash-suggestion",
-            items: ({ query }) => {
-              const q = query.toLowerCase();
-              if (!q) return ALL_SLASH_CMDS;
-              return ALL_SLASH_CMDS.filter(
-                (c) => c.label.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)
-              );
-            },
-            command: ({ editor, range, props }) => {
-              editor.chain().focus().deleteRange(range).run();
-              props.run(editor);
-            },
-            render: () => ({
-              onStart: (props) => {
-                slashPropsRef.current = props;
-                setSlashMenu({
-                  items: props.items,
-                  activeIndex: 0,
-                  rect: props.clientRect?.() ?? new DOMRect(),
-                });
-              },
-              onUpdate: (props) => {
-                slashPropsRef.current = props;
-                setSlashMenu((prev) =>
-                  prev
-                    ? { items: props.items, activeIndex: 0, rect: props.clientRect?.() ?? prev.rect }
-                    : null
-                );
-              },
-              onExit: () => {
-                slashPropsRef.current = null;
-                setSlashMenu(null);
-              },
-              onKeyDown: ({ event }) => {
-                const menu = slashMenuRef.current;
-                if (!menu) return false;
-                if (event.key === "Escape") { setSlashMenu(null); return true; }
-                if (event.key === "ArrowDown") {
-                  setSlashMenu((prev) =>
-                    prev ? { ...prev, activeIndex: (prev.activeIndex + 1) % prev.items.length } : null
-                  );
-                  return true;
-                }
-                if (event.key === "ArrowUp") {
-                  setSlashMenu((prev) =>
-                    prev ? { ...prev, activeIndex: (prev.activeIndex - 1 + prev.items.length) % prev.items.length } : null
-                  );
-                  return true;
-                }
-                if (event.key === "Enter") {
-                  const item = menu.items[menu.activeIndex];
-                  if (item) slashPropsRef.current?.command(item);
-                  return true;
-                }
-                return false;
-              },
-            }),
-          }),
-        ];
-      },
-    }),
-  []); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const slashCommandExtension = useMemo(() => createSlashCommandExtension(slashPropsRef, slashMenuRef, setSlashMenu), []);
 
   const editor = useEditor(
     {
