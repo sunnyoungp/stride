@@ -33,11 +33,12 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; style: React.CSSPr
 export function TaskContextMenu({ task, position, onClose, selectedIds }: Props) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const allTasks   = useTaskStore((s) => s.tasks);
+  const tasks      = useTaskStore((s) => s.tasks);
   const menuRef    = useRef<HTMLDivElement | null>(null);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
-  const [activePanel, setActivePanel] = useState<"main" | "priority" | "reparent">("main");
+  const [activePanel, setActivePanel] = useState<"main" | "priority" | "parentPicker">("main");
   const [clampedPos, setClampedPos]   = useState(position);
+  const [parentSearch, setParentSearch] = useState("");
 
   const today    = useMemo(() => localDateString(new Date()), []);
   const tomorrow = useMemo(() => { const d = new Date(); d.setDate(d.getDate()+1); return localDateString(d); }, []);
@@ -57,12 +58,59 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
 
   const reschedule = async (dueDate: string) => {
     const ids = [...(selectedIds && selectedIds.size > 1 ? selectedIds : [task.id])];
-    console.log(`[bulk reschedule] processing ${ids.length} tasks to ${dueDate}`);
     for (const id of ids) await updateTask(id, { dueDate });
     onClose();
   };
   const markComplete = async () => { await updateTask(task.id, { status: "done" }); onClose(); };
   const onDelete = async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } };
+
+  const promoteToTask = async () => {
+    if (!task.parentTaskId) return;
+    const parent = tasks.find((t) => t.id === task.parentTaskId);
+    if (parent) {
+      await updateTask(parent.id, { subtaskIds: parent.subtaskIds.filter((id) => id !== task.id) });
+    }
+    await updateTask(task.id, { parentTaskId: undefined });
+    onClose();
+  };
+
+  // Candidate parent tasks: incomplete tasks in the same section, not this task, not subtasks of this task
+  const candidateParents = useMemo(() => {
+    return tasks.filter(
+      (t) =>
+        t.id !== task.id &&
+        !t.parentTaskId && // only top-level tasks
+        t.sectionId === task.sectionId &&
+        t.status !== "done" &&
+        t.status !== "cancelled"
+    );
+  }, [tasks, task.id, task.sectionId]);
+
+  const filteredParents = useMemo(() => {
+    if (!parentSearch.trim()) return candidateParents;
+    const q = parentSearch.toLowerCase();
+    return candidateParents.filter((t) => t.title.toLowerCase().includes(q));
+  }, [candidateParents, parentSearch]);
+
+  const moveToParent = async (newParentId: string) => {
+    const newParent = tasks.find((t) => t.id === newParentId);
+    if (!newParent) return;
+
+    // Remove from old parent's subtaskIds
+    if (task.parentTaskId) {
+      const oldParent = tasks.find((t) => t.id === task.parentTaskId);
+      if (oldParent) {
+        await updateTask(oldParent.id, { subtaskIds: oldParent.subtaskIds.filter((id) => id !== task.id) });
+      }
+    }
+    // Add to new parent's subtaskIds
+    if (!newParent.subtaskIds.includes(task.id)) {
+      await updateTask(newParentId, { subtaskIds: [...newParent.subtaskIds, task.id] });
+    }
+    // Update this task's parentTaskId and match parent's sectionId
+    await updateTask(task.id, { parentTaskId: newParentId, sectionId: newParent.sectionId });
+    onClose();
+  };
 
   return (
     <div
@@ -74,6 +122,11 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
       {/* Task label */}
       <div className="px-3 py-2 mb-1" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="truncate text-xs font-medium" style={{ color: "var(--fg-muted)" }}>{task.title || "(Untitled)"}</div>
+        {task.parentTaskId && (
+          <div className="text-[10px] mt-0.5" style={{ color: "var(--fg-faint)" }}>
+            ↳ subtask
+          </div>
+        )}
       </div>
 
       {activePanel === "main" && (
@@ -121,27 +174,27 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
 
           <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
-          {task.parentTaskId && (
-            <>
-              <button type="button" onClick={() => { void updateTask(task.id, { parentTaskId: undefined }); onClose(); }}
-                className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
-                style={{ color: "var(--fg)" }}
-              >Promote to task</button>
-              <button type="button" onClick={() => setActivePanel("reparent")}
-                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
-                style={{ color: "var(--fg)" }}
-              >
-                <span>Move to parent...</span>
-                <span className="text-xs" style={{ color: "var(--fg-faint)" }}>›</span>
-              </button>
-              <div className="my-1 h-px" style={{ background: "var(--border)" }} />
-            </>
-          )}
-
           <button type="button" onClick={() => void markComplete()}
             className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
             style={{ color: "var(--fg)" }}
           >✓ Mark Complete</button>
+
+          {/* Subtask-specific actions */}
+          {task.parentTaskId && (
+            <>
+              <div className="my-1 h-px" style={{ background: "var(--border)" }} />
+              <button type="button" onClick={() => void promoteToTask()}
+                className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+                style={{ color: "var(--fg)" }}
+              >↑ Promote to task</button>
+              <button type="button" onClick={() => { setParentSearch(""); setActivePanel("parentPicker"); }}
+                className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+                style={{ color: "var(--fg)" }}
+              >⤴ Move to different parent</button>
+            </>
+          )}
+
+          <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
           <button type="button" onClick={() => void onDelete()}
             className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
@@ -172,25 +225,47 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
         </>
       )}
 
-      {activePanel === "reparent" && (
+      {activePanel === "parentPicker" && (
         <>
           <button onClick={() => setActivePanel("main")}
             className="flex items-center gap-1.5 px-3 py-2 text-xs transition-all duration-150 hover:bg-[var(--bg-hover)] rounded-xl"
             style={{ color: "var(--fg-muted)" }}
           >‹ Back</button>
-          
-          <div className="px-1 max-h-[240px] overflow-auto">
-             {allTasks.filter(t => !t.parentTaskId && t.id !== task.id && t.status !== "done" && t.status !== "cancelled").map(t => (
-               <button key={t.id} type="button" onClick={async () => { await updateTask(task.id, { parentTaskId: t.id }); onClose(); }}
-                 className="flex w-full items-center truncate rounded-xl px-3 py-2 text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
-                 style={{ color: "var(--fg-muted)" }}
-               >
-                 {t.title || "(Untitled)"}
-               </button>
-             ))}
-             {allTasks.filter(t => !t.parentTaskId && t.id !== task.id && t.status !== "done" && t.status !== "cancelled").length === 0 && (
-               <div className="px-3 py-4 text-center text-xs text-muted" style={{ color: "var(--fg-faint)" }}>No parent tasks available</div>
-             )}
+          <div className="px-2 pb-1">
+            <input
+              autoFocus
+              value={parentSearch}
+              onChange={(e) => setParentSearch(e.target.value)}
+              placeholder="Search tasks…"
+              className="w-full rounded-xl px-3 py-1.5 text-xs outline-none mb-1"
+              style={{
+                background: "var(--bg-subtle)",
+                border: "1px solid var(--border)",
+                color: "var(--fg)",
+                fontSize: 13,
+              }}
+            />
+            {filteredParents.length === 0 ? (
+              <div className="px-2 py-3 text-xs text-center" style={{ color: "var(--fg-faint)" }}>
+                {candidateParents.length === 0
+                  ? "No tasks in the same section"
+                  : "No matches"}
+              </div>
+            ) : (
+              <div style={{ maxHeight: 180, overflowY: "auto" }}>
+                {filteredParents.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => void moveToParent(t.id)}
+                    className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--bg-hover)]"
+                    style={{ color: "var(--fg)" }}
+                  >
+                    <span className="block truncate">{t.title || "(Untitled)"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

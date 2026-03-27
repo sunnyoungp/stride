@@ -78,33 +78,32 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     return (
         <ThemeProvider>
-        <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
-            {/* Sidebar: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
-            {!hideSidebar && (
-                <aside
-                    className={`h-screen flex-none border-r border-[var(--border)] transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${
-                        isZenMode ? "w-0 opacity-0 border-none" : "md:w-14 lg:w-[220px] opacity-100"
-                    }`}
-                >
-                    <Sidebar />
-                </aside>
-            )}
+            <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
+                {/* Sidebar: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
+                {!hideSidebar && (
+                    <aside
+                        className={`h-screen flex-none border-r border-[var(--border)] transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0 border-none" : "md:w-14 lg:w-[220px] opacity-100"
+                            }`}
+                    >
+                        <Sidebar />
+                    </aside>
+                )}
 
-            {/* Main content: flex-1, overflow hidden — each page handles its own scroll */}
-            <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)] min-w-0 flex flex-col md:pb-0" style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom))" }}>
-                {children}
-            </main>
+                {/* Main content: flex-1, overflow hidden — each page handles its own scroll */}
+                <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg)] min-w-0 flex flex-col md:pb-0" style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom))" }}>
+                    {children}
+                </main>
 
-            {/* Mobile bottom navigation and FABs */}
-            <BottomTabBar />
-            <MobileFABs />
+                {/* Mobile bottom navigation and FABs */}
+                <BottomTabBar />
+                <MobileFABs />
 
-            <GlobalSearch />
-            <QuickAdd />
-            <SettingsApplier />
-            <GlobalShortcuts />
-            <FocusSetupModal />
-        </div>
+                <GlobalSearch />
+                <QuickAdd />
+                <SettingsApplier />
+                <GlobalShortcuts />
+                <FocusSetupModal />
+            </div>
         </ThemeProvider>
     );
 }

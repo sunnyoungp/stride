@@ -181,14 +181,14 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
   }, [loadTasks]);
 
 
-  // Include subtasks, we will filter them visually based on parent presence
+  // Always exclude subtasks before any other filter
   const rootIncompleteTasks = useMemo(() =>
-    tasks.filter((t) => t.status !== "done" && t.status !== "cancelled"),
+    tasks.filter((t) => !t.parentTaskId && t.status !== "done" && t.status !== "cancelled"),
     [tasks],
   );
 
   const rootCompletedTasks = useMemo(() =>
-    tasks.filter((t) => t.status === "done" || t.status === "cancelled"),
+    tasks.filter((t) => !t.parentTaskId && (t.status === "done" || t.status === "cancelled")),
     [tasks],
   );
 
@@ -256,26 +256,21 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           b.push(t);
           bySubId.set(t.subsectionId, b);
         }
-        const mt = bySubId.get(undefined) ?? [];
         return {
           key: s.id,
           title: s.title,
           icon: s.icon,
           section: s,
           accent: getSectionAccent(s),
-          mainTasks: mt.filter((t, _, arr) => !t.parentTaskId || !arr.some(pt => pt.id === t.parentTaskId)),
+          mainTasks: bySubId.get(undefined) ?? [],
           subsections: sSubs
-            .map((sub) => {
-              const items = bySubId.get(sub.id) ?? [];
-              return { ...sub, items: items.filter((t, _, arr) => !t.parentTaskId || !arr.some(pt => pt.id === t.parentTaskId)) };
-            })
+            .map((sub) => ({ ...sub, items: bySubId.get(sub.id) ?? [] }))
             .filter((sub) => sub.items.length > 0 || sectionIdFilter === s.id),
           totalCount: sTasks.length,
         };
       })
       .filter((g) => sectionIdFilter ? g.key === sectionIdFilter : g.totalCount >= 0);
-    const sortedUnsorted = unsortedTasks.filter((t, _, arr) => !t.parentTaskId || !arr.some(pt => pt.id === t.parentTaskId));
-    return { groups: builtGroups, unsorted: sortedUnsorted };
+    return { groups: builtGroups, unsorted: unsortedTasks };
   }, [filteredTasks, sectionIdFilter, sections, subsections]);
 
   const handleDragStart = (e: DragStartEvent) => {
@@ -330,19 +325,14 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
     ];
   }, [unsorted, groups, tasks, expandedSubs]);
 
-  const topLevelFilteredTasks = useMemo(() => {
-    if (!filterDate) return [];
-    return filteredTasks.filter((t, _, arr) => !t.parentTaskId || !arr.some(pt => pt.id === t.parentTaskId));
-  }, [filteredTasks, filterDate]);
-
   const renderRow = (task: Task): React.ReactElement => {
     const isDone       = task.status === "done";
-    const subtaskItems = tasks.filter((t) => t.parentTaskId === task.id);
+    // Only show subtasks that share the same section as the parent
+    const subtaskItemsAll = tasks.filter((t) => t.parentTaskId === task.id);
+    const subtaskItems = subtaskItemsAll.filter((t) => t.sectionId === task.sectionId);
     const hasSubtasks  = subtaskItems.length > 0;
     const expanded     = expandedSubs[task.id] ?? true;
     const isSelected   = selectedTaskIds.has(task.id);
-    const isStandaloneSubtask = !!task.parentTaskId;
-    const parentTitle = isStandaloneSubtask ? tasks.find(t => t.id === task.parentTaskId)?.title : undefined;
 
     const handleRowClick = (e: React.MouseEvent) => {
       if (e.shiftKey || e.metaKey) {
@@ -421,7 +411,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           </button>
 
           {/* Title */}
-          <div className="min-w-0 flex-[3] flex flex-col">
+          <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5 min-w-0">
               <span
                 className="task-title-text leading-snug truncate"
@@ -435,16 +425,12 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
               {task.rolledOver && (
                 <span className="text-[11px] opacity-40 flex-none" title={`Rolled over from ${task.rolledOverFrom}`}>↩</span>
               )}
+            
             </div>
-            {isStandaloneSubtask && parentTitle && (
-              <span className="text-[11px] truncate mt-0.5" style={{ color: "var(--fg-faint)" }}>
-                ↳ parent: {parentTitle}
-              </span>
-            )}
           </div>
 
           {/* Right side: chips + collapse chevron */}
-          <div className="flex flex-[1] flex-none items-center justify-end gap-1.5">
+          <div className="flex flex-none items-center gap-1.5">
             {task.priority !== "none" && <PriorityFlag priority={task.priority} />}
             {task.dueDate && (
               <span
@@ -477,13 +463,31 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           </div>
         </div>
 
-        {/* Subtasks — seamless indent, no lines or backgrounds */}
+        {/* Subtasks — indented with connector line, due date chip, right-click menu */}
         {hasSubtasks && expanded && (
-          <div className="pb-2">
+          <div style={{ position: "relative" }}>
+            {/* Vertical connector line alongside all subtasks */}
+            <div style={{
+              position: "absolute",
+              left: 29,
+              top: 0,
+              bottom: 8,
+              width: 1.5,
+              background: "var(--border-mid)",
+              borderRadius: 1,
+            }} />
             {subtaskItems.map((st) => {
               const stDone    = st.status === "done";
               const isEditing = editSubId === st.id;
               const stSelected = selectedTaskIds.has(st.id);
+              const stChip = st.dueDate
+                ? (() => {
+                    const d = st.dueDate.includes("T") ? st.dueDate.slice(0, 10) : st.dueDate;
+                    return isOverdue(d)
+                      ? { label: friendlyDate(d), bg: "rgba(239,68,68,0.08)", color: "var(--priority-high)" }
+                      : { label: friendlyDate(d), bg: "var(--accent-bg)", color: "var(--accent)" };
+                  })()
+                : null;
 
               const handleSubtaskClick = (e: React.MouseEvent) => {
                 e.stopPropagation();
@@ -502,6 +506,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                 }
                 clearSelection();
                 anchorTaskIdRef.current = st.id;
+                onTaskClick(st, { x: e.clientX, y: e.clientY });
               };
 
               return (
@@ -509,25 +514,47 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                   key={st.id}
                   data-task-id={st.id}
                   data-task-title={st.title}
-                  className="flex items-center gap-2.5 py-[6px] pr-4"
                   style={{
-                    paddingLeft: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    paddingLeft: 44,
+                    paddingRight: 16,
+                    paddingTop: 6,
+                    paddingBottom: 6,
                     background: stSelected ? "var(--accent-bg)" : undefined,
                     outline: stSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
                     cursor: "pointer",
+                    position: "relative",
+                    gap: 8,
                   }}
                   onClick={handleSubtaskClick}
+                  onContextMenu={(e) => { e.preventDefault(); setContextMenu({ task: st, x: e.clientX, y: e.clientY }); }}
                   onMouseEnter={(e) => { if (!stSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = stSelected ? "var(--accent-bg)" : ""; }}
                 >
+                  {/* Horizontal connector arm */}
+                  <div style={{
+                    position: "absolute",
+                    left: 29,
+                    top: "50%",
+                    width: 12,
+                    height: 1.5,
+                    background: "var(--border-mid)",
+                    borderRadius: 1,
+                  }} />
+
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); void updateTask(st.id, { status: stDone ? "todo" : "done" }); }}
-                    className="flex h-[14px] w-[14px] flex-none items-center justify-center rounded-[4px] transition-all duration-150"
-                    style={stDone
-                      ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
-                      : { border: "1.5px solid var(--border-strong)", background: "transparent" }
-                    }
+                    className="flex flex-none items-center justify-center rounded-[4px] transition-all duration-150"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      flexShrink: 0,
+                      ...(stDone
+                        ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
+                        : { border: "1.5px solid var(--border-strong)", background: "transparent" })
+                    }}
                   >
                     {stDone && (
                       <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
@@ -535,6 +562,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                       </svg>
                     )}
                   </button>
+
                   {isEditing ? (
                     <input
                       autoFocus
@@ -559,13 +587,26 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                   ) : (
                     <span
                       onClick={(e) => { e.stopPropagation(); setEditSubId(st.id); setEditSubVal(st.title); }}
-                      className="flex-1 cursor-text text-[13.5px] leading-snug"
-                      style={stDone
-                        ? { textDecoration: "line-through", color: "var(--fg-faint)" }
-                        : { color: "var(--fg-muted)" }
-                      }
+                      className="flex-1 leading-snug truncate"
+                      style={{
+                        fontSize: 13,
+                        cursor: "text",
+                        ...(stDone
+                          ? { textDecoration: "line-through", color: "var(--fg-faint)" }
+                          : { color: "var(--fg-muted)" })
+                      }}
                     >
                       {st.title || "(Untitled)"}
+                    </span>
+                  )}
+
+                  {/* Due date chip */}
+                  {stChip && (
+                    <span
+                      className="flex-none rounded-lg px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
+                      style={{ background: stChip.bg, color: stChip.color }}
+                    >
+                      {stChip.label}
                     </span>
                   )}
                 </div>
@@ -747,13 +788,13 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
               boxShadow: "var(--shadow-sm)",
             }}
           >
-            {topLevelFilteredTasks.length === 0 ? (
+            {filteredTasks.length === 0 ? (
               <div className="py-10 text-center text-[13px]" style={{ color: "var(--fg-faint)" }}>
                 Nothing due today
               </div>
             ) : (
-              <SortableContext items={topLevelFilteredTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                {topLevelFilteredTasks.map((t, idx) => (
+              <SortableContext items={filteredTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                {filteredTasks.map((t, idx) => (
                   <div key={t.id} style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}>
                     <SortableTaskRow task={t} renderTaskRow={renderRow} />
                   </div>

@@ -184,31 +184,66 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     const originalTask = currentState.tasks.find((t) => t.id === id);
     if (!originalTask) return;
 
+    // Section-based nesting enforcement: if sectionId changes and task has a parentTaskId,
+    // check if the new section differs from the parent's section → auto-clear parentTaskId.
+    let effectiveChanges: Partial<Task> = { ...changes };
+    if ("sectionId" in changes && originalTask.parentTaskId) {
+      const parent = currentState.tasks.find((t) => t.id === originalTask.parentTaskId);
+      if (parent && (changes.sectionId ?? undefined) !== parent.sectionId) {
+        effectiveChanges = { ...effectiveChanges, parentTaskId: undefined };
+      }
+    }
+
     const updatedAt = new Date().toISOString();
 
-    const row = { ...taskChangesToRow(changes), updated_at: updatedAt };
+    const row = { ...taskChangesToRow(effectiveChanges), updated_at: updatedAt };
     const { error } = await supabase.from("tasks").update(row).eq("id", id);
     if (error) console.error("Failed to update task:", error);
 
     set({
       tasks: currentState.tasks.map((t) =>
-        t.id === id ? { ...t, ...changes, updatedAt } : t
+        t.id === id ? { ...t, ...effectiveChanges, updatedAt } : t
       ),
     });
 
-    if (changes.status === "done" && originalTask.recurrence) {
-      const nextInstance = generateNextRecurringInstance(originalTask);
-      if (nextInstance.dueDate) {
-        await get().createTask(nextInstance);
+    // If parentTaskId was cleared due to section change, remove from parent's subtaskIds
+    if (
+      "parentTaskId" in effectiveChanges &&
+      !effectiveChanges.parentTaskId &&
+      originalTask.parentTaskId
+    ) {
+      const parent = get().tasks.find((t) => t.id === originalTask.parentTaskId);
+      if (parent) {
+        const newSubtaskIds = parent.subtaskIds.filter((sid) => sid !== id);
+        await supabase
+          .from("tasks")
+          .update({ subtask_ids: newSubtaskIds, updated_at: updatedAt })
+          .eq("id", originalTask.parentTaskId);
+        set({
+          tasks: get().tasks.map((t) =>
+            t.id === originalTask.parentTaskId ? { ...t, subtaskIds: newSubtaskIds, updatedAt } : t
+          ),
+        });
       }
     }
 
-    if (changes.status === "done" && originalTask.status !== "done") {
-      const subtasks = get().tasks.filter((t) => t.parentTaskId === id);
-      for (const sub of subtasks) {
-        if (sub.status !== "done") {
-          await updateTask(sub.id, { status: "done" });
-        }
+    // Complete all incomplete subtasks when parent is marked done
+    if (effectiveChanges.status === "done" && originalTask.subtaskIds.length > 0) {
+      const incompleteSubtasks = get().tasks.filter(
+        (t) =>
+          originalTask.subtaskIds.includes(t.id) &&
+          t.status !== "done" &&
+          t.status !== "cancelled"
+      );
+      for (const sub of incompleteSubtasks) {
+        await get().updateTask(sub.id, { status: "done" });
+      }
+    }
+
+    if (effectiveChanges.status === "done" && originalTask.recurrence) {
+      const nextInstance = generateNextRecurringInstance(originalTask);
+      if (nextInstance.dueDate) {
+        await get().createTask(nextInstance);
       }
     }
   };
@@ -231,18 +266,63 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     const updatedAt = new Date().toISOString();
     const currentTasks = get().tasks;
 
+    // Detect tasks whose sectionId is changing and have a parentTaskId.
+    // Collect parent subtaskIds that need updating.
+    const parentSubtaskUpdates = new Map<string, string[]>();
+    const tasksWithClearedParent = new Set<string>();
+
     for (const update of updates) {
+      if (update.sectionId === undefined) continue; // no section change in this update
+      const task = currentTasks.find((t) => t.id === update.id);
+      if (!task?.parentTaskId) continue;
+      const parent = currentTasks.find((t) => t.id === task.parentTaskId);
+      if (!parent) continue;
+      const newSectionId = update.sectionId ?? undefined;
+      if (newSectionId !== parent.sectionId) {
+        tasksWithClearedParent.add(update.id);
+        const existing = parentSubtaskUpdates.get(parent.id) ?? [...parent.subtaskIds];
+        parentSubtaskUpdates.set(parent.id, existing.filter((sid) => sid !== update.id));
+      }
+    }
+
+    for (const update of updates) {
+      const clearedParent = tasksWithClearedParent.has(update.id);
       await supabase
         .from("tasks")
-        .update({ order: update.order, section_id: update.sectionId ?? null, updated_at: updatedAt })
+        .update({
+          order: update.order,
+          section_id: update.sectionId ?? null,
+          updated_at: updatedAt,
+          ...(clearedParent ? { parent_task_id: null } : {}),
+        })
         .eq("id", update.id);
+    }
+
+    // Update parent subtaskIds
+    for (const [parentId, newSubtaskIds] of parentSubtaskUpdates) {
+      await supabase
+        .from("tasks")
+        .update({ subtask_ids: newSubtaskIds, updated_at: updatedAt })
+        .eq("id", parentId);
     }
 
     set({
       tasks: currentTasks.map((t) => {
         const update = updates.find((u) => u.id === t.id);
         if (update) {
-          return { ...t, order: update.order, sectionId: update.sectionId ?? t.sectionId, updatedAt };
+          const clearedParent = tasksWithClearedParent.has(t.id);
+          return {
+            ...t,
+            order: update.order,
+            sectionId: update.sectionId ?? t.sectionId,
+            updatedAt,
+            ...(clearedParent ? { parentTaskId: undefined } : {}),
+          };
+        }
+        // Update parent's subtaskIds in local state
+        const newSubtaskIds = parentSubtaskUpdates.get(t.id);
+        if (newSubtaskIds !== undefined) {
+          return { ...t, subtaskIds: newSubtaskIds, updatedAt };
         }
         return t;
       }),

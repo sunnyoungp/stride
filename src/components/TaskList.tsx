@@ -5,7 +5,7 @@
  * Used by: TaskListView, inbox/page, next7/page, and anywhere else tasks are listed.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useMemo } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Task, TaskPriority } from "@/types/index";
 import { useTaskStore } from "@/store/taskStore";
@@ -331,11 +331,9 @@ type TaskRowProps = {
   onRightClick?: (task: Task, pos: { x: number; y: number }) => void;
   /** If true, renders without context menu (caller manages it externally) */
   noContextMenu?: boolean;
-  isStandaloneSubtask?: boolean;
-  parentTitle?: string;
 };
 
-export function TaskRow({ task, onClick, onRightClick, noContextMenu, isStandaloneSubtask, parentTitle }: TaskRowProps) {
+export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowProps) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const selection = useContext(SelectionContext);
@@ -440,26 +438,20 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu, isStandalo
         </button>
 
         {/* Title */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <span
-            className="task-title-text"
-            style={{
-              lineHeight: 1.4,
-              color: isDone ? "var(--fg-faint)" : "var(--fg)",
-              textDecoration: isDone ? "line-through" : "none",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {task.title || "(Untitled)"}
-          </span>
-          {isStandaloneSubtask && parentTitle && (
-            <span style={{ fontSize: 11, color: "var(--fg-faint)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              ↳ parent: {parentTitle}
-            </span>
-          )}
-        </div>
+        <span
+          className="task-title-text"
+          style={{
+            flex: 1,
+            lineHeight: 1.4,
+            color: isDone ? "var(--fg-faint)" : "var(--fg)",
+            textDecoration: isDone ? "line-through" : "none",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {task.title || "(Untitled)"}
+        </span>
 
         {/* Right side: due chip + priority flag */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -621,34 +613,57 @@ function TaskRowsWithSubtasks({
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
 }) {
   const allTasks = useTaskStore((s) => s.tasks);
-  
-  const topLevelTasks = useMemo(() => {
-    return tasks.filter((t: Task) => !t.parentTaskId || !tasks.some(pt => pt.id === t.parentTaskId));
-  }, [tasks]);
 
   return (
     <>
-      {topLevelTasks.map((task: Task, idx: number) => {
+      {tasks.map((task, idx) => {
+        // Only show subtasks that share the same section as the parent
         const subtasks = task.subtaskIds?.length
           ? allTasks.filter(
-              (t) => t.parentTaskId === task.id && t.status !== "done" && t.status !== "cancelled"
+              (t) =>
+                t.parentTaskId === task.id &&
+                t.sectionId === task.sectionId &&
+                t.status !== "done" &&
+                t.status !== "cancelled"
             )
           : [];
-        const isStandalone = !!task.parentTaskId;
-        const parentTitle = isStandalone ? allTasks.find(t => t.id === task.parentTaskId)?.title : undefined;
         return (
           <React.Fragment key={task.id}>
             <div style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}>
-              <TaskRow task={task} isStandaloneSubtask={isStandalone} parentTitle={parentTitle} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+              <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
             </div>
-            {subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                style={{ borderTop: "1px solid var(--border)", paddingLeft: 24 }}
-              >
-                <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+            {subtasks.length > 0 && (
+              <div style={{ position: "relative" }}>
+                {/* Vertical connector line */}
+                <div style={{
+                  position: "absolute",
+                  left: 29,
+                  top: 0,
+                  bottom: 8,
+                  width: 1.5,
+                  background: "var(--border-mid)",
+                  borderRadius: 1,
+                }} />
+                {subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20, position: "relative" }}
+                  >
+                    {/* Horizontal connector arm */}
+                    <div style={{
+                      position: "absolute",
+                      left: 29,
+                      top: "50%",
+                      width: 12,
+                      height: 1.5,
+                      background: "var(--border-mid)",
+                      borderRadius: 1,
+                    }} />
+                    <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </React.Fragment>
         );
       })}

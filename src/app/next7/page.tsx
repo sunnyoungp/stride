@@ -137,7 +137,10 @@ function DroppableDateGroup({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: date });
   const allTasks = useTaskStore((s) => s.tasks);
-  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+  // Only parent tasks are sortable; subtasks ride along with their parent
+  const parentTaskIds = useMemo(() => tasks.filter((t) => !t.parentTaskId).map((t) => t.id), [tasks]);
+  // Count of visible items (parents only for the header badge, to avoid confusion)
+  const parentCount = tasks.filter((t) => !t.parentTaskId).length;
 
   return (
     <div
@@ -156,33 +159,96 @@ function DroppableDateGroup({
       <div style={{ padding: "11px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border)" }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", flex: 1 }}>{label}</span>
         <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 10, background: "var(--bg-subtle)", color: "var(--fg-faint)" }}>
-          {tasks.length}
+          {parentCount}
         </span>
       </div>
 
       {/* Rows */}
-      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+      <SortableContext items={parentTaskIds} strategy={verticalListSortingStrategy}>
         {tasks.length === 0 ? (
           <div style={{ padding: "16px", fontSize: 12, color: "var(--fg-faint)", fontStyle: "italic", textAlign: "center" }}>
             No tasks
           </div>
         ) : (
           tasks.map((task, idx) => {
-            const subtasks = allTasks.filter(
-              (t) => t.parentTaskId === task.id && t.status !== "done" && t.status !== "cancelled"
-            );
-            return (
-              <React.Fragment key={task.id}>
-                <div style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
-                  className="[&:hover_.task-drag-grip]:opacity-40">
-                  <SortableTaskRow task={task} onTaskClick={onTaskClick} onTaskRightClick={onTaskRightClick} />
+            const isSubtask = !!task.parentTaskId;
+            const parentTask = isSubtask
+              ? allTasks.find((t) => t.id === task.parentTaskId)
+              : null;
+            // Is the parent also in this same date group?
+            const parentInSameGroup = isSubtask && tasks.some((t) => t.id === task.parentTaskId);
+
+            if (isSubtask) {
+              // Subtask rendering: connector if parent in same group, parent link label if not
+              return (
+                <div
+                  key={task.id}
+                  style={{
+                    borderTop: idx > 0 ? "1px solid var(--border)" : undefined,
+                    position: "relative",
+                  }}
+                >
+                  {parentInSameGroup ? (
+                    // Indented with connector line
+                    <div style={{ paddingLeft: 20, position: "relative" }}>
+                      <div style={{
+                        position: "absolute",
+                        left: 29,
+                        top: 0,
+                        bottom: "50%",
+                        width: 1.5,
+                        background: "var(--border-mid)",
+                      }} />
+                      <div style={{
+                        position: "absolute",
+                        left: 29,
+                        top: "50%",
+                        width: 10,
+                        height: 1.5,
+                        background: "var(--border-mid)",
+                      }} />
+                      <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                    </div>
+                  ) : (
+                    // Standalone subtask with parent link label
+                    <div>
+                      {parentTask && (
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 3,
+                          paddingLeft: 42,
+                          paddingTop: 6,
+                          paddingBottom: 0,
+                        }}>
+                          <span style={{ fontSize: 10, color: "var(--fg-faint)" }}>↳</span>
+                          <span style={{
+                            fontSize: 10,
+                            color: "var(--fg-faint)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {parentTask.title || "(Untitled)"}
+                          </span>
+                        </div>
+                      )}
+                      <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                    </div>
+                  )}
                 </div>
-                {subtasks.map((sub) => (
-                  <div key={sub.id} style={{ borderTop: "1px solid var(--border)", paddingLeft: 32, opacity: 0.9 }}>
-                    <TaskRow task={sub} onClick={onTaskClick} onRightClick={onTaskRightClick} />
-                  </div>
-                ))}
-              </React.Fragment>
+              );
+            }
+
+            // Regular parent task row (sortable)
+            return (
+              <div
+                key={task.id}
+                style={idx > 0 ? { borderTop: "1px solid var(--border)" } : {}}
+                className="[&:hover_.task-drag-grip]:opacity-40"
+              >
+                <SortableTaskRow task={task} onTaskClick={onTaskClick} onTaskRightClick={onTaskRightClick} />
+              </div>
             );
           })
         )}
@@ -256,15 +322,34 @@ export default function Next7Page() {
     return dates;
   }, [today]);
 
+  // All incomplete tasks including subtasks — subtasks appear in their own date groups
   const incompleteTasks = useMemo(
     () => tasks.filter((t) => t.status !== "done" && t.status !== "cancelled"),
     [tasks]
   );
 
   const overdueTasks = useMemo(
-    () => applySortBy(incompleteTasks.filter((t) => t.dueDate && t.dueDate < today), sortBy),
+    () => applySortBy(
+      incompleteTasks.filter((t) => !t.parentTaskId && t.dueDate && t.dueDate < today),
+      sortBy
+    ),
     [incompleteTasks, today, sortBy]
   );
+
+  // Order tasks in a date bucket: parents first, then their subtasks interleaved
+  const interleaveSubtasks = (bucket: Task[]): Task[] => {
+    const parents = bucket.filter((t) => !t.parentTaskId);
+    const result: Task[] = [];
+    const placed = new Set<string>();
+    for (const parent of parents) {
+      result.push(parent);
+      placed.add(parent.id);
+      const children = bucket.filter((t) => t.parentTaskId === parent.id);
+      for (const child of children) { result.push(child); placed.add(child.id); }
+    }
+    for (const t of bucket) { if (!placed.has(t.id)) result.push(t); }
+    return result;
+  };
 
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>();
@@ -274,9 +359,12 @@ export default function Next7Page() {
       const d = t.dueDate.slice(0, 10);
       if (map.has(d)) map.get(d)!.push(t);
     }
-    // Apply sort within each date bucket
-    for (const [date, bucket] of map) map.set(date, applySortBy(bucket, sortBy));
+    // Sort then interleave subtasks after their parent
+    for (const [date, bucket] of map) {
+      map.set(date, interleaveSubtasks(applySortBy(bucket, sortBy)));
+    }
     return map;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incompleteTasks, next7, sortBy]);
 
   const kanbanColumns: KanbanColumn[] = useMemo(() => {
@@ -441,7 +529,7 @@ export default function Next7Page() {
           orderedTaskIds={[
             ...overdueTasks,
             ...next7.flatMap((d) => tasksByDate.get(d) ?? []),
-          ].map((t) => t.id)}
+          ].filter((t) => !t.parentTaskId).map((t) => t.id)}
         >
           <DndContext
             sensors={sensors}

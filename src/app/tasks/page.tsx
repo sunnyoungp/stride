@@ -82,13 +82,29 @@ function TasksPageInner({
   const today = todayStr();
 
   const incompleteTasks = useMemo(() => {
-    let base = tasks
-      .filter((t) => t.status !== "done" && t.status !== "cancelled");
+    // All incomplete tasks (including subtasks) — used for kanban columns
+    let base = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
     if (todayOnly) base = base.filter((t) => !t.dueDate || t.dueDate.slice(0, 10) === today);
     return applySortBy(base, sortBy);
   }, [tasks, todayOnly, today, sortBy]);
 
   // ── Kanban columns ─────────────────────────────────────────────────────────
+
+  // Orders tasks so subtasks appear immediately after their parent within a column
+  const interleaveSubtasks = (columnTasks: Task[]): Task[] => {
+    const parents = columnTasks.filter((t) => !t.parentTaskId);
+    const result: Task[] = [];
+    const placed = new Set<string>();
+    for (const parent of parents) {
+      result.push(parent);
+      placed.add(parent.id);
+      const children = columnTasks.filter((t) => t.parentTaskId === parent.id);
+      for (const child of children) { result.push(child); placed.add(child.id); }
+    }
+    // Any remaining (orphan subtasks whose parent isn't in this column)
+    for (const t of columnTasks) { if (!placed.has(t.id)) result.push(t); }
+    return result;
+  };
 
   const kanbanColumns = useMemo((): KanbanColumn[] => {
     // When a section is selected, always use subsection grouping regardless of groupBy
@@ -99,13 +115,16 @@ function TasksPageInner({
         .sort((a, b) => a.order - b.order);
       const cols: KanbanColumn[] = subs.map((sub) => ({
         id: sub.id, title: sub.title, color: sub.color ?? "#94a3b8",
-        tasks: sectionTasks.filter((t) => t.subsectionId === sub.id),
+        tasks: interleaveSubtasks(sectionTasks.filter((t) => t.subsectionId === sub.id)),
       }));
-      cols.push({ id: "__general__", title: "General", color: "#94a3b8", tasks: sectionTasks.filter((t) => !t.subsectionId) });
+      cols.push({
+        id: "__general__", title: "General", color: "#94a3b8",
+        tasks: interleaveSubtasks(sectionTasks.filter((t) => !t.subsectionId)),
+      });
       return cols;
     }
 
-    // groupBy: date
+    // groupBy: date — subtasks appear in their own due date column
     if (groupBy === "date") {
       const tom = new Date(); tom.setDate(tom.getDate() + 1);
       const tomorrowStr = localDate(tom);
@@ -115,44 +134,49 @@ function TasksPageInner({
       const laterT = incompleteTasks.filter((t) => t.dueDate && t.dueDate.slice(0, 10) > tomorrowStr);
       const noDate = incompleteTasks.filter((t) => !t.dueDate);
       const cols: KanbanColumn[] = [];
-      if (overdue.length) cols.push({ id: "__overdue__", title: "Overdue", color: "#ef4444", tasks: overdue });
-      cols.push({ id: "__today__", title: "Today", color: "var(--accent)", tasks: todayT });
-      cols.push({ id: "__tomorrow__", title: "Tomorrow", color: "#8b5cf6", tasks: tomorrowT });
-      if (laterT.length) cols.push({ id: "__later__", title: "Later", color: "#94a3b8", tasks: laterT });
-      cols.push({ id: "__nodate__", title: "No Date", color: "#94a3b8", tasks: noDate });
+      if (overdue.length) cols.push({ id: "__overdue__", title: "Overdue", color: "#ef4444", tasks: interleaveSubtasks(overdue) });
+      cols.push({ id: "__today__", title: "Today", color: "var(--accent)", tasks: interleaveSubtasks(todayT) });
+      cols.push({ id: "__tomorrow__", title: "Tomorrow", color: "#8b5cf6", tasks: interleaveSubtasks(tomorrowT) });
+      if (laterT.length) cols.push({ id: "__later__", title: "Later", color: "#94a3b8", tasks: interleaveSubtasks(laterT) });
+      cols.push({ id: "__nodate__", title: "No Date", color: "#94a3b8", tasks: interleaveSubtasks(noDate) });
       return cols;
     }
 
-    // groupBy: priority
+    // groupBy: priority — only parent tasks for non-list groupings
+    const rootIncomplete = incompleteTasks.filter((t) => !t.parentTaskId);
     if (groupBy === "priority") {
       return [
-        { id: "__high__",   title: "High",        color: "var(--priority-high, #ef4444)",   tasks: incompleteTasks.filter((t) => t.priority === "high") },
-        { id: "__medium__", title: "Medium",       color: "var(--priority-medium, #f59e0b)", tasks: incompleteTasks.filter((t) => t.priority === "medium") },
-        { id: "__low__",    title: "Low",          color: "var(--priority-low, #3b82f6)",    tasks: incompleteTasks.filter((t) => t.priority === "low") },
-        { id: "__nopri__",  title: "No Priority",  color: "#94a3b8",                          tasks: incompleteTasks.filter((t) => !t.priority || t.priority === "none") },
+        { id: "__high__",   title: "High",        color: "var(--priority-high, #ef4444)",   tasks: rootIncomplete.filter((t) => t.priority === "high") },
+        { id: "__medium__", title: "Medium",       color: "var(--priority-medium, #f59e0b)", tasks: rootIncomplete.filter((t) => t.priority === "medium") },
+        { id: "__low__",    title: "Low",          color: "var(--priority-low, #3b82f6)",    tasks: rootIncomplete.filter((t) => t.priority === "low") },
+        { id: "__nopri__",  title: "No Priority",  color: "#94a3b8",                          tasks: rootIncomplete.filter((t) => !t.priority || t.priority === "none") },
       ];
     }
 
-    // groupBy: tag
+    // groupBy: tag — only parent tasks
     if (groupBy === "tag") {
-      const allTags = [...new Set(incompleteTasks.flatMap((t) => t.tags ?? []))].sort();
+      const allTags = [...new Set(rootIncomplete.flatMap((t) => t.tags ?? []))].sort();
       const cols: KanbanColumn[] = allTags.map((tag) => ({
         id: `__tag__${tag}`, title: tag, color: "#94a3b8",
-        tasks: incompleteTasks.filter((t) => (t.tags ?? []).includes(tag)),
+        tasks: rootIncomplete.filter((t) => (t.tags ?? []).includes(tag)),
       }));
-      cols.push({ id: "__notag__", title: "No Tag", color: "#94a3b8", tasks: incompleteTasks.filter((t) => !t.tags || t.tags.length === 0) });
+      cols.push({ id: "__notag__", title: "No Tag", color: "#94a3b8", tasks: rootIncomplete.filter((t) => !t.tags || t.tags.length === 0) });
       return cols;
     }
 
-    // groupBy: list (default) — section-based
+    // groupBy: list (default) — section-based, subtasks included in their section
     const cols: KanbanColumn[] = sections
       .slice().sort((a, b) => a.order - b.order)
       .map((s) => ({
         id: s.id, title: s.title, icon: s.icon, color: getSectionAccent(s),
-        tasks: incompleteTasks.filter((t) => t.sectionId === s.id),
+        tasks: interleaveSubtasks(incompleteTasks.filter((t) => t.sectionId === s.id)),
       }));
-    cols.push({ id: "__unsorted__", title: "Inbox", color: "#94a3b8", tasks: incompleteTasks.filter((t) => !t.sectionId) });
+    cols.push({
+      id: "__unsorted__", title: "Inbox", color: "#94a3b8",
+      tasks: interleaveSubtasks(incompleteTasks.filter((t) => !t.sectionId)),
+    });
     return cols;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incompleteTasks, sections, subsections, sectionIdFilter, groupBy, today]);
 
   const handleKanbanMove = async (taskId: string, targetColId: string, newOrder: number) => {
