@@ -279,7 +279,7 @@ export function EventPanel(props: EventPanelProps) {
         {/* Time row */}
         {!form.allDay && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <span style={{ color: "var(--fg-faint)", flexShrink: 0, display: "flex", alignItems: "center" }}>
+            <span style={{ color: "var(--fg-muted)", flexShrink: 0, display: "flex", alignItems: "center" }}>
               <ClockIcon />
             </span>
             <input
@@ -294,7 +294,7 @@ export function EventPanel(props: EventPanelProps) {
                 fontSize: 14, color: "var(--fg)", fontFamily: "inherit", cursor: "pointer",
               }}
             />
-            <span style={{ color: "var(--fg-faint)", fontSize: 13 }}>→</span>
+            <span style={{ color: "var(--fg-muted)", fontSize: 13 }}>→</span>
             <input
               type="time"
               value={form.endTime}
@@ -308,7 +308,7 @@ export function EventPanel(props: EventPanelProps) {
               }}
             />
             {dur > 0 && (
-              <span style={{ fontSize: 12, color: "var(--fg-faint)", flexShrink: 0, marginLeft: 2 }}>
+              <span style={{ fontSize: 12, color: "var(--fg-muted)", flexShrink: 0, marginLeft: 2 }}>
                 {fmtDur(dur)}
               </span>
             )}
@@ -318,7 +318,7 @@ export function EventPanel(props: EventPanelProps) {
         {/* Date row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: form.allDay ? 0 : 22 }}>
           {form.allDay && (
-            <span style={{ color: "var(--fg-faint)", flexShrink: 0, display: "flex", alignItems: "center" }}>
+            <span style={{ color: "var(--fg-muted)", flexShrink: 0, display: "flex", alignItems: "center" }}>
               <ClockIcon />
             </span>
           )}
@@ -339,7 +339,7 @@ export function EventPanel(props: EventPanelProps) {
               fontSize: 14, color: "var(--fg)", fontFamily: "inherit", cursor: "pointer",
             }}
           />
-          <span style={{ fontSize: 12, color: "var(--fg-faint)" }}>{fmtDateLabel(form.date)}</span>
+          <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>{fmtDateLabel(form.date)}</span>
         </div>
 
         {/* All-day · Repeat */}
@@ -380,7 +380,7 @@ export function EventPanel(props: EventPanelProps) {
       {/* Location */}
       <div style={{ padding: "8px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ color: "var(--fg-faint)", flexShrink: 0, display: "flex", alignItems: "center" }}>
+          <span style={{ color: "var(--fg-muted)", flexShrink: 0, display: "flex", alignItems: "center" }}>
             <PinIcon />
           </span>
           <input
@@ -398,7 +398,7 @@ export function EventPanel(props: EventPanelProps) {
       {/* Description */}
       <div style={{ padding: "0 16px 8px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <span style={{ color: "var(--fg-faint)", flexShrink: 0, display: "flex", alignItems: "center", paddingTop: 3 }}>
+          <span style={{ color: "var(--fg-muted)", flexShrink: 0, display: "flex", alignItems: "center", paddingTop: 3 }}>
             <TextIcon />
           </span>
           <textarea
@@ -420,7 +420,7 @@ export function EventPanel(props: EventPanelProps) {
       {/* Color picker */}
       <div style={{ padding: "8px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ color: "var(--fg-faint)", flexShrink: 0, display: "flex", alignItems: "center" }}>
+          <span style={{ color: "var(--fg-muted)", flexShrink: 0, display: "flex", alignItems: "center" }}>
             <PaletteIcon />
           </span>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>

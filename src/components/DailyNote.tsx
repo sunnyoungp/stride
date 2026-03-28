@@ -1088,6 +1088,21 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     if (moveItemRef) moveItemRef.current = handleMoveItem;
   }, [handleMoveItem, moveItemRef]);
 
+  // Handle block move from EditorBubbleMenu
+  useEffect(() => {
+    const h = (e: any) => {
+      const { date, editor: ed } = e.detail;
+      if (ed !== editor) return;
+      const { $from } = ed.state.selection;
+      const node = $from.node($from.depth);
+      const title = node.textContent.trim();
+      const taskId = (node.attrs as any).taskId || null;
+      if (title) void handleMoveItem(title, taskId, date);
+    };
+    window.addEventListener("stride-move-block" as any, h);
+    return () => window.removeEventListener("stride-move-block" as any, h);
+  }, [editor, handleMoveItem]);
+
   /**
    * Delete a checklist item from the editor.
    * For linked items, onUpdate detects the missing taskId and calls deleteTask automatically.
@@ -1188,7 +1203,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         >
           <span
             title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
-            style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
+            style={{ fontSize: 11, color: "var(--fg-muted)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}
           >
             {editorFontSize}px
           </span>
@@ -1217,7 +1232,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
               padding: "3px 8px", borderRadius: 8,
               border: "1px solid var(--border)",
               background: isLinked ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--bg-subtle)",
-              color: isLinked ? "var(--accent)" : "var(--fg-faint)",
+              color: isLinked ? "var(--accent)" : "var(--fg-muted)",
               fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
               transition: "all 0.15s ease",
             }}

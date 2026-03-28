@@ -1,7 +1,7 @@
 "use client";
 import { BubbleMenu } from "@tiptap/react/menus";
 import type { Editor } from "@tiptap/core";
-import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Palette } from "lucide-react";
+import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Palette, Calendar } from "lucide-react";
 import { useState } from "react";
 
 const COLORS = [
@@ -101,6 +101,21 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
             isActive={editor.isActive("link")}
             onClick={toggleLink}
             icon={<LinkIcon size={15} />}
+          />
+        )}
+
+        {!showColor && (
+          <MenuButton
+            isActive={false}
+            onClick={() => {
+              const date = window.prompt("Schedule for date (YYYY-MM-DD)", new Date().toISOString().split("T")[0]);
+              if (date) {
+                // We'll use a custom command or event to handle this in components
+                const event = new CustomEvent("stride-move-block", { detail: { date, editor } });
+                window.dispatchEvent(event);
+              }
+            }}
+            icon={<Calendar size={15} />}
           />
         )}
       </div>

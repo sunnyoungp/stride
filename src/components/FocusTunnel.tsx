@@ -330,7 +330,7 @@ export function FocusTunnel() {
                       animate={{ opacity: isActive ? 1 : 0.4, scale: isActive ? 1 : 0.98, y: 0 }}
                       exit={{ opacity: 0, x: -60, scale: 0.9, transition: { duration: 0.5, ease: "anticipate" } }}
                       transition={{ type: "spring", stiffness: 350, damping: 38 }}
-                      className="relative w-full rounded-[32px] p-10 md:p-12 mb-4 last:mb-0 transition-all duration-700 shadow-none"
+                      className="relative w-full rounded-[32px] p-6 md:p-12 mb-4 last:mb-0 transition-all duration-700 shadow-none"
                       style={{ background: style.bg, border: "1px solid rgba(0,0,0,0.06)" }}
                     >
                       <div className="flex items-center gap-10">

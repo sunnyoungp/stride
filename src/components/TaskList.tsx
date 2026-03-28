@@ -449,6 +449,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
             justifyContent: "center",
             padding: 0,
             transition: "all 150ms ease",
+            marginTop: 2,
           }}
         >
           {isDone && (
@@ -469,7 +470,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
               textDecoration: isDone ? "line-through" : "none",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              whiteSpace: "normal",
             }}
           >
             {task.title || "(Untitled)"}
@@ -483,7 +484,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
                 color: "var(--fg-faint)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                whiteSpace: "normal",
                 marginTop: 1,
               }}>
                 {preview}
@@ -600,11 +601,7 @@ export function AddTaskRow({ sectionId, subsectionId, dueDate }: AddTaskRowProps
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "10px 16px",
-        borderTop: "1px solid var(--border)",
+        display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 16px",
       }}
     >
       <span

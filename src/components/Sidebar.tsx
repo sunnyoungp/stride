@@ -682,7 +682,7 @@ export function Sidebar() {
             <line x1="9" y1="9" x2="13" y2="13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
           <span style={{ flex: 1, textAlign: "left" }}>Search</span>
-          <kbd style={{
+          <kbd className="hidden md:inline-flex" style={{
             fontSize: 10, padding: "1px 5px", borderRadius: 4,
             background: "var(--bg-hover)", border: "1px solid var(--border)",
             color: "var(--fg-faint)", lineHeight: "1.6",

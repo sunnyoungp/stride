@@ -67,7 +67,7 @@ function SettingCard({ id, title, children }: { id: string; title: string; child
 
 function SettingRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--fg)" }}>{label}</div>
         {description && <div style={{ fontSize: 12, color: "var(--fg-faint)", marginTop: 2 }}>{description}</div>}
@@ -1030,10 +1030,12 @@ export default function SettingsPage() {
             }
           }}
         >
-          <AccountBadge />
           <AppearanceCard />
           <NavigationCard />
-          <ShortcutsCard />
+          {/* Shortcuts hidden on mobile per bug audit */}
+          <div className="hidden md:block">
+            <ShortcutsCard />
+          </div>
           <DailyNoteCard />
           <TasksCard />
           <CalendarCard />
