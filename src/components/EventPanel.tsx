@@ -499,7 +499,7 @@ export function EventPanel(props: EventPanelProps) {
           ref={panelRef}
           style={{
             position: "fixed", left: 0, right: 0, bottom: 0,
-            paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+            paddingBottom: "calc(32px + env(safe-area-inset-bottom))",
             background: "var(--bg-card)",
             borderTop: "1px solid var(--border-mid)",
             borderRadius: "16px 16px 0 0",

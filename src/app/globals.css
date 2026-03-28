@@ -308,7 +308,7 @@ a, button, input, select, textarea {
 
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 0;
   margin: 0.1rem 0;
@@ -327,12 +327,9 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li > label {
   flex-shrink: 0;
   user-select: none;
-  /* Match editor line-height (1.15) so checkbox centers on the first line center */
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 1.15em;
-  margin-top: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {

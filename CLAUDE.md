@@ -262,7 +262,11 @@ Headers in task list groups and Kanban columns are sticky. Rules:
 - Background must be **solid** `var(--bg-card)` — no transparency, no tint, so content doesn't bleed through
 - **No `borderBottom`** — TickTick style: no border, no shadow when stuck. Just vertical padding
 - The card/column that wraps the header must use `overflow: "clip"` (not `overflow: "hidden"`) so sticky isn't blocked. `overflow: clip` preserves visual border-radius clipping without creating a scroll container
-- For Kanban columns: move `overflowY: "auto"` to the column container (not the tasks inner div), and set `alignItems: "stretch"` on the outer board so columns fill full height
+- For Kanban columns: use `overflow: "clip"` on the column div (no `overflowY: "auto"`). The outer board wrapper uses `alignItems: "flex-start"` so columns hug their content height. Do NOT use `height: 100%` or `alignItems: "stretch"` on Kanban columns
+
+### Kanban "Add Task" footer button
+- The "+ Add Task" footer inside each Kanban column must use `position: "sticky", bottom: 0, background: "var(--bg-card)", zIndex: 5` so it remains visible when the column is tall
+- This sticky pattern works when a scrollable ancestor (the page) scrolls past the column
 
 ### Task row checkbox alignment
 - The outer row container MUST use `alignItems: "center"` (flexbox) so checkbox and label stay vertically centered
@@ -352,13 +356,15 @@ Root canvas  (var(--color-app-root-bg))  — darkest, behind everything
 ## What NOT to do
 
 - Never use `bg-zinc-*`, `text-zinc-*`, `border-white/*` Tailwind classes for UI surfaces — use CSS variables
-- Never hardcode colors like `#18181b`, `#27272a`, `#3f3f46` — use CSS variables  
+- Never hardcode colors like `#18181b`, `#27272a`, `#3f3f46` — use CSS variables
 - Never write a new context menu from scratch — extend the existing pattern
 - Never add a new modal backdrop — use the standard one above
 - Never use `z-index` values other than those in the hierarchy above
 - Never skip `env(safe-area-inset-bottom)` on fixed bottom elements
 - Never make a feature that only works via right-click with no mobile fallback
 - Never use `font-size` smaller than 16px on mobile inputs
+- **Never add a Read-only / lock toggle to document or note editors** — editors are always editable. The `isLocked` / `setIsLocked` pattern was removed; do not re-introduce it
+- **Never use `marginTop` offsets on checkboxes** in TipTap task lists — use `align-items: center` on the `li` and `label` instead (see globals.css)
 
 ## Before Every Commit
 

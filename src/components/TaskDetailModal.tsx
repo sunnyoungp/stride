@@ -180,7 +180,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           className="fixed z-[100] flex flex-col overflow-hidden"
           style={isMobile ? {
             bottom: keyboardHeight > 0 ? keyboardHeight : 0,
-            paddingBottom: keyboardHeight > 0 ? 0 : "env(safe-area-inset-bottom)",
+            paddingBottom: keyboardHeight > 0 ? 0 : "calc(32px + env(safe-area-inset-bottom))",
             left: 0,
             right: 0,
             maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : "85vh",

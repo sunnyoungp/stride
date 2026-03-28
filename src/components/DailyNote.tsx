@@ -573,16 +573,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   useEffect(() => { noteRef.current         = note;       }, [note]);
   useEffect(() => { isLinkedRef.current     = isLinked;   }, [isLinked]);
 
-  const [formatPanelOpen, setFormatPanelOpen] = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("stride-format-panel-open") === "true";
-    return false;
-  });
+  const [formatPanelOpen, setFormatPanelOpen] = useState(false);
   const toggleFormatPanel = () => {
-    setFormatPanelOpen(prev => {
-      const next = !prev;
-      localStorage.setItem("stride-format-panel-open", String(next));
-      return next;
-    });
+    setFormatPanelOpen(prev => !prev);
   };
 
   // Escape clears multi-select
@@ -730,7 +723,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     }
   }, []); // stable — reads only refs
 
-  const [isLocked, setIsLocked] = useState(true);
+
 
   // Slash command TipTap extension — created once, captures stable refs/setters
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -754,7 +747,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         FontSizeKeyboardExtension,
       ],
       immediatelyRender: false,
-      editable: false, // Default to read-only
+      editable: true, // Always editable
       content: note?.content ? safeParseJson(note.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
@@ -942,13 +935,10 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       },
       onBlur: ({ editor }) => { void syncNewTaskItems(editor); },
     },
-    [note?.id, isLocked],
+    [note?.id],
   );
 
-  // Sync isLocked state with TipTap editor
-  useEffect(() => {
-    if (editor) editor.setEditable(!isLocked);
-  }, [editor, isLocked]);
+
 
   // Keep editorRef current
   useEffect(() => { editorRef.current = editor ?? null; }, [editor]);
@@ -1203,12 +1193,19 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }
 
   return (
-    <div className="group relative mx-auto w-full max-w-2xl px-8 py-8">
+    <div className="group relative flex flex-col h-full w-full max-w-2xl mx-auto overflow-hidden">
       {/* Floating controls — subtle, only visible on hover */}
       {!hideHeader && (
         <div
-          className="absolute flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-          style={{ top: 20, right: 32, zIndex: 10 }}
+          className="absolute flex items-center gap-2 transition-opacity duration-200"
+          style={{
+            bottom: 24,
+            left: 24,
+            zIndex: 100,
+            opacity: 0.8
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.8")}
         >
           <span
             title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
@@ -1216,31 +1213,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           >
             {editorFontSize}px
           </span>
-          <button
-            type="button"
-            onClick={() => setIsLocked(!isLocked)}
-            title={isLocked ? "Unlock to edit" : "Lock editor (Read-only)"}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "3px 8px", borderRadius: 8,
-              border: "1px solid var(--border)",
-              background: isLocked ? "var(--bg-subtle)" : "var(--bg-active)",
-              color: isLocked ? "var(--fg-muted)" : "var(--accent)",
-              fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            {isLocked ? (
-              <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
-                <path d="M5 6V4.5a2.5 2.5 0 1 1 5 0V6m-7 0h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            ) : (
-              <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
-                <path d="M10.5 4.5V3a2.5 2.5 0 0 0-5 0v1.5m-.5 2h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM5 9v2M10 9v2" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            )}
-            {isLocked ? "Read-only" : "Editing"}
-          </button>
+
           <button
             type="button"
             data-format-trigger
@@ -1287,6 +1260,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           if (editor && editor.view && editor.view.dom.contains(e.target as Node)) return;
           lassoStartRef.current = { x: e.clientX, y: e.clientY };
         }}
+        className="flex-1 overflow-y-auto px-8 py-8"
         style={{ position: "relative" }}
       >
         {editor ? (

@@ -190,7 +190,7 @@ export default function NotesPage() {
             flex: 1, overflow: "auto",
             paddingBottom: calendarOpen ? 0 : "calc(56px + env(safe-area-inset-bottom))",
           }}>
-            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader moveItemRef={dailyNoteMoveRef} />
+            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} />
           </div>
         </div>
 
@@ -252,7 +252,7 @@ export default function NotesPage() {
             {dateNav}
             {/* Editor body */}
             <div style={{ flex: 1, overflow: "auto" }}>
-              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} hideHeader moveItemRef={dailyNoteMoveRef} />
+              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} />
             </div>
           </div>
         </div>

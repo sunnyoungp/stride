@@ -672,7 +672,7 @@ function TaskRowsWithSubtasks({
                 {subtasks.map((subtask) => (
                   <div
                     key={subtask.id}
-                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20, paddingTop: 2, paddingBottom: 2 }}
+                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20, paddingTop: 6, paddingBottom: 6 }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
                     <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />

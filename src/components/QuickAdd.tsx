@@ -276,7 +276,7 @@ export function QuickAdd() {
           borderTopRightRadius: 16,
           border: "1px solid var(--border-mid)",
           bottom: keyboardHeight > 0 ? keyboardHeight : 0,
-          paddingBottom: keyboardHeight > 0 ? 0 : "env(safe-area-inset-bottom)",
+          paddingBottom: keyboardHeight > 0 ? 0 : "calc(32px + env(safe-area-inset-bottom))",
           transition: "bottom 200ms ease",
         } : {
           marginBottom: 40,

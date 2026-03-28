@@ -471,7 +471,7 @@ function KanbanColumnView({
         borderRadius: 14, background: "var(--bg-card)",
         border: isOver ? `2px solid var(--accent)` : "1px solid var(--border)",
         transition: "border 150ms ease",
-        overflowY: "auto",
+        overflow: "clip",
       }}
     >
       {/* Header */}
@@ -526,9 +526,9 @@ function KanbanColumnView({
         </SortableContext>
       </div>
 
-      {/* Footer */}
+      {/* Footer — sticky so it's always visible at the bottom of the column */}
       {onAddTask && (
-        <div style={{ padding: "8px 12px 12px" }}>
+        <div style={{ padding: "8px 12px 12px", position: "sticky", bottom: 0, background: "var(--bg-card)", zIndex: 5 }}>
           {addingAt === "bottom" ? (
             <InlineInputCard onCommit={commit} onCancel={() => setAddingAt(null)} />
           ) : (
@@ -630,8 +630,8 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
           gap: 20,
           overflowX: "auto",
           padding: 16,
-          height: "100%",
-          alignItems: "stretch",
+          minHeight: "100%",
+          alignItems: "flex-start",
           WebkitOverflowScrolling: "touch",
         }}
       >

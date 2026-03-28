@@ -116,16 +116,9 @@ export function DocumentEditor({ documentId }: Props) {
     }
   }, [documents, documentId]);
 
-  const [formatPanelOpen, setFormatPanelOpen] = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("stride-format-panel-open") === "true";
-    return false;
-  });
+  const [formatPanelOpen, setFormatPanelOpen] = useState(false);
   const toggleFormatPanel = () => {
-    setFormatPanelOpen(prev => {
-      const next = !prev;
-      localStorage.setItem("stride-format-panel-open", String(next));
-      return next;
-    });
+    setFormatPanelOpen(prev => !prev);
   };
 
   useEffect(() => {
@@ -162,7 +155,7 @@ export function DocumentEditor({ documentId }: Props) {
 
   const syncedBadge = Boolean(doc?.linkedTaskIds && doc.linkedTaskIds.length > 0);
 
-  const [isLocked, setIsLocked] = useState(true);
+
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const slashCommandExtension = useMemo(() => createSlashCommandExtension(slashPropsRef, slashMenuRef, setSlashMenu), []);
@@ -183,7 +176,7 @@ export function DocumentEditor({ documentId }: Props) {
         FontSizeKeyboardExtension,
       ],
       immediatelyRender: false,
-      editable: false, // Default to read-only
+      editable: true, // Always editable
       content: doc?.content ? safeParseJson(doc.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
@@ -266,10 +259,7 @@ export function DocumentEditor({ documentId }: Props) {
     [doc?.id],
   );
 
-  // Sync isLocked state with TipTap editor
-  useEffect(() => {
-    if (editor) editor.setEditable(!isLocked);
-  }, [editor, isLocked]);
+
 
   useEffect(() => {
     if (!editor || !doc) return;
@@ -397,32 +387,7 @@ export function DocumentEditor({ documentId }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsLocked(!isLocked)}
-            title={isLocked ? "Unlock to edit" : "Lock editor (Read-only)"}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "4px 10px", borderRadius: 8,
-              border: "1px solid var(--border)",
-              background: isLocked ? "var(--bg-subtle)" : "var(--bg-active)",
-              color: isLocked ? "var(--fg-muted)" : "var(--accent)",
-              fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
-              transition: "all 0.15s ease",
-              marginTop: "4px"
-            }}
-          >
-            {isLocked ? (
-              <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                <path d="M5 6V4.5a2.5 2.5 0 1 1 5 0V6m-7 0h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                <path d="M10.5 4.5V3a2.5 2.5 0 0 0-5 0v1.5m-.5 2h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM5 9v2M10 9v2" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            )}
-            {isLocked ? "Read-only" : "Editing"}
-          </button>
+
           {syncedBadge ? (
             <div className="mt-1 rounded-lg px-3 py-1 text-xs font-medium flex-shrink-0 hidden md:block" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
               Synced
