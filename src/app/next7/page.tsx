@@ -183,19 +183,16 @@ function DroppableDateGroup({
               return (
                 <div
                   key={task.id}
-                  style={{
-                    borderTop: idx > 0 ? "1px solid var(--border)" : undefined,
-                  }}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
                   {parentInSameGroup ? (
-                    // Indented — simple left padding, no connector line
-                    <div style={{ paddingLeft: 20, paddingTop: 2, paddingBottom: 2 }}>
-                      <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                    // Indented — simple left padding, no border, compact spacing
+                    <div style={{ paddingLeft: 20 }}>
+                      <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} compact />
                     </div>
                   ) : (
                     // Standalone subtask with parent link label
-                    <div>
+                    <div style={{ borderTop: "1px solid var(--border)" }}>
                       {parentTask && (
                         <div style={{
                           display: "flex",
@@ -217,7 +214,7 @@ function DroppableDateGroup({
                           </span>
                         </div>
                       )}
-                      <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                      <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} compact />
                     </div>
                   )}
                 </div>

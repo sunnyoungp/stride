@@ -352,9 +352,11 @@ type TaskRowProps = {
   onRightClick?: (task: Task, pos: { x: number; y: number }) => void;
   /** If true, renders without context menu (caller manages it externally) */
   noContextMenu?: boolean;
+  /** If true, uses compact vertical padding (5px) instead of standard (11px) for subtask rows */
+  compact?: boolean;
 };
 
-export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowProps) {
+export function TaskRow({ task, onClick, onRightClick, noContextMenu, compact }: TaskRowProps) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const selection = useContext(SelectionContext);
@@ -416,7 +418,7 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
           display: "flex",
           alignItems: "center",
           gap: 10,
-          padding: "11px 16px",
+          padding: compact ? "5px 16px" : "11px 16px",
           cursor: "pointer",
           transition: "background 120ms ease",
           background: rowBg,
@@ -672,10 +674,10 @@ function TaskRowsWithSubtasks({
                 {subtasks.map((subtask) => (
                   <div
                     key={subtask.id}
-                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20, paddingTop: 6, paddingBottom: 6 }}
+                    style={{ paddingLeft: 20 }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
-                    <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />
+                    <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} compact />
                   </div>
                 ))}
               </div>

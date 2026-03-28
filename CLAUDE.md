@@ -8,6 +8,18 @@
 
 ---
 
+## ⚠️ CROSS-TAB CONSISTENCY — CRITICAL RULE
+
+**Any UI change to task rows, subtasks, headers, or list layout MUST be applied consistently across ALL FOUR tabs simultaneously:**
+- **Dashboard** (`/app/page.tsx`) — uses `TaskListView`
+- **Inbox** (`/app/inbox/page.tsx`) — uses `TaskGroup` / `TaskRowsWithSubtasks`
+- **Next 7 Days** (`/app/next7/page.tsx`) — uses `DroppableDateGroup`
+- **Tasks** (`/app/tasks/page.tsx`) — uses `TaskListView`
+
+Never fix spacing, borders, checkbox styles, or subtask rendering in only one tab. Always audit and update all four.
+
+---
+
 ## Kanban — applies to ALL three pages
 
 Kanban view exists on **Tasks** (`/app/tasks/page.tsx`), **Inbox** (`/app/inbox/page.tsx`), and **Next 7 Days** (`/app/next7/page.tsx`). All three share the same `KanbanBoard` component.
@@ -268,10 +280,21 @@ Headers in task list groups and Kanban columns are sticky. Rules:
 - The "+ Add Task" footer inside each Kanban column must use `position: "sticky", bottom: 0, background: "var(--bg-card)", zIndex: 5` so it remains visible when the column is tall
 - This sticky pattern works when a scrollable ancestor (the page) scrolls past the column
 
-### Task row checkbox alignment
+### Task row checkbox alignment (UI list rows)
 - The outer row container MUST use `alignItems: "center"` (flexbox) so checkbox and label stay vertically centered
 - **Never use `marginTop` offsets** on the checkbox to nudge it into place — those break when font size changes
 - Remove any `marginTop` from checkbox buttons; rely on the flex `alignItems: center` of the parent
+
+### Checkbox alignment in the TipTap document/notes editor
+- Use `align-items: flex-start` on the `li` element (NOT `center`) — centering misaligns with multi-line text
+- Add `margin-top: 3px` to the `label` element to optically align the checkbox with the first line's cap height
+- This ensures correct alignment for both single-line and multi-line task items
+- See `globals.css` `.ProseMirror ul[data-type="taskList"] li` and `li > label`
+
+### Subtask rows in list view
+- **No divider lines between a parent task and its subtasks.** `borderTop` separators must only appear between top-level parent task groups (i.e., above the first row of a new parent group), never above individual subtask rows
+- Subtask rows use the `compact` prop on `TaskRow` (`padding: "5px 16px"` instead of `"11px 16px"`) to match the compact spacing in `TaskListView`
+- Subtask indentation: wrap the `<TaskRow compact />` in a `<div style={{ paddingLeft: 20 }}>` container
 
 ---
 
@@ -364,7 +387,8 @@ Root canvas  (var(--color-app-root-bg))  — darkest, behind everything
 - Never make a feature that only works via right-click with no mobile fallback
 - Never use `font-size` smaller than 16px on mobile inputs
 - **Never add a Read-only / lock toggle to document or note editors** — editors are always editable. The `isLocked` / `setIsLocked` pattern was removed; do not re-introduce it
-- **Never use `marginTop` offsets on checkboxes** in TipTap task lists — use `align-items: center` on the `li` and `label` instead (see globals.css)
+- **Never use `align-items: center` on TipTap task list `li` elements** — use `flex-start` + `margin-top: 3px` on the label instead (see globals.css). `center` misaligns checkboxes on multi-line items
+- **Never add `borderTop` dividers between a parent task and its subtasks** — only between top-level parent groups
 
 ## Before Every Commit
 
