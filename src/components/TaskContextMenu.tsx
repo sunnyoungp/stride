@@ -62,7 +62,8 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
     onClose();
   };
   const markComplete = async () => { await updateTask(task.id, { status: "done" }); onClose(); };
-  const onDelete = async (e: React.MouseEvent) => {
+  const onDelete = async (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (window.confirm("Delete this task?")) {
       await deleteTask(task.id);

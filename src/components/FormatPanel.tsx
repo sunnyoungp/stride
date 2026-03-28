@@ -40,8 +40,12 @@ export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanel
     const applyFont = fontMap[docFont] || fontMap.system;
     
     // Applies font directly to the ProseMirror contenteditable element
-    if (editor?.view?.dom) {
-      editor.view.dom.style.fontFamily = applyFont;
+    try {
+      if (editor && editor.view && editor.view.dom) {
+        editor.view.dom.style.fontFamily = applyFont;
+      }
+    } catch (e) {
+      console.warn("Tiptap view not ready in FormatPanel:", e);
     }
   }, [docFont, editor]);
 

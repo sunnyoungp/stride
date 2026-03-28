@@ -628,7 +628,7 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
           display: "flex",
           gap: 20,
           overflowX: "auto",
-          overflowY: "hidden",
+          overflowY: "auto",
           padding: 16,
           height: "100%",
           alignItems: "flex-start",

@@ -80,6 +80,7 @@ function scanTaskItems(editor: Editor): TaskItemScan[] {
 }
 
 function writeTaskIdToNode(editor: Editor, pos: number, taskId: string, attrs: Record<string, unknown>) {
+  if (!editor.view) return;
   editor.view.dispatch(
     editor.view.state.tr
       .setNodeMarkup(pos, undefined, { ...attrs, taskId })
@@ -132,7 +133,7 @@ function removeNodeFromEditor(editor: Editor, title: string): boolean {
       return false;
     }
   });
-  if (found) editor.view.dispatch(tr);
+  if (found && editor.view) editor.view.dispatch(tr);
   return found;
 }
 
@@ -202,7 +203,7 @@ function DnSelectionBar({
     const ed = editorRef.current;
     if (!ed) return;
     const items = taskBlocks();
-    const tr = ed.view.state.tr;
+    const tr = ed.state.tr;
     let modified = false;
     items.forEach(({ pos, checked, taskId }) => {
       if (!checked) {
@@ -213,7 +214,7 @@ function DnSelectionBar({
         if (taskId) void updateTask(taskId, { status: "done" });
       }
     });
-    if (modified) { tr.setMeta("addToHistory", false); ed.view.dispatch(tr); }
+    if (modified && ed.view) { tr.setMeta("addToHistory", false); ed.view.dispatch(tr); }
     onClear();
   };
 
@@ -237,14 +238,14 @@ function DnSelectionBar({
     if (!ed) return;
     // Sort descending so positions stay valid as we remove nodes
     const items = getSelectedBlocks().sort((a, b) => b.pos - a.pos);
-    const tr = ed.view.state.tr;
+    const tr = ed.state.tr;
     items.forEach(({ pos }) => {
       try {
         const node = tr.doc.nodeAt(pos);
         if (node) tr.delete(pos, pos + node.nodeSize);
       } catch { /* ignore */ }
     });
-    ed.view.dispatch(tr);
+    if (ed.view) ed.view.dispatch(tr);
     // onUpdate will detect missing taskIds and call deleteTask automatically
     onClear();
   };
@@ -1250,7 +1251,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         onMouseDown={(e) => {
           // Only start lasso if clicking outside the editor content (on padding/empty area)
           if (e.button !== 0) return;
-          if (editor && editor.view.dom.contains(e.target as Node)) return;
+          if (editor && editor.view && editor.view.dom.contains(e.target as Node)) return;
           lassoStartRef.current = { x: e.clientX, y: e.clientY };
         }}
         style={{ position: "relative" }}

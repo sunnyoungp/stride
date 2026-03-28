@@ -194,10 +194,10 @@ function AgendaDayCard({
         <div style={{ fontSize: 28, fontWeight: 300, lineHeight: 1, color: isToday ? "var(--accent)" : "var(--fg)" }}>
           {dayNum}
         </div>
-        <div style={{ fontSize: 11, color: "var(--fg-faint)", lineHeight: 1.5 }}>{monthStr}</div>
+        <div style={{ fontSize: 11, color: "var(--fg-muted)", lineHeight: 1.5 }}>{monthStr}</div>
         {isToday
           ? <div style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", lineHeight: 1.4 }}>Today</div>
-          : <div style={{ fontSize: 11, color: "var(--fg-faint)", lineHeight: 1.4 }}>{weekdayStr}</div>
+          : <div style={{ fontSize: 11, color: "var(--fg-muted)", lineHeight: 1.4 }}>{weekdayStr}</div>
         }
       </div>
 
@@ -727,9 +727,9 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 26, height: 26, borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-subtle)",
-                  color: "var(--fg-muted)", cursor: "pointer", flexShrink: 0,
+                  border: "1px solid var(--border-strong)",
+                  background: "var(--bg-card)",
+                  color: "var(--fg)", cursor: "pointer", flexShrink: 0,
                 }}
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -754,9 +754,9 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 26, height: 26, borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-subtle)",
-                  color: "var(--fg-muted)", cursor: "pointer", flexShrink: 0,
+                  border: "1px solid var(--border-strong)",
+                  background: "var(--bg-card)",
+                  color: "var(--fg)", cursor: "pointer", flexShrink: 0,
                 }}
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -796,7 +796,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 </div>
               ) : (
                 <span style={{
-                  fontSize: "0.75rem", fontWeight: 600,
+                  fontSize: "0.80rem", fontWeight: 700,
                   color: isViewingToday ? "var(--accent)" : "var(--fg)",
                   marginLeft: 2,
                 }}>

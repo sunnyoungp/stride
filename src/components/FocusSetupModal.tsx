@@ -175,15 +175,16 @@ export function FocusSetupModal() {
               </div>
 
               {/* Playlist */}
-              <div style={{
-                display: "flex", flexDirection: "column", borderRadius: "12px",
-                border: `1px ${playlist.length === 0 ? "dashed" : "solid"} var(--border)`,
-                background: playlist.length === 0 ? "transparent" : "var(--bg-subtle)",
-                flex: 1, minHeight: 0,
-                opacity: playlist.length === 0 ? 0.6 : 1,
-                transition: "all 300ms ease",
-                overflow: "hidden",
-              }}>
+              <div 
+                className="flex flex-col rounded-xl overflow-hidden"
+                style={{
+                  border: `1.5px ${playlist.length === 0 ? "dashed" : "solid"} var(--border)`,
+                  background: playlist.length === 0 ? "transparent" : "var(--bg-subtle)",
+                  flex: 1, minHeight: 0,
+                  opacity: playlist.length === 0 ? 0.6 : 1,
+                  transition: "all 300ms ease",
+                }}
+              >
                 <div style={{
                   padding: "10px 16px",
                   borderBottom: "1px solid var(--border)",
@@ -239,18 +240,18 @@ export function FocusSetupModal() {
           <button
             onClick={handleStart}
             disabled={playlist.length === 0}
+            className="w-full active:scale-[0.98] transition-all"
             style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: "12px",
+              padding: "16px 20px",
+              borderRadius: "14px",
               border: "none",
               background: "var(--accent)",
               color: "#fff",
-              fontSize: "13px",
+              fontSize: "15px",
               fontWeight: 600,
               cursor: playlist.length === 0 ? "not-allowed" : "pointer",
               opacity: playlist.length === 0 ? 0.35 : 1,
-              transition: "opacity 150ms",
+              touchAction: "manipulation",
             }}
           >
             Start Session →
