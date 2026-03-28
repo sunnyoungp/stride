@@ -18,10 +18,12 @@ export function MobileFABs() {
   }, []);
 
   const keyboardHeight = Math.max(0, windowHeight - vpHeight);
+  const isKeyboardUp = keyboardHeight > 20;
+
   const TAB_BAR_H = 72;
-  const bottomOffset = keyboardHeight > 0
+  const bottomOffset = isKeyboardUp
     ? keyboardHeight + 16
-    : TAB_BAR_H + 16;
+    : TAB_BAR_H + 8; // Slightly tighter to bottom bar
 
   const openNewTask = () => {
     window.dispatchEvent(new Event("stride:open-quickadd"));
@@ -33,10 +35,11 @@ export function MobileFABs() {
 
   return (
     <div
-      className="md:hidden fixed right-4 z-40 flex flex-col items-center gap-3"
+      className={`md:hidden fixed right-4 z-40 flex flex-col items-center gap-3 transition-all duration-300 ${
+        isKeyboardUp ? "opacity-0 pointer-events-none scale-90 translate-y-4" : "opacity-100 scale-100 translate-y-0"
+      }`}
       style={{
         bottom: `calc(${bottomOffset}px + env(safe-area-inset-bottom))`,
-        transition: "bottom 200ms ease",
       }}
     >
       {/* Focus Mode FAB (top) */}
@@ -44,11 +47,11 @@ export function MobileFABs() {
         type="button"
         onClick={openFocusModal}
         aria-label="Focus Mode"
-        className="flex h-12 w-12 items-center justify-center rounded-full transition-transform active:scale-95"
+        className="flex h-12 w-12 items-center justify-center rounded-full transition-transform active:scale-95 shadow-xl"
         style={{
           background: "var(--accent)",
           color: "white",
-          boxShadow: "0 4px 16px rgba(232,96,60,0.45)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
         }}
       >
         {/* Lightning bolt */}
@@ -62,11 +65,11 @@ export function MobileFABs() {
         type="button"
         onClick={openNewTask}
         aria-label="New Task"
-        className="flex h-12 w-12 items-center justify-center rounded-full transition-transform active:scale-95"
+        className="flex h-12 w-12 items-center justify-center rounded-full transition-transform active:scale-95 shadow-xl"
         style={{
           background: "var(--accent)",
           color: "white",
-          boxShadow: "0 4px 16px rgba(232,96,60,0.45)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
         }}
       >
         {/* Plus icon */}

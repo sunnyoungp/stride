@@ -169,22 +169,22 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           onClick={() => { save(); onClose(); }}
         />
       )}
-      <div
-        ref={modalRef}
-        onClick={(e) => e.stopPropagation()}
-        className="fixed z-50 flex flex-col overflow-hidden"
-        style={isMobile ? {
-          bottom: keyboardHeight,
-          left: 0,
-          right: 0,
-          maxHeight: "85vh",
-          background: "var(--bg-card)",
-          borderTop: "1px solid var(--border-mid)",
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          boxShadow: "var(--shadow-float)",
-          transition: "bottom 200ms ease",
-        } : {
+        <div
+          ref={modalRef}
+          onClick={(e) => e.stopPropagation()}
+          className="fixed z-50 flex flex-col overflow-hidden"
+          style={isMobile ? {
+            bottom: keyboardHeight > 0 ? keyboardHeight : "env(safe-area-inset-bottom)",
+            left: 0,
+            right: 0,
+            maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : "85vh",
+            background: "var(--bg-card)",
+            borderTop: "1px solid var(--border-mid)",
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            boxShadow: "var(--shadow-float)",
+            transition: "bottom 200ms ease",
+          } : {
           left: pos.x,
           top:  pos.y,
           width: 400,

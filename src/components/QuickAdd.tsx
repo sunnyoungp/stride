@@ -268,8 +268,10 @@ export function QuickAdd() {
         <div
           className="cmd-palette fixed left-0 right-0 overflow-auto"
           style={{
-            bottom: keyboardHeight,
-            maxHeight: `calc(100vh - ${keyboardHeight}px - 40px)`,
+            bottom: keyboardHeight > 0 ? keyboardHeight : "env(safe-area-inset-bottom)",
+            maxHeight: keyboardHeight > 0 
+              ? `calc(100vh - ${keyboardHeight}px - 20px)`
+              : "calc(90vh - env(safe-area-inset-bottom))",
             background: "var(--bg-card)",
             borderTop: "1px solid var(--border-mid)",
             borderTopLeftRadius: 20,

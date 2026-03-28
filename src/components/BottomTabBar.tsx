@@ -161,11 +161,14 @@ export function BottomTabBar() {
     <>
       {/* Bottom tab bar — mobile only */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center border-t border-[var(--border)]"
+        className="md:hidden fixed z-50 flex items-center shadow-lg transition-transform duration-300 left-4 right-4"
         style={{
-          background: "var(--bg-sidebar)",
-          height: "calc(72px + env(safe-area-inset-bottom))",
-          paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-mid)",
+          borderRadius: "24px",
+          height: "64px",
+          bottom: "calc(12px + env(safe-area-inset-bottom))",
+          paddingBottom: "0",
         }}
       >
         {tabs.map((tab) => {
@@ -213,7 +216,7 @@ export function BottomTabBar() {
           <div
             className="md:hidden fixed left-0 right-0 z-49 rounded-t-2xl py-2"
             style={{
-              bottom: "calc(72px + env(safe-area-inset-bottom))",
+              bottom: "calc(88px + env(safe-area-inset-bottom))",
               background: "var(--bg-card)",
               border: "1px solid var(--border-mid)",
               boxShadow: "var(--shadow-lg)",

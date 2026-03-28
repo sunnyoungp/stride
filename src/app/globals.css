@@ -494,8 +494,15 @@ a, button, input, select, textarea {
 /* Scrollable content — extra bottom padding so content isn't hidden behind tab bar */
 @media (max-width: 767px) {
   .mobile-scroll-content {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom) + 16px) !important;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
   }
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
 }
 
 /* ── Mobile: prevent iOS auto-zoom on focused inputs ── */
