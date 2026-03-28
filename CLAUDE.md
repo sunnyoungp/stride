@@ -256,6 +256,19 @@ Mobile inputs MUST use `fontSize: "16px"` to prevent iOS zoom.
 <div className="h-px" style={{ background: "var(--border)" }} />
 ```
 
+### Sticky section/group headers
+Headers in task list groups and Kanban columns are sticky. Rules:
+- `position: "sticky", top: 0, zIndex: 10`
+- Background must be **solid** `var(--bg-card)` — no transparency, no tint, so content doesn't bleed through
+- **No `borderBottom`** — TickTick style: no border, no shadow when stuck. Just vertical padding
+- The card/column that wraps the header must use `overflow: "clip"` (not `overflow: "hidden"`) so sticky isn't blocked. `overflow: clip` preserves visual border-radius clipping without creating a scroll container
+- For Kanban columns: move `overflowY: "auto"` to the column container (not the tasks inner div), and set `alignItems: "stretch"` on the outer board so columns fill full height
+
+### Task row checkbox alignment
+- The outer row container MUST use `alignItems: "center"` (flexbox) so checkbox and label stay vertically centered
+- **Never use `marginTop` offsets** on the checkbox to nudge it into place — those break when font size changes
+- Remove any `marginTop` from checkbox buttons; rely on the flex `alignItems: center` of the parent
+
 ---
 
 ## Layout — Floating Panel System

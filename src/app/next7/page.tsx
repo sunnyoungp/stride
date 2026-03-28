@@ -150,13 +150,13 @@ function DroppableDateGroup({
         borderRadius: 16,
         border: isOver ? "1px solid var(--accent)" : "1px solid var(--border)",
         boxShadow: isOver ? "0 0 0 2px var(--accent-bg-strong)" : "var(--shadow-sm)",
-        overflow: "hidden",
+        overflow: "clip",
         flexShrink: 0,
         transition: "border 120ms ease, box-shadow 120ms ease",
       }}
     >
       {/* Header */}
-      <div style={{ padding: "11px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "11px 16px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, zIndex: 10, background: "var(--bg-card)" }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", flex: 1 }}>{label}</span>
         <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 10, background: "var(--bg-subtle)", color: "var(--fg-faint)" }}>
           {parentCount}
@@ -190,7 +190,7 @@ function DroppableDateGroup({
                 >
                   {parentInSameGroup ? (
                     // Indented — simple left padding, no connector line
-                    <div style={{ paddingLeft: 20 }}>
+                    <div style={{ paddingLeft: 20, paddingTop: 2, paddingBottom: 2 }}>
                       <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} />
                     </div>
                   ) : (

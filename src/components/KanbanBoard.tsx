@@ -275,8 +275,8 @@ function KanbanCardVisual({
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
-                  paddingTop: 4,
-                  paddingBottom: 4,
+                  paddingTop: 6,
+                  paddingBottom: 6,
                   cursor: "pointer",
                   borderRadius: 6,
                 }}
@@ -471,10 +471,11 @@ function KanbanColumnView({
         borderRadius: 14, background: "var(--bg-card)",
         border: isOver ? `2px solid var(--accent)` : "1px solid var(--border)",
         transition: "border 150ms ease",
+        overflowY: "auto",
       }}
     >
       {/* Header */}
-      <div style={{ background: `${color}14`, padding: "12px 16px", borderRadius: "12px 12px 0 0" }}>
+      <div style={{ background: "var(--bg-card)", padding: "12px 16px", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {column.icon && <span style={{ fontSize: 14 }}>{column.icon}</span>}
           <span style={{ fontWeight: 600, fontSize: 13, color: "var(--fg)" }}>{column.title}</span>
@@ -500,7 +501,7 @@ function KanbanColumnView({
       </div>
 
       {/* Tasks area */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8, minHeight: 80 }}>
+      <div style={{ flex: 1, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8, minHeight: 80 }}>
         {addingAt === "top" && (
           <InlineInputCard onCommit={commit} onCancel={() => setAddingAt(null)} />
         )}
@@ -628,10 +629,9 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
           display: "flex",
           gap: 20,
           overflowX: "auto",
-          overflowY: "auto",
           padding: 16,
           height: "100%",
-          alignItems: "flex-start",
+          alignItems: "stretch",
           WebkitOverflowScrolling: "touch",
         }}
       >

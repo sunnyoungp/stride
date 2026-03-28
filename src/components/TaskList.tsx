@@ -449,7 +449,6 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu }: TaskRowP
             justifyContent: "center",
             padding: 0,
             transition: "all 150ms ease",
-            marginTop: 2,
           }}
         >
           {isDone && (
@@ -673,7 +672,7 @@ function TaskRowsWithSubtasks({
                 {subtasks.map((subtask) => (
                   <div
                     key={subtask.id}
-                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20 }}
+                    style={{ borderTop: "1px solid var(--border)", paddingLeft: 20, paddingTop: 2, paddingBottom: 2 }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
                     <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} />
@@ -731,7 +730,7 @@ export function TaskGroup({
         borderRadius: 16,
         border: "1px solid var(--border)",
         boxShadow: "var(--shadow-sm)",
-        overflow: "hidden",
+        overflow: "clip",
         flexShrink: 0,
       }}
     >
@@ -742,8 +741,10 @@ export function TaskGroup({
           display: "flex",
           alignItems: "center",
           gap: 8,
-          borderBottom: "1px solid var(--border)",
-          background: isOverdueGroup ? "rgba(239,68,68,0.06)" : "transparent",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--bg-card)",
         }}
       >
         {accentColor && (
