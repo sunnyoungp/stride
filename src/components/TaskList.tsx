@@ -671,10 +671,10 @@ function TaskRowsWithSubtasks({
             </div>
             {subtasks.length > 0 && (
               <div>
-                {subtasks.map((subtask) => (
+                {subtasks.map((subtask, stIdx) => (
                   <div
                     key={subtask.id}
-                    style={{ paddingLeft: 20 }}
+                    style={{ paddingLeft: 20, ...(stIdx === subtasks.length - 1 ? { paddingBottom: 6 } : {}) }}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
                     <TaskRow task={subtask} onClick={onTaskClick} onRightClick={onTaskRightClick} compact />

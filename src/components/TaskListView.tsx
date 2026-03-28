@@ -473,7 +473,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
         {/* Subtasks — indented, lightweight */}
         {hasSubtasks && expanded && (
           <div>
-            {subtaskItems.map((st) => {
+            {subtaskItems.map((st, stIdx) => {
               const stDone    = st.status === "done";
               const isEditing = editSubId === st.id;
               const stSelected = selectedTaskIds.has(st.id);
@@ -514,14 +514,14 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    paddingLeft: 40,
+                    paddingLeft: 36,
                     paddingRight: 16,
                     paddingTop: 5,
-                    paddingBottom: 5,
+                    paddingBottom: stIdx === subtaskItems.length - 1 ? 11 : 5,
                     background: stSelected ? "var(--accent-bg)" : undefined,
                     outline: stSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
                     cursor: "pointer",
-                    gap: 8,
+                    gap: 10,
                   }}
                   onClick={handleSubtaskClick}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -535,8 +535,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                     onClick={(e) => { e.stopPropagation(); void updateTask(st.id, { status: stDone ? "todo" : "done" }); }}
                     className="flex flex-none items-center justify-center rounded-[4px] transition-all duration-150"
                     style={{
-                      width: 14,
-                      height: 14,
+                      width: 17,
+                      height: 17,
                       flexShrink: 0,
                       ...(stDone
                         ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
@@ -544,8 +544,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                     }}
                   >
                     {stDone && (
-                      <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
-                        <path d="M1 3L3 5L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                        <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     )}
                   </button>
@@ -579,7 +579,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                         cursor: "text",
                         ...(stDone
                           ? { textDecoration: "line-through", color: "var(--fg-faint)" }
-                          : { color: "var(--fg-muted)" })
+                          : { color: "var(--fg)" })
                       }}
                     >
                       {st.title || "(Untitled)"}

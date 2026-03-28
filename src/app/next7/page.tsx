@@ -179,6 +179,9 @@ function DroppableDateGroup({
             const parentInSameGroup = isSubtask && tasks.some((t) => t.id === task.parentTaskId);
 
             if (isSubtask) {
+              // Is this the last subtask of its parent group before the next parent (or end)?
+              const isLastSubtaskOfParent = parentInSameGroup &&
+                (idx === tasks.length - 1 || tasks[idx + 1]?.parentTaskId !== task.parentTaskId);
               // Subtask rendering: indented if parent in same group, parent link label if not
               return (
                 <div
@@ -187,7 +190,7 @@ function DroppableDateGroup({
                 >
                   {parentInSameGroup ? (
                     // Indented — simple left padding, no border, compact spacing
-                    <div style={{ paddingLeft: 20 }}>
+                    <div style={{ paddingLeft: 20, ...(isLastSubtaskOfParent ? { paddingBottom: 6 } : {}) }}>
                       <TaskRow task={task} onClick={onTaskClick} onRightClick={onTaskRightClick} compact />
                     </div>
                   ) : (

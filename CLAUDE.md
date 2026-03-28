@@ -18,6 +18,19 @@
 
 Never fix spacing, borders, checkbox styles, or subtask rendering in only one tab. Always audit and update all four.
 
+### ⚠️ CANONICAL REFERENCE — Next 7 Days list view
+
+**The Next 7 Days list view is the canonical reference for task row design.** All four tabs (Dashboard, Inbox, Tasks, Next 7 Days) must render task rows identically:
+- Same checkbox size: **17×17px**, `borderRadius: 4`, `1.5px` border
+- Same row padding: **`11px 16px`** for parent rows, **`5px 16px`** for compact/subtask rows
+- Same subtask indentation: wrap `<TaskRow compact />` in `<div style={{ paddingLeft: 20 }}>` (effective left offset = 36px including TaskRow's own 16px padding)
+- Same divider pattern: `borderTop: "1px solid var(--border)"` between parent task groups
+- Same date chip style (from `dueDateChip()` in TaskList.tsx)
+- Last subtask in each parent group gets **extra 6px bottom padding** (paddingBottom on the wrapper div)
+- **No per-tab style override to task rows is permitted** unless explicitly documented here with a reason
+
+**Why this rule exists:** The task row appearance kept diverging across tabs because each tab renders rows through different components (`renderRow` in TaskListView vs `TaskRow` in TaskList vs `DroppableDateGroup`). Every fix must be audited against all four tabs simultaneously.
+
 ---
 
 ## Kanban — applies to ALL three pages
