@@ -62,7 +62,13 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
     onClose();
   };
   const markComplete = async () => { await updateTask(task.id, { status: "done" }); onClose(); };
-  const onDelete = async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } };
+  const onDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Delete this task?")) {
+      await deleteTask(task.id);
+      onClose();
+    }
+  };
 
   const promoteToTask = async () => {
     if (!task.parentTaskId) return;
@@ -196,7 +202,7 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
 
           <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
-          <button type="button" onClick={() => void onDelete()}
+          <button type="button" onClick={onDelete}
             className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
             style={{ color: "#ef4444" }}
           >Delete</button>

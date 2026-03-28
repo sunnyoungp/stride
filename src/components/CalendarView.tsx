@@ -44,7 +44,7 @@ function viewConfig(v: ViewKey): { type: string; duration?: { days?: number; wee
     // "week" uses a sliding 7-day window so trackpad can shift by 1 day at a time
     case "week": return { type: "timeGrid", duration: { days: 7 } };
     // "month" uses a 5-week grid so vertical trackpad shifts by 1 week at a time
-    case "month": return { type: "dayGrid", duration: { weeks: 5 } };
+    case "month": return { type: "dayGridMonth" };
     default: return { type: "timeGridDay" };
   }
 }

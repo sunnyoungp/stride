@@ -12,6 +12,7 @@ import {
   DragStartEvent,
   DragOverlay,
   useDroppable,
+  TouchSensor,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -556,7 +557,8 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -621,14 +623,16 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
       onDragEnd={handleDragEnd}
     >
       <div
+        className="touch-pan-y"
         style={{
           display: "flex",
           gap: 20,
           overflowX: "auto",
-          overflowY: "auto",
+          overflowY: "hidden",
           padding: 16,
           height: "100%",
           alignItems: "flex-start",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {columns.map((col) => (

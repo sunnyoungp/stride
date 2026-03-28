@@ -18,7 +18,8 @@ import { SlashCommandMenu } from "@/components/SlashCommandMenu";
 import { EditorBubbleMenu } from "@/components/EditorBubbleMenu";
 import { FormatPanel } from "@/components/FormatPanel";
 import Color from "@tiptap/extension-color";
-import Link from "@tiptap/extension-link";
+import TiptapLink from "@tiptap/extension-link";
+import Link from "next/link";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -175,7 +176,7 @@ export function DocumentEditor({ documentId }: Props) {
         slashCommandExtension,
         TextStyle,
         Color,
-        Link.configure({ openOnClick: false }),
+        TiptapLink.configure({ openOnClick: false }),
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
       ],
@@ -361,7 +362,19 @@ export function DocumentEditor({ documentId }: Props) {
     <div className="mx-auto w-full max-w-[680px] px-6 py-10">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-8">
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col gap-2">
+          {/* Mobile Back Button */}
+          <Link
+            href="/documents"
+            className="md:hidden flex items-center gap-1.5 text-xs font-medium mb-1"
+            style={{ color: "var(--fg-faint)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+              <path d="M9 4l-4 3.5L9 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Documents
+          </Link>
+
           <input
             value={localTitle}
             onChange={handleTitleChange}
@@ -370,15 +383,15 @@ export function DocumentEditor({ documentId }: Props) {
             style={{ color: "var(--fg)", fontSize: 30, lineHeight: 1.2 }}
             placeholder="Untitled"
           />
-          <div className="mt-1.5 text-xs" style={{ color: "var(--fg-faint)" }}>
+          <div className="mt-1 text-xs" style={{ color: "var(--fg-faint)" }}>
             Updated {formatUpdatedAt(doc.updatedAt)}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {syncedBadge ? (
-            <div className="mt-1 rounded-lg px-3 py-1 text-xs font-medium flex-shrink-0" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
-              Synced to Tasks
+            <div className="mt-1 rounded-lg px-3 py-1 text-xs font-medium flex-shrink-0 hidden md:block" style={{ background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+              Synced
             </div>
           ) : null}
           <button
@@ -399,8 +412,8 @@ export function DocumentEditor({ documentId }: Props) {
         </div>
       </div>
 
-      {/* Font-size hint */}
-      <div className="mb-4 flex items-center gap-3">
+      {/* Shortcuts hint bar — hide on mobile */}
+      <div className="mb-4 hidden md:flex items-center gap-3">
         <span
           title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
           style={{ fontSize: 11, color: "var(--fg-faint)", userSelect: "none", fontVariantNumeric: "tabular-nums" }}

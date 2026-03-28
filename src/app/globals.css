@@ -320,7 +320,7 @@ a, button, input, select, textarea {
   /* Match editor leading-7 (1.75rem) so checkbox centers on the first text line */
   display: flex;
   align-items: center;
-  height: 1.75rem;
+  height: 1.55em;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
@@ -406,7 +406,7 @@ a, button, input, select, textarea {
 ═══════════════════════════════════════════ */
 .fc {
   --fc-border-color: var(--border);
-  --fc-today-bg-color: rgba(232, 96, 60, 0.04);
+  --fc-today-bg-color: var(--accent-bg);
   --fc-neutral-bg-color: transparent;
   --fc-page-bg-color: transparent;
   --fc-small-font-size: 0.77rem;
@@ -464,6 +464,20 @@ a, button, input, select, textarea {
 .fc .fc-timegrid-now-indicator-arrow {
   border-top-color: var(--accent) !important;
   border-bottom-color: var(--accent) !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  border: 1px solid var(--accent) !important;
+}
+
+.fc-daygrid-event {
+  white-space: normal !important;
+  align-items: flex-start !important;
+  padding: 1px 0 !important;
+}
+
+.fc-daygrid-event-dot {
+  margin-top: 4px !important;
 }
 
 /* ═══════════════════════════════════════════
