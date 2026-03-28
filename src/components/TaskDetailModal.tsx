@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSectionStore } from "@/store/sectionStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -97,6 +98,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const [newSubtask, setNewSub] = useState("");
   const [editSubId, setEditSubId]   = useState<string | null>(null);
   const [editSubVal, setEditSubVal] = useState("");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const isDone   = task.status === "done";
   const subtasks = useMemo(() => tasks.filter((t) => t.parentTaskId === task.id), [tasks, task.id]);
@@ -160,11 +163,13 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
     if (!title) { setNewSub(""); subtaskRef.current?.focus(); }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       {isMobile && (
         <div
-          className="fixed inset-0 z-50 backdrop-fade"
+          className="fixed inset-0 z-[100] backdrop-fade"
           style={{ background: "rgba(0,0,0,0.28)" }}
           onClick={() => { save(); onClose(); }}
         />
@@ -172,9 +177,10 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
         <div
           ref={modalRef}
           onClick={(e) => e.stopPropagation()}
-          className="fixed z-50 flex flex-col overflow-hidden"
+          className="fixed z-[100] flex flex-col overflow-hidden"
           style={isMobile ? {
-            bottom: keyboardHeight > 0 ? keyboardHeight : "env(safe-area-inset-bottom)",
+            bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+            paddingBottom: keyboardHeight > 0 ? 0 : "env(safe-area-inset-bottom)",
             left: 0,
             right: 0,
             maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : "85vh",
@@ -668,7 +674,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
         </button>
       </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 

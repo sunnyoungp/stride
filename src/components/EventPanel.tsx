@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -187,9 +188,11 @@ export function EventPanel(props: EventPanelProps) {
 
   const [form, setForm] = useState<FormState>(() => initForm(props));
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Animate in
   useEffect(() => {
+    setMounted(true);
     const id = requestAnimationFrame(() => setVisible(true));
     const timer = setTimeout(() => titleRef.current?.focus(), 80);
     return () => { cancelAnimationFrame(id); clearTimeout(timer); };
@@ -482,12 +485,14 @@ export function EventPanel(props: EventPanelProps) {
     </div>
   );
 
+  if (!mounted) return null;
+
   // ── Mobile: bottom sheet ───────────────────────────────────────────────────
   if (isMobile) {
-    return (
+    return createPortal(
       <>
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.28)", zIndex: 100, opacity: visible ? 1 : 0, transition: "opacity 280ms ease" }}
           onClick={onClose}
         />
         <div
@@ -499,7 +504,7 @@ export function EventPanel(props: EventPanelProps) {
             borderTop: "1px solid var(--border-mid)",
             borderRadius: "16px 16px 0 0",
             boxShadow: "var(--shadow-float)",
-            zIndex: 51,
+            zIndex: 101,
             maxHeight: "90vh",
             overflowY: "auto",
             transform: visible ? "translateY(0)" : "translateY(100%)",
@@ -523,14 +528,15 @@ export function EventPanel(props: EventPanelProps) {
           </div>
           {body}
         </div>
-      </>
+      </>,
+      document.body
     );
   }
 
   // ── Desktop: smart-positioned inline panel ─────────────────────────────────
   const { style: posStyle, origin } = smartPos(props.clickPos.x, props.clickPos.y);
 
-  return (
+  return createPortal(
     <div
       ref={panelRef}
       role="dialog"
@@ -575,6 +581,7 @@ export function EventPanel(props: EventPanelProps) {
         >✕</button>
       </div>
       {body}
-    </div>
+    </div>,
+    document.body
   );
 }

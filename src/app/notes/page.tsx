@@ -160,7 +160,7 @@ export default function NotesPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, paddingBottom: 16 }}>
         <ChevronBtn dir="prev" label="Previous day" onClick={() => setSelectedDate(prev => shiftDate(prev, -1))} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 210, justifyContent: "center" }}>
-          <span style={{ fontSize: 14, fontWeight: 500, textAlign: "center", color: isOffToday ? "var(--fg-faint)" : "var(--fg)", userSelect: "none" }}>
+          <span style={{ fontSize: 14, fontWeight: 500, textAlign: "center", color: isOffToday ? "var(--fg-muted)" : "var(--fg)", userSelect: "none" }}>
             {formatNoteDate(selectedDate, today)}
           </span>
           {isOffToday && (
@@ -202,7 +202,10 @@ export default function NotesPage() {
             background: "var(--bg-card)",
             borderTop: "1px solid var(--border-mid)",
             overflowY: "auto",
-            paddingBottom: "env(safe-area-inset-bottom)",
+            paddingBottom: "calc(80px + env(safe-area-inset-bottom))",
+            position: "relative",
+            zIndex: 60, 
+            boxShadow: "0 -4px 12px rgba(0,0,0,0.1)",
           }}>
             {/* Drag handle */}
             <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>

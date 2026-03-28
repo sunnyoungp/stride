@@ -667,20 +667,50 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 </button>
               </div>
 
-              <div
-                className="flex items-center gap-0.5 rounded-xl p-1"
-                style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
-              >
-                {VIEW_LABELS.map(([key, label]) => (
-                  <button key={key} type="button" onClick={() => switchView(key)}
-                    className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all duration-150 ease-out"
-                    style={view === key
-                      ? { background: "var(--bg-card)", color: "var(--fg)", boxShadow: "var(--shadow-sm)" }
-                      : { color: "var(--fg-faint)" }
-                    }
-                  >{label}</button>
-                ))}
-              </div>
+              {isMobile ? (
+                <div style={{ position: "relative" }}>
+                  <select
+                    value={view}
+                    onChange={(e) => switchView(e.target.value as ViewKey)}
+                    style={{
+                      appearance: "none",
+                      background: "var(--bg-subtle)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "10px",
+                      padding: "4px 24px 4px 10px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      color: "var(--fg)",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    {VIEW_LABELS.map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                  <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--fg-faint)" }}>
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-0.5 rounded-xl p-1"
+                  style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
+                >
+                  {VIEW_LABELS.map(([key, label]) => (
+                    <button key={key} type="button" onClick={() => switchView(key)}
+                      className="rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all duration-150 ease-out"
+                      style={view === key
+                        ? { background: "var(--bg-card)", color: "var(--fg)", boxShadow: "var(--shadow-sm)" }
+                        : { color: "var(--fg-faint)" }
+                      }
+                    >{label}</button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

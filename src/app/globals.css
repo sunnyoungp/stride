@@ -309,18 +309,30 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  gap: 8.5px;
+  gap: 10px;
   padding: 0;
   margin: 0.1rem 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ensure no top margin on first paragraph in task items to avoid alignment shift */
+.ProseMirror ul[data-type="taskList"] li > div > p:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label {
   flex-shrink: 0;
   user-select: none;
-  /* Match editor leading-7 (1.75rem) so checkbox centers on the first text line */
+  /* Match editor line-height (1.15) so checkbox centers on the first line center */
   display: flex;
   align-items: center;
-  height: 1.55em;
+  justify-content: center;
+  height: 1.15em;
+  margin-top: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTaskStore } from "@/store/taskStore";
 import { useSectionStore } from "@/store/sectionStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
@@ -66,12 +67,15 @@ export function QuickAdd() {
   const isMobile          = useIsMobile();
   const { height: vpHeight } = useVisualViewport();
   const [windowHeight, setWindowHeight] = useState(0);
+  
   useEffect(() => {
+    if (typeof window === "undefined") return;
     setWindowHeight(window.innerHeight);
     const update = () => setWindowHeight(window.innerHeight);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+  
   const keyboardHeight = Math.max(0, windowHeight - vpHeight);
 
   const [open, setOpen]               = useState(false);
@@ -88,8 +92,12 @@ export function QuickAdd() {
   const [eventStart, setEventStart]       = useState("09:00");
   const [eventEnd, setEventEnd]           = useState("10:00");
   const [eventAllDay, setEventAllDay]     = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => { setMounted(true); }, []);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const preview      = useMemo(() => (value.trim() ? parse(value) : null), [value]);
   const effectiveDate = selectedDate ?? preview?.dueDate;
@@ -164,11 +172,11 @@ export function QuickAdd() {
 
   useEffect(() => {
     if (!open) return;
-    const id = window.setTimeout(() => { inputRef.current?.focus(); }, 0);
+    const id = window.setTimeout(() => { inputRef.current?.focus(); }, 10);
     return () => window.clearTimeout(id);
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const today    = todayStr();
   const tomorrow = tomorrowStr();
@@ -196,7 +204,6 @@ export function QuickAdd() {
   const durMins = calcEventDuration(eventStart, eventEnd);
   const eventFields = (
     <div style={{ padding: "12px 20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Title */}
       <input
         ref={inputRef}
         value={eventTitle}
@@ -209,8 +216,6 @@ export function QuickAdd() {
           fontSize: "16px", fontWeight: 600, color: "var(--fg)", outline: "none",
         }}
       />
-
-      {/* Time row */}
       {!eventAllDay && (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <input type="time" value={eventStart} onChange={e => setEventStart(e.target.value)}
@@ -225,13 +230,9 @@ export function QuickAdd() {
           )}
         </div>
       )}
-
-      {/* Date */}
       <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
         style={{ width: "100%", boxSizing: "border-box", background: "var(--bg-subtle)", border: "1px solid var(--border)", borderRadius: 10, padding: "7px 10px", fontSize: 14, color: "var(--fg)", outline: "none" }}
       />
-
-      {/* All-day toggle */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 13, color: "var(--fg)" }}>All day</span>
         <button type="button" onClick={() => setEventAllDay(v => !v)}
@@ -246,8 +247,6 @@ export function QuickAdd() {
           }} />
         </button>
       </div>
-
-      {/* Submit */}
       <button type="button" onClick={submit}
         className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150"
         style={{ background: "var(--accent)", color: "white", border: "none", cursor: "pointer" }}
@@ -257,158 +256,66 @@ export function QuickAdd() {
     </div>
   );
 
-  /* ── Mobile: bottom sheet above keyboard ── */
-  if (isMobile) {
-    return (
-      <div className="fixed inset-0 z-50">
-        {/* Backdrop */}
-        <div className="absolute inset-0 backdrop-fade" style={{ background: "rgba(0,0,0,0.22)" }} onClick={close} />
+  return createPortal(
+    <div
+      ref={modalRef}
+      className="fixed inset-0 flex flex-col items-center justify-end"
+      style={{ zIndex: 105 }}
+    >
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] backdrop-fade"
+        onClick={close}
+        style={{ zIndex: -1 }}
+      />
 
-        {/* Sheet */}
-        <div
-          className="cmd-palette fixed left-0 right-0 overflow-auto"
-          style={{
-            bottom: keyboardHeight > 0 ? keyboardHeight : "env(safe-area-inset-bottom)",
-            maxHeight: keyboardHeight > 0 
-              ? `calc(100vh - ${keyboardHeight}px - 20px)`
-              : "calc(90vh - env(safe-area-inset-bottom))",
-            background: "var(--bg-card)",
-            borderTop: "1px solid var(--border-mid)",
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            boxShadow: "var(--shadow-float)",
-            transition: "bottom 200ms ease",
-          }}
-        >
-          {/* Drag handle */}
+      <div
+        className="cmd-palette w-full max-w-[500px] overflow-hidden bg-[var(--bg-card)] shadow-float"
+        style={isMobile ? {
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          border: "1px solid var(--border-mid)",
+          bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+          paddingBottom: keyboardHeight > 0 ? 0 : "env(safe-area-inset-bottom)",
+          transition: "bottom 200ms ease",
+        } : {
+          marginBottom: 40,
+          borderRadius: 16,
+          border: "1px solid var(--border-mid)",
+        }}
+      >
+        {/* Drag handle for mobile */}
+        {isMobile && (
           <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
             <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
           </div>
+        )}
 
-          {/* Mode toggle */}
-          {modeToggle}
-
-          {mode === "event" ? eventFields : (
-            <>
-              {/* Input row */}
-              <div className="flex items-center gap-4 px-5 py-[14px]">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="flex-none" style={{ color: "var(--fg-faint)" }}>
-                  <line x1="9" y1="2" x2="9" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} placeholder="New task…"
-                  className="flex-1 bg-transparent outline-none"
-                  style={{ fontSize: "16px", fontWeight: 450, color: "var(--fg)", caretColor: "var(--accent)" }}
-                />
-                {value.trim() && (
-                  <button type="button" onClick={submit}
-                    className="flex-none flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium"
-                    style={{ background: "var(--accent)", color: "white" }}>
-                    Add <kbd className="text-[10px] opacity-70">↵</kbd>
-                  </button>
-                )}
-              </div>
-              {/* Tilde hint */}
-              {value.includes("~") && (
-                <div className="px-5 pb-1" style={{ borderTop: "1px solid var(--border)" }}>
-                  <span style={{ fontSize: 11, color: tildeMatch ? "var(--accent)" : "var(--fg-faint)" }}>
-                    {tildeMatch
-                      ? `↩ Will assign to "${tildeMatch.title}"`
-                      : "Type ~sectionname to assign a section"}
-                  </span>
-                </div>
-              )}
-
-              {/* Options */}
-              <div className="space-y-3 px-5 py-4" style={{ borderTop: value.includes("~") ? "none" : "1px solid var(--border)" }}>
-                <div className="flex items-center gap-3">
-                  <span className="w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "var(--fg-faint)" }}>Date</span>
-                  <div className="flex items-center gap-1.5">
-                    {[{ label: "Today", val: today }, { label: "Tomorrow", val: tomorrow }].map(({ label, val }) => {
-                      const active = effectiveDate === val;
-                      return (
-                        <button key={label} type="button" onClick={() => setSelectedDate((v) => (v === val ? undefined : val))}
-                          className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150 ease-out"
-                          style={active ? { background: "var(--accent-bg-strong)", color: "var(--accent)" } : { background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                {sections.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <span className="mt-[3px] w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "var(--fg-faint)" }}>Section</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {sections.map((s) => {
-                        const active = sectionId === s.id;
-                        return (
-                          <button key={s.id} type="button" onClick={() => setSectionId((v) => (v === s.id ? "" : s.id))}
-                            className="flex items-center gap-1 rounded-lg px-3 py-1 text-[12.5px] font-medium"
-                            style={active ? { background: "var(--bg-active)", color: "var(--accent)" } : { background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
-                            {s.icon && <span>{s.icon}</span>}<span>{s.title}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[14vh]">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 backdrop-fade"
-        style={{ background: "rgba(0,0,0,0.22)" }}
-        onClick={close}
-      />
-
-      {/* Panel */}
-      <div
-        className="cmd-palette relative mx-4 w-full max-w-[560px] overflow-hidden rounded-2xl"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-mid)",
-          boxShadow: "var(--shadow-float)",
-        }}
-      >
-        {/* ── Mode toggle ── */}
+        {/* Mode toggle */}
         {modeToggle}
 
         {mode === "event" ? eventFields : (
           <>
-            {/* ── Input row ── */}
+            {/* Input row */}
             <div className="flex items-center gap-4 px-5 py-[18px]">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="flex-none" style={{ color: "var(--fg-faint)" }}>
                 <line x1="9" y1="2" x2="9" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              <input
-                ref={inputRef}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="New task…"
+              <input ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} placeholder="New task…"
                 className="flex-1 bg-transparent outline-none"
                 style={{ fontSize: "16px", fontWeight: 450, color: "var(--fg)", caretColor: "var(--accent)" }}
               />
               {value.trim() && (
                 <button type="button" onClick={submit}
                   className="flex-none flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 ease-out"
-                  style={{ background: "var(--accent)", color: "white" }}
-                >
+                  style={{ background: "var(--accent)", color: "white" }}>
                   Add <kbd className="text-[10px] opacity-70">↵</kbd>
                 </button>
               )}
             </div>
 
-            {/* ── Tilde hint ── */}
+            {/* Tilde hint */}
             {value.includes("~") && (
               <div className="px-5 pb-1 pt-0" style={{ borderTop: "1px solid var(--border)" }}>
                 <span style={{ fontSize: 11, color: tildeMatch ? "var(--accent)" : "var(--fg-faint)" }}>
@@ -419,9 +326,8 @@ export function QuickAdd() {
               </div>
             )}
 
-            {/* ── Options ── */}
+            {/* Options */}
             <div className="space-y-3 px-5 py-4" style={{ borderTop: value.includes("~") ? "none" : "1px solid var(--border)" }}>
-              {/* Date */}
               <div className="flex items-center gap-3">
                 <span className="w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "var(--fg-faint)" }}>Date</span>
                 <div className="flex items-center gap-1.5">
@@ -430,14 +336,13 @@ export function QuickAdd() {
                     return (
                       <button key={label} type="button" onClick={() => setSelectedDate((v) => (v === val ? undefined : val))}
                         className="rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150 ease-out"
-                        style={active ? { background: "var(--accent-bg-strong)", color: "var(--accent)" } : { background: "var(--bg-hover)", color: "var(--fg-muted)" }}
-                      >{label}</button>
+                        style={active ? { background: "var(--accent-bg-strong)", color: "var(--accent)" } : { background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
+                        {label}
+                      </button>
                     );
                   })}
                 </div>
               </div>
-
-              {/* Section */}
               {sections.length > 0 && (
                 <div className="flex items-start gap-3">
                   <span className="mt-[3px] w-[52px] flex-none text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "var(--fg-faint)" }}>Section</span>
@@ -447,17 +352,14 @@ export function QuickAdd() {
                       return (
                         <button key={s.id} type="button" onClick={() => setSectionId((v) => (v === s.id ? "" : s.id))}
                           className="flex items-center gap-1 rounded-lg px-3 py-1 text-[12.5px] font-medium transition-all duration-150 ease-out"
-                          style={active ? { background: "var(--bg-active)", color: "var(--accent)" } : { background: "var(--bg-hover)", color: "var(--fg-muted)" }}
-                        >
-                          {s.icon && <span>{s.icon}</span>}
-                          <span>{s.title}</span>
+                          style={active ? { background: "var(--bg-active)", color: "var(--accent)" } : { background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
+                          {s.icon && <span>{s.icon}</span>}<span>{s.title}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
               )}
-
               {/* Live tag preview */}
               {(preview?.tags?.length ?? 0) > 0 && (
                 <div className="flex items-center gap-3">
@@ -476,6 +378,7 @@ export function QuickAdd() {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

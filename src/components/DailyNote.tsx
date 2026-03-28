@@ -730,6 +730,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     }
   }, []); // stable — reads only refs
 
+  const [isLocked, setIsLocked] = useState(true);
+
   // Slash command TipTap extension — created once, captures stable refs/setters
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const slashCommandExtension = useMemo(() => createSlashCommandExtension(slashPropsRef, slashMenuRef, setSlashMenu), []);
@@ -752,6 +754,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         FontSizeKeyboardExtension,
       ],
       immediatelyRender: false,
+      editable: false, // Default to read-only
       content: note?.content ? safeParseJson(note.content) ?? undefined : undefined,
       editorProps: {
         attributes: {
@@ -939,8 +942,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       },
       onBlur: ({ editor }) => { void syncNewTaskItems(editor); },
     },
-    [note?.id],
+    [note?.id, isLocked],
   );
+
+  // Sync isLocked state with TipTap editor
+  useEffect(() => {
+    if (editor) editor.setEditable(!isLocked);
+  }, [editor, isLocked]);
 
   // Keep editorRef current
   useEffect(() => { editorRef.current = editor ?? null; }, [editor]);
@@ -1208,6 +1216,31 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           >
             {editorFontSize}px
           </span>
+          <button
+            type="button"
+            onClick={() => setIsLocked(!isLocked)}
+            title={isLocked ? "Unlock to edit" : "Lock editor (Read-only)"}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "3px 8px", borderRadius: 8,
+              border: "1px solid var(--border)",
+              background: isLocked ? "var(--bg-subtle)" : "var(--bg-active)",
+              color: isLocked ? "var(--fg-muted)" : "var(--accent)",
+              fontSize: "0.7rem", fontWeight: 500, cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {isLocked ? (
+              <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+                <path d="M5 6V4.5a2.5 2.5 0 1 1 5 0V6m-7 0h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+                <path d="M10.5 4.5V3a2.5 2.5 0 0 0-5 0v1.5m-.5 2h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM5 9v2M10 9v2" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            )}
+            {isLocked ? "Read-only" : "Editing"}
+          </button>
           <button
             type="button"
             data-format-trigger

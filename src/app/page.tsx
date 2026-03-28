@@ -138,15 +138,15 @@ export default function Page() {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         {/* Date nav */}
-        <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button type="button" onClick={() => setSelectedDate((p) => shiftDate(p, -1))} aria-label="Previous day"
-              style={{ fontSize: "18px", lineHeight: 1, color: "rgba(0,0,0,0.3)", cursor: "pointer", border: "none", background: "transparent", padding: "4px 8px", borderRadius: 6 }}>‹</button>
-            <span onDoubleClick={() => setSelectedDate(today)} style={{ fontSize: "14px", fontWeight: 500, minWidth: 180, textAlign: "center", display: "inline-block", color: selectedDate !== today ? "rgba(0,0,0,0.38)" : "var(--fg, #1a1a1a)", userSelect: "none" }}>
+              style={{ fontSize: "18px", lineHeight: 1, color: "var(--fg-muted)", cursor: "pointer", border: "none", background: "transparent", padding: "4px 8px", borderRadius: 6 }}>‹</button>
+            <span onDoubleClick={() => setSelectedDate(today)} style={{ fontSize: "14px", fontWeight: 500, minWidth: 180, textAlign: "center", display: "inline-block", color: selectedDate !== today ? "var(--fg-muted)" : "var(--fg)", userSelect: "none" }}>
               {formatDashboardDate(selectedDate, today)}
             </span>
             <button type="button" onClick={() => setSelectedDate((p) => shiftDate(p, 1))} aria-label="Next day"
-              style={{ fontSize: "18px", lineHeight: 1, color: "rgba(0,0,0,0.3)", cursor: "pointer", border: "none", background: "transparent", padding: "4px 8px", borderRadius: 6 }}>›</button>
+              style={{ fontSize: "18px", lineHeight: 1, color: "var(--fg-muted)", cursor: "pointer", border: "none", background: "transparent", padding: "4px 8px", borderRadius: 6 }}>›</button>
           </div>
         </div>
 
@@ -226,7 +226,7 @@ export default function Page() {
       <div style={{
         flexShrink: 0, height: 44,
         display: "flex", alignItems: "center", justifyContent: "center",
-        borderBottom: "1px solid rgba(0,0,0,0.06)",
+        borderBottom: "1px solid var(--border)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {/* Left chevron */}
@@ -236,12 +236,13 @@ export default function Page() {
             aria-label="Previous day"
             style={{
               fontSize: "18px", lineHeight: 1,
-              color: "rgba(0,0,0,0.3)", cursor: "pointer",
+              color: "var(--fg-faint)", cursor: "pointer",
               border: "none", background: "transparent",
               padding: "4px 8px", borderRadius: 6,
+              transition: "color 120ms ease, background 120ms ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.7)"; e.currentTarget.style.background = "rgba(0,0,0,0.05)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.3)"; e.currentTarget.style.background = "transparent"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--fg)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--fg-faint)"; e.currentTarget.style.background = "transparent"; }}
           >‹</button>
 
           {/* Date label */}
@@ -249,11 +250,8 @@ export default function Page() {
             onDoubleClick={() => setSelectedDate(today)}
             title={selectedDate !== today ? "Double-click to return to today" : undefined}
             style={{
-              fontSize: "14px", fontWeight: 500,
-              minWidth: 180, textAlign: "center", display: "inline-block",
-              color: selectedDate !== today ? "rgba(0,0,0,0.38)" : "var(--fg, #1a1a1a)",
-              cursor: selectedDate !== today ? "default" : "default",
-              userSelect: "none",
+              fontSize: "14px", fontWeight: 500, minWidth: 200, textAlign: "center",
+              color: selectedDate === today ? "var(--fg)" : "var(--fg-muted)", userSelect: "none"
             }}
           >
             {formatDashboardDate(selectedDate, today)}
@@ -266,12 +264,13 @@ export default function Page() {
             aria-label="Next day"
             style={{
               fontSize: "18px", lineHeight: 1,
-              color: "rgba(0,0,0,0.3)", cursor: "pointer",
+              color: "var(--fg-faint)", cursor: "pointer",
               border: "none", background: "transparent",
               padding: "4px 8px", borderRadius: 6,
+              transition: "color 120ms ease, background 120ms ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.7)"; e.currentTarget.style.background = "rgba(0,0,0,0.05)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.3)"; e.currentTarget.style.background = "transparent"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--fg)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--fg-faint)"; e.currentTarget.style.background = "transparent"; }}
           >›</button>
         </div>
       </div>
