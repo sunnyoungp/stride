@@ -311,8 +311,10 @@ Headers in task list groups and Kanban columns are sticky. Rules:
 
 ### Checkbox alignment in the TipTap document/notes editor
 - Use `align-items: flex-start` on the `li` element (NOT `center`) — centering misaligns with multi-line text
-- Add `margin-top: 3px` to the `label` element to optically align the checkbox with the first line's cap height
+- Add `margin-top: 0.2em` to the `label` element to optically align the checkbox with the first line's cap height (em-based so it scales with font size)
 - This ensures correct alignment for both single-line and multi-line task items
+- Checkbox `width`/`height` must be `1em` (NOT fixed px) — this ensures the checkbox scales proportionally when the user changes editor font size
+- Gap between checkbox and text content must be `0.6em` (NOT fixed px) so it scales with font size
 - See `globals.css` `.ProseMirror ul[data-type="taskList"] li` and `li > label`
 
 ### Subtask rows in list view
@@ -443,7 +445,8 @@ When `sortBy === "manual"`, tasks are ordered by their `order` field (lowest fir
 - Never make a feature that only works via right-click with no mobile fallback
 - Never use `font-size` smaller than 16px on mobile inputs
 - **Never add a Read-only / lock toggle to document or note editors** — editors are always editable. The `isLocked` / `setIsLocked` pattern was removed; do not re-introduce it
-- **Never use `align-items: center` on TipTap task list `li` elements** — use `flex-start` + `margin-top: 3px` on the label instead (see globals.css). `center` misaligns checkboxes on multi-line items
+- **Never use `align-items: center` on TipTap task list `li` elements** — use `flex-start` + `margin-top: 0.2em` on the label instead (see globals.css). `center` misaligns checkboxes on multi-line items
+- **Never use fixed px for checkbox `width`/`height` in TipTap editors** — use `1em` so the checkbox scales with font size
 - **Never add `borderTop` dividers between a parent task and its subtasks** — only between top-level parent groups
 
 ## Before Every Commit
