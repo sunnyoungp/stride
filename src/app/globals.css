@@ -10,7 +10,7 @@
   /* backgrounds */
   --bg:           #faf7f4;
   --bg-subtle:    #f4efe9;
-  --bg-card:      #ffffff;
+  --bg-card:      #fefcf9;
   --bg-sidebar:   #faf7f4;
   --bg-hover:     rgba(30, 20, 10, 0.04);
   --bg-active:    rgba(232, 96, 60, 0.07);
@@ -58,7 +58,7 @@
   /* three-layer floating panel depth */
   --color-app-root-bg: #D0CEC8;  /* canvas behind both panels — slightly darker than sidebar */
   --sidebar-bg:  #E8E5E2;        /* floating sidebar panel — mid layer */
-  --content-bg:  #FFFFFF;        /* floating content panel — top layer */
+  --content-bg:  #fefcf9;        /* floating content panel — top layer */
   --shadow-panel: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
 
   /* FONT SIZES — three independent tokens */
@@ -74,10 +74,10 @@
    DARK MODE — warm near-black
 ═══════════════════════════════════════════ */
 .dark {
-  --bg:           #110e0a;
-  --bg-subtle:    #1a1612;
-  --bg-card:      #201c17;
-  --bg-sidebar:   #161210;
+  --bg:           #1c1812;
+  --bg-subtle:    #24201a;
+  --bg-card:      #2a251e;
+  --bg-sidebar:   #1a1610;
   --bg-hover:     rgba(245, 235, 225, 0.05);
   --bg-active:    rgba(232, 96, 60, 0.10);
 
@@ -93,9 +93,9 @@
   --accent-bg-strong: rgba(232, 96, 60, 0.20);
 
   /* three-layer floating panel depth */
-  --color-app-root-bg: #090806;  /* canvas behind both panels — darkest layer */
-  --sidebar-bg:  #1C1C1E;        /* floating sidebar panel — mid layer */
-  --content-bg:  #242424;        /* floating content panel — top layer */
+  --color-app-root-bg: #100e0b;  /* canvas behind both panels — darkest layer */
+  --sidebar-bg:  #1a1610;        /* floating sidebar panel — mid layer */
+  --content-bg:  #2a251e;        /* floating content panel — top layer */
   --shadow-panel: 0 4px 24px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20);
 
   --border:       rgba(245, 235, 225, 0.07);
@@ -233,13 +233,13 @@ a, button, input, select, textarea {
 ═══════════════════════════════════════════ */
 
 /* ── Base font size — controlled by --font-size-notes token ── */
-.ProseMirror { font-size: var(--font-size-notes, 15px); line-height: 1.15; letter-spacing: 0; }
+.ProseMirror { font-size: var(--font-size-notes, 15px); line-height: 1.2; letter-spacing: 0; }
 .ProseMirror p { margin-bottom: 0.75em; }
 
 /* ── Headings ── */
-.ProseMirror h1 { font-size: 28px; font-weight: 700; line-height: 1.15;  margin: 1rem 0 0.5rem;   color: var(--fg); letter-spacing: -0.01em; }
-.ProseMirror h2 { font-size: 18px;  font-weight: 600; line-height: 1.15; margin: 0.875rem 0 0.375rem; color: var(--fg); letter-spacing: -0.01em; }
-.ProseMirror h3 { font-size: 15px; font-weight: 600; line-height: 1.15;  margin: 0.75rem 0 0.25rem;  color: var(--fg); letter-spacing: -0.01em; }
+.ProseMirror h1 { font-size: 28px; font-weight: 700; line-height: 1.2;  margin: 1rem 0 0.5rem;   color: var(--fg); letter-spacing: -0.01em; }
+.ProseMirror h2 { font-size: 18px;  font-weight: 600; line-height: 1.2; margin: 0.875rem 0 0.375rem; color: var(--fg); letter-spacing: -0.01em; }
+.ProseMirror h3 { font-size: 15px; font-weight: 600; line-height: 1.2;  margin: 0.75rem 0 0.25rem;  color: var(--fg); letter-spacing: -0.01em; }
 
 /* ── Blockquote ── */
 .ProseMirror blockquote {

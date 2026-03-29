@@ -434,10 +434,32 @@ When `sortBy === "manual"`, tasks are ordered by their `order` field (lowest fir
 
 ---
 
+## Background Token Conventions
+
+### No pure white or pure black
+- `--bg-card` and `--content-bg` must **never** be `#ffffff` or `#000000`. Light themes use tinted near-whites (e.g. `#fefcf9` for warm, `#fbfaff` for lavender). Dark themes must have a lifted base (deep slate, not black).
+- All backgrounds use CSS variables — never hardcoded hex values.
+
+### Dark theme base luminance targets
+Dark themes should feel like "deep slate, not black." Target base lightness:
+- `--color-app-root-bg`: ~L5–7% (darkest layer, e.g. `#0e1014`)
+- `--sidebar-bg`: ~L9–12% (sidebar panel)
+- `--bg` / `--content-bg`: ~L12–16% (main content surfaces)
+- `--bg-card`: same as `--content-bg` or slightly lighter
+
+### Light theme surface targets
+- `--bg`: slightly warm/tinted page bg (e.g. `#faf7f4`)
+- `--bg-card` / `--content-bg`: tinted near-white matching theme hue (e.g. `#fefcf9` warm, `#fbfaff` purple, `#fafdf9` green)
+- `--color-app-root-bg`: noticeably darker/desaturated canvas (e.g. `#D0CEC8`)
+- `--sidebar-bg`: between root and content (e.g. `#E8E5E2`)
+
+---
+
 ## What NOT to do
 
 - Never use `bg-zinc-*`, `text-zinc-*`, `border-white/*` Tailwind classes for UI surfaces — use CSS variables
 - Never hardcode colors like `#18181b`, `#27272a`, `#3f3f46` — use CSS variables
+- **Never set `--bg-card` or `--content-bg` to pure `#ffffff` or `#FFFFFF`** — use a tinted near-white that matches the theme's hue character
 - Never write a new context menu from scratch — extend the existing pattern
 - Never add a new modal backdrop — use the standard one above
 - Never use `z-index` values other than those in the hierarchy above
