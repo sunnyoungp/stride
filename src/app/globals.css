@@ -4,43 +4,79 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ═══════════════════════════════════════════
-   LIGHT MODE — warm cream (#faf7f4 base)
+   GLASSMORPHISM DESIGN SYSTEM
+   Three-layer depth: bg-app → bg-panel → bg-card
+   All surfaces are semi-transparent glass.
+   Tint variables drive all surface colors.
 ═══════════════════════════════════════════ */
+
+/* ── Light mode — warm tint (default) ── */
 :root {
-  /* backgrounds */
-  --bg:           #faf7f4;
-  --bg-subtle:    #f4efe9;
-  --bg-card:      #fefcf9;
-  --bg-sidebar:   #faf7f4;
-  --bg-hover:     rgba(30, 20, 10, 0.04);
-  --bg-active:    rgba(232, 96, 60, 0.07);
+  /* Tint control — hue + saturation only, lightness is layer-defined */
+  --tint-h: 30;
+  --tint-s: 16%;
+
+  /* Layer 0 — App canvas (behind everything) */
+  --bg-app:    hsl(var(--tint-h), var(--tint-s), 72%);
+
+  /* Layer 1 — Panels (sidebar + content) — glass, same color */
+  --bg-panel:  color-mix(in srgb, hsl(var(--tint-h), var(--tint-s), 82%) 52%, transparent);
+
+  /* Layer 2 — Cards / groups — glass, slightly lighter */
+  --bg-card:   color-mix(in srgb, hsl(var(--tint-h), var(--tint-s), 88%) 50%, transparent);
+
+  /* Solid surfaces (editor, code blocks, inputs) */
+  --bg:        hsl(var(--tint-h), var(--tint-s), 97%);
+  --bg-subtle: hsl(var(--tint-h), var(--tint-s), 93%);
+
+  /* Interaction states */
+  --bg-hover:   rgba(0, 0, 0, 0.05);
+  --bg-active:  rgba(232, 96, 60, 0.09);
+
+  /* Glass blur amounts */
+  --glass-blur-panel: blur(24px) saturate(160%);
+  --glass-blur-card:  blur(14px) saturate(140%);
+
+  /* Glass borders — bright top edge gives depth */
+  --glass-border:     rgba(255, 255, 255, 0.62);
+  --glass-border-top: rgba(255, 255, 255, 0.84);
+
+  /* Glass shadows */
+  --glass-shadow-panel: 0 6px 28px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.76);
+  --glass-shadow-card:  0 2px 10px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.80);
 
   /* text */
-  --fg:           #1a1310;
-  --fg-muted:     #6b5f57;
-  --fg-faint:     #a8998f;
-  --fg-placeholder: #c8b8ae;
+  --fg:           rgba(0, 0, 0, 0.84);
+  --fg-muted:     rgba(0, 0, 0, 0.46);
+  --fg-faint:     rgba(0, 0, 0, 0.28);
+  --fg-placeholder: rgba(0, 0, 0, 0.22);
 
-  /* accent — coral */
+  /* accent — coral (user-configurable) */
   --accent:       #e8603c;
   --accent-hover: #d44e2a;
   --accent-fg:    #ffffff;
-  --accent-bg:    rgba(232, 96, 60, 0.08);
-  --accent-bg-strong: rgba(232, 96, 60, 0.14);
+  --accent-bg:    rgba(232, 96, 60, 0.10);
+  --accent-bg-strong: rgba(232, 96, 60, 0.17);
 
   /* borders */
-  --border:       rgba(30, 20, 10, 0.07);
-  --border-mid:   rgba(30, 20, 10, 0.11);
-  --border-strong:rgba(30, 20, 10, 0.18);
+  --border:       rgba(0, 0, 0, 0.07);
+  --border-mid:   rgba(0, 0, 0, 0.10);
+  --border-strong:rgba(0, 0, 0, 0.16);
 
   /* shadows */
-  --shadow-sm:    0 1px 2px rgba(30,20,10,0.05), 0 1px 4px rgba(30,20,10,0.03);
-  --shadow-md:    0 4px 16px rgba(30,20,10,0.08), 0 2px 6px rgba(30,20,10,0.04);
-  --shadow-lg:    0 12px 40px rgba(30,20,10,0.11), 0 4px 16px rgba(30,20,10,0.05);
-  --shadow-float: 0 24px 80px rgba(30,20,10,0.14), 0 8px 32px rgba(30,20,10,0.08);
-  --shadow-card:  0 1px 3px rgba(30,20,10,0.06), 0 1px 8px rgba(30,20,10,0.04);
-  --shadow-card-hover: 0 4px 14px rgba(30,20,10,0.10), 0 2px 6px rgba(30,20,10,0.06);
-  --shadow-drawer: -8px 0 40px rgba(30,20,10,0.12), -2px 0 8px rgba(30,20,10,0.06);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:    0 12px 40px rgba(0,0,0,0.11);
+  --shadow-float: 0 24px 80px rgba(0,0,0,0.13);
+  --shadow-card:  var(--glass-shadow-card);
+  --shadow-card-hover: 0 4px 14px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.80);
+  --shadow-drawer: -8px 0 40px rgba(0,0,0,0.10), -2px 0 8px rgba(0,0,0,0.06);
+
+  /* legacy panel depth aliases → new tokens */
+  --color-app-root-bg: var(--bg-app);
+  --sidebar-bg:        var(--bg-panel);
+  --content-bg:        var(--bg-panel);
+  --shadow-panel:      var(--glass-shadow-panel);
 
   /* priorities */
   --priority-low:    #3b82f6;
@@ -48,18 +84,12 @@
   --priority-high:   #ef4444;
 
   /* section pastels (light) */
-  --section-work:        rgba(99,102,241,0.10);
-  --section-personal:    rgba(34,197,94,0.10);
-  --section-health:      rgba(239,68,68,0.10);
-  --section-work-fg:     #6366f1;
-  --section-personal-fg: #16a34a;
+  --section-work:        rgba(99,102,241,0.12);
+  --section-personal:    rgba(34,197,94,0.12);
+  --section-health:      rgba(239,68,68,0.12);
+  --section-work-fg:     #5b5fd6;
+  --section-personal-fg: #15803d;
   --section-health-fg:   #dc2626;
-  
-  /* three-layer floating panel depth */
-  --color-app-root-bg: #D0CEC8;  /* canvas behind both panels — slightly darker than sidebar */
-  --sidebar-bg:  #E8E5E2;        /* floating sidebar panel — mid layer */
-  --content-bg:  #fefcf9;        /* floating content panel — top layer */
-  --shadow-panel: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
 
   /* FONT SIZES — three independent tokens */
   --font-size-tasks: 15px;  /* task titles in list view and kanban cards */
@@ -71,49 +101,69 @@
 }
   
 /* ═══════════════════════════════════════════
-   DARK MODE — warm near-black
+   DARK MODE — glass on deep slate
 ═══════════════════════════════════════════ */
 .dark {
-  --bg:           #1c1812;
-  --bg-subtle:    #24201a;
-  --bg-card:      #2a251e;
-  --bg-sidebar:   #1a1610;
-  --bg-hover:     rgba(245, 235, 225, 0.05);
-  --bg-active:    rgba(232, 96, 60, 0.10);
+  /* Tint inherited from :root (theme overrides --tint-h/--tint-s) */
 
-  --fg:           #f0e8e0;
-  --fg-muted:     #8f8078;
-  --fg-faint:     #4f4640;
-  --fg-placeholder: #382f28;
+  /* Layer 0 — deep, tinted canvas */
+  --bg-app:    hsl(var(--tint-h), 12%, 8%);
+
+  /* Layer 1 — panels: semi-transparent glass */
+  --bg-panel:  color-mix(in srgb, hsl(var(--tint-h), 14%, 17%) 55%, transparent);
+
+  /* Layer 2 — cards: slightly lighter glass */
+  --bg-card:   color-mix(in srgb, hsl(var(--tint-h), 14%, 22%) 55%, transparent);
+
+  /* Solid surfaces (editor, inputs) */
+  --bg:        hsl(var(--tint-h), 14%, 14%);
+  --bg-subtle: hsl(var(--tint-h), 14%, 18%);
+
+  /* Interaction states */
+  --bg-hover:  rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(232, 96, 60, 0.12);
+
+  /* Glass borders */
+  --glass-border:     rgba(255, 255, 255, 0.11);
+  --glass-border-top: rgba(255, 255, 255, 0.18);
+
+  /* Glass shadows */
+  --glass-shadow-panel: 0 6px 28px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.11);
+  --glass-shadow-card:  0 2px 10px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
+
+  --fg:           rgba(255, 255, 255, 0.90);
+  --fg-muted:     rgba(255, 255, 255, 0.44);
+  --fg-faint:     rgba(255, 255, 255, 0.24);
+  --fg-placeholder: rgba(255, 255, 255, 0.18);
 
   --accent:       #e8603c;
   --accent-hover: #eb7052;
   --accent-fg:    #ffffff;
-  --accent-bg:    rgba(232, 96, 60, 0.11);
-  --accent-bg-strong: rgba(232, 96, 60, 0.20);
+  --accent-bg:    rgba(232, 96, 60, 0.13);
+  --accent-bg-strong: rgba(232, 96, 60, 0.22);
 
-  /* three-layer floating panel depth */
-  --color-app-root-bg: #100e0b;  /* canvas behind both panels — darkest layer */
-  --sidebar-bg:  #1a1610;        /* floating sidebar panel — mid layer */
-  --content-bg:  #2a251e;        /* floating content panel — top layer */
-  --shadow-panel: 0 4px 24px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20);
+  /* legacy panel depth aliases → new tokens */
+  --color-app-root-bg: var(--bg-app);
+  --sidebar-bg:        var(--bg-panel);
+  --content-bg:        var(--bg-panel);
+  --shadow-panel:      var(--glass-shadow-panel);
 
-  --border:       rgba(245, 235, 225, 0.07);
-  --border-mid:   rgba(245, 235, 225, 0.11);
-  --border-strong:rgba(245, 235, 225, 0.17);
+  --border:       rgba(255, 255, 255, 0.07);
+  --border-mid:   rgba(255, 255, 255, 0.10);
+  --border-strong:rgba(255, 255, 255, 0.16);
 
-  --shadow-sm:    0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
-  --shadow-md:    0 4px 16px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.28);
-  --shadow-lg:    0 12px 40px rgba(0,0,0,0.60), 0 4px 16px rgba(0,0,0,0.38);
-  --shadow-float: 0 24px 80px rgba(0,0,0,0.76), 0 8px 32px rgba(0,0,0,0.44);
-  --shadow-card:  0 1px 4px rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.18);
-  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.44), 0 2px 8px rgba(0,0,0,0.28);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.32);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg:    0 12px 40px rgba(0,0,0,0.60);
+  --shadow-float: 0 24px 80px rgba(0,0,0,0.76);
+  --shadow-card:  var(--glass-shadow-card);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.44), inset 0 1px 0 rgba(255,255,255,0.10);
   --shadow-drawer: -8px 0 40px rgba(0,0,0,0.50), -2px 0 8px rgba(0,0,0,0.30);
 
-  --section-work:        rgba(99,102,241,0.14);
-  --section-personal:    rgba(34,197,94,0.13);
-  --section-health:      rgba(239,68,68,0.13);
-  --section-work-fg:     #818cf8;
+  --section-work:        rgba(99,102,241,0.16);
+  --section-personal:    rgba(34,197,94,0.15);
+  --section-health:      rgba(239,68,68,0.15);
+  --section-work-fg:     #a5b4fc;
   --section-personal-fg: #4ade80;
   --section-health-fg:   #f87171;
 }
@@ -132,11 +182,11 @@
    BASE
 ═══════════════════════════════════════════ */
 html {
-  background: var(--bg);
+  background: var(--bg-app);
 }
 
 body {
-  background: var(--bg);
+  background: var(--bg-app);
   color: var(--fg);
   font-family: var(--font-app, system-ui, -apple-system, BlinkMacSystemFont, sans-serif);
   font-size: var(--font-size-ui, 14px);
@@ -148,6 +198,43 @@ body {
 /* Smooth transitions on interactive elements */
 a, button, input, select, textarea {
   transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══════════════════════════════════════════
+   GLASS UTILITY CLASSES
+   Apply these to surfaces that need blur treatment.
+   The blur renders against whatever is visually behind
+   the element in the stacking context.
+═══════════════════════════════════════════ */
+
+/* Layer 1 — panels (sidebar, main content) */
+.glass-panel {
+  background: var(--bg-panel) !important;
+  backdrop-filter: var(--glass-blur-panel);
+  -webkit-backdrop-filter: var(--glass-blur-panel);
+  border: 1px solid var(--glass-border) !important;
+  border-top: 1px solid var(--glass-border-top) !important;
+  box-shadow: var(--glass-shadow-panel) !important;
+}
+
+/* Layer 2 — cards, task groups, kanban columns */
+.glass-card {
+  background: var(--bg-card) !important;
+  backdrop-filter: var(--glass-blur-card);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  border: 1px solid var(--glass-border) !important;
+  border-top: 1px solid var(--glass-border-top) !important;
+  box-shadow: var(--glass-shadow-card) !important;
+}
+
+/* Floating surfaces — modals, context menus, popovers, date pickers */
+.glass-float {
+  background: var(--bg-card) !important;
+  backdrop-filter: var(--glass-blur-card);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  border: 1px solid var(--glass-border) !important;
+  border-top: 1px solid var(--glass-border-top) !important;
+  box-shadow: var(--shadow-float) !important;
 }
 
 /* ═══════════════════════════════════════════
@@ -207,17 +294,20 @@ a, button, input, select, textarea {
 }
 
 /* ═══════════════════════════════════════════
-   TASK CARDS — floating white cards
+   TASK CARDS — glass cards
 ═══════════════════════════════════════════ */
 .task-card {
   background: var(--bg-card);
-  border-radius: 14px;
-  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur-card);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  border-radius: 11px;
+  box-shadow: var(--glass-shadow-card);
+  border: 1px solid var(--glass-border);
+  border-top: 1px solid var(--glass-border-top);
   padding: 10px 14px;
   margin-bottom: 8px;
   cursor: pointer;
   transition: box-shadow 150ms cubic-bezier(0.16,1,0.3,1), transform 150ms cubic-bezier(0.16,1,0.3,1);
-  border: 1px solid var(--border);
 }
 .task-card:hover {
   box-shadow: var(--shadow-card-hover);
@@ -225,7 +315,7 @@ a, button, input, select, textarea {
 }
 .task-card:active {
   transform: translateY(0);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--glass-shadow-card);
 }
 
 /* ═══════════════════════════════════════════

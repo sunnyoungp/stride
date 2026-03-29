@@ -9,6 +9,12 @@ export function SettingsApplier() {
     const themeSetting = localStorage.getItem("stride-theme") ?? "neutral-dark";
     applyTheme(getThemeById(themeSetting));
 
+    // Custom tint override — applied after theme so it wins
+    const tintH = localStorage.getItem("stride-tint-h");
+    const tintS = localStorage.getItem("stride-tint-s");
+    if (tintH) document.documentElement.style.setProperty("--tint-h", tintH);
+    if (tintS) document.documentElement.style.setProperty("--tint-s", tintS);
+
     // Per-user overrides applied after the theme
     const accent = localStorage.getItem("stride-accent");
     if (accent) document.documentElement.style.setProperty("--accent", accent);

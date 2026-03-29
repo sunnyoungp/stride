@@ -54,49 +54,118 @@ Inline subtask rows inside `KanbanCardVisual` must have `onPointerDown={(e) => e
 
 ## Design System — ALWAYS use these, never hardcode values
 
+### ⚠️ GLASSMORPHISM — THREE-LAYER DEPTH SYSTEM
+
+Stride uses a **three-layer glassmorphism** design. Every surface is derived from `--tint-h` and `--tint-s`. **No surface may use a hardcoded background color.**
+
+```
+Layer 0  →  --bg-app       App canvas (behind everything). Solid, darkest/most muted.
+Layer 1  →  --bg-panel     Panels (sidebar + content). Semi-transparent glass, same color for both.
+Layer 2  →  --bg-card      Cards, task groups, Kanban columns. Slightly lighter glass.
+```
+
+All panel/card backgrounds are derived via CSS `color-mix()` from `--tint-h` and `--tint-s`. When the user changes the tint, all glass surfaces update automatically.
+
+#### Glass pattern per layer
+
+**Layer 1 — panels** (ClientLayout.tsx sidebar + main):
+```css
+background: var(--bg-panel);
+backdrop-filter: var(--glass-blur-panel);   /* blur(24px) saturate(160%) */
+-webkit-backdrop-filter: var(--glass-blur-panel);
+border: 1px solid var(--glass-border);
+border-top: 1px solid var(--glass-border-top);
+box-shadow: var(--glass-shadow-panel);
+border-radius: 14px;
+```
+
+**Layer 2 — cards / task groups / Kanban columns / floating surfaces**:
+```css
+background: var(--bg-card);
+backdrop-filter: var(--glass-blur-card);    /* blur(14px) saturate(140%) */
+-webkit-backdrop-filter: var(--glass-blur-card);
+border: 1px solid var(--glass-border);
+border-top: 1px solid var(--glass-border-top);
+box-shadow: var(--glass-shadow-card);        /* or --shadow-float for modals */
+border-radius: 11px;   /* 12px for context menus, 14–16px for modals/sheets */
+```
+
+Use `backdropFilter` + `WebkitBackdropFilter` in React inline styles. Use the `.glass-card` CSS class for elements that need glass treatment where adding inline styles is impractical.
+
+#### Tint system
+
+Themes declare `--tint-h` (hue, 0–360) and `--tint-s` (saturation, e.g. `16%`). The rest auto-derives:
+- `--bg-app`: `hsl(var(--tint-h), var(--tint-s), 72%)` in light / `hsl(var(--tint-h), 12%, 8%)` in dark
+- `--bg-panel`: `color-mix(in srgb, hsl(var(--tint-h), var(--tint-s), 82%) 52%, transparent)` in light
+- `--bg-card`: `color-mix(in srgb, hsl(var(--tint-h), var(--tint-s), 88%) 50%, transparent)` in light
+
+Users can override tint via Settings > Appearance > Glass tint. Persisted as `stride-tint-h` and `stride-tint-s` in localStorage. SettingsApplier applies these after the theme.
+
+Per-theme tint hints (h, s):
+- Warm: 30, 16% | Cool: 218, 10% | Midnight: 222, 18% | Ocean: 184, 22%
+- Forest: 138, 18% | Aurora: 255, 14% | Sunset: 28, 22% | Neutral: 220, 6%
+- Neutral-light: 30, 16% | Lavender: 260, 14% | Matcha: 138, 12% | Sky: 210, 14%
+
 ### CSS Variables (defined in globals.css / SettingsApplier.tsx)
 All colors, spacing, and surfaces MUST use these variables. Never use Tailwind color classes like `bg-zinc-900`, `text-zinc-200`, `border-white/10`, or hardcoded hex values like `#18181b` for UI surfaces.
 
 ```
-/* Surfaces */
---bg                  base page background
---bg-card             card / panel background
---bg-subtle           input backgrounds, secondary surfaces
---bg-hover            hover state background
---bg-active           selected/active state background
+/* Three-layer depth (glass) */
+--bg-app              App canvas — behind panels
+--bg-panel            Panel glass (sidebar + content) — color-mix derived
+--bg-card             Card glass (groups, kanban, modals) — color-mix derived
+
+/* Solid surfaces (editors, inputs) */
+--bg                  Solid page/editor background — hsl-derived, theme-specific
+--bg-subtle           Solid secondary surface (inputs, code blocks)
+--bg-hover            Hover state background
+--bg-active           Selected/active state background
+
+/* Glass tokens */
+--glass-blur-panel    blur(24px) saturate(160%)
+--glass-blur-card     blur(14px) saturate(140%)
+--glass-border        Frosted border (sides/bottom)
+--glass-border-top    Bright top edge border (specular highlight)
+--glass-shadow-panel  Panel drop shadow + inset top glow
+--glass-shadow-card   Card drop shadow + inset top glow
 
 /* Text */
---fg                  primary text
---fg-muted            secondary text
---fg-faint            tertiary / placeholder text
+--fg                  primary text — rgba(0,0,0,0.84) light / rgba(255,255,255,0.90) dark
+--fg-muted            secondary text — passes 3:1 AA large against --bg-card
+--fg-faint            tertiary text — lower contrast, decorative only
+--fg-placeholder      placeholder / disabled text
 
 /* Borders */
 --border              default border
---border-mid          slightly stronger border (for cards, menus)
+--border-mid          slightly stronger border
 --border-strong       strong border (drag handles, dividers)
 
 /* Accent */
---accent              primary brand color (orange, user-configurable)
+--accent              primary brand color (coral default, user-configurable)
 --accent-bg           accent tint background
 --accent-bg-strong    stronger accent tint
 
 /* Shadows */
---shadow-lg           standard elevated shadow
---shadow-float        floating element shadow (modals, popovers)
---shadow-panel        floating card shadow (sidebar + content panels)
-                      Light: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)
-                      Dark:  0 4px 24px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20)
+--shadow-sm/md/lg     standard depth shadows
+--shadow-float        modal / heavy float shadow
 
-/* Layout depth — three-layer floating panel system */
---color-app-root-bg   root canvas behind both panels (darkest/most muted layer)
---sidebar-bg          floating sidebar panel background (mid layer)
---content-bg          floating content panel background (top/lightest layer)
+/* Legacy aliases (point to new tokens, do not use directly in new code) */
+--color-app-root-bg   → var(--bg-app)
+--sidebar-bg          → var(--bg-panel)
+--content-bg          → var(--bg-panel)
+--shadow-panel        → var(--glass-shadow-panel)
 
 /* Priority */
 --priority-high
 --priority-medium
 --priority-low
 ```
+
+### Contrast requirements
+- `--fg` against `--bg-card`: must pass WCAG AA (≥4.5:1)
+- `--fg-muted` against `--bg-card`: must pass AA large (≥3:1)
+- `--fg-faint` / `--fg-placeholder`: lower contrast allowed — decorative use only
+- Check all themed variants before shipping new text colors
 
 ### Border Radius — use these consistently
 ```
@@ -128,9 +197,9 @@ All colors, spacing, and surfaces MUST use these variables. Never use Tailwind c
 ## Component Rules — ALWAYS use existing components
 
 ### Context Menus
-Use ONE consistent pattern across ALL context menus. The correct pattern is `ProjectContextMenu` and `SectionContextMenu` (they use CSS variables). Do NOT follow the old `DocumentContextMenu` pattern (it uses hardcoded `bg-zinc-900`, `text-zinc-200`, `border-white/10` — this is wrong and should be migrated).
+Use ONE consistent pattern across ALL context menus. All context menus now use the glass treatment.
 
-Correct context menu shell:
+Correct context menu shell (glass):
 ```tsx
 <div
   ref={menuRef}
@@ -138,8 +207,11 @@ Correct context menu shell:
     left: clampedPos.x,
     top: clampedPos.y,
     background: "var(--bg-card)",
-    border: "1px solid var(--border-mid)",
-    boxShadow: "var(--shadow-lg)",
+    backdropFilter: "var(--glass-blur-card)",
+    WebkitBackdropFilter: "var(--glass-blur-card)",
+    border: "1px solid var(--glass-border)",
+    borderTop: "1px solid var(--glass-border-top)",
+    boxShadow: "var(--shadow-float)",
     zIndex: 9999,
   }}
   className="fixed w-[200px] select-none rounded-xl p-1"
@@ -434,24 +506,33 @@ When `sortBy === "manual"`, tasks are ordered by their `order` field (lowest fir
 
 ---
 
-## Background Token Conventions
+## Glass Surface Conventions
 
-### No pure white or pure black
-- `--bg-card` and `--content-bg` must **never** be `#ffffff` or `#000000`. Light themes use tinted near-whites (e.g. `#fefcf9` for warm, `#fbfaff` for lavender). Dark themes must have a lifted base (deep slate, not black).
+### All surfaces are glass — no flat whites or blacks
+- `--bg-card` and `--bg-panel` are **always** semi-transparent `color-mix()` values derived from `--tint-h`/`--tint-s`. They MUST NOT be hardcoded hex values.
+- `--bg` (solid editor/input background) uses `hsl()` derived from tint — also no hardcoded hex.
 - All backgrounds use CSS variables — never hardcoded hex values.
 
-### Dark theme base luminance targets
-Dark themes should feel like "deep slate, not black." Target base lightness:
-- `--color-app-root-bg`: ~L5–7% (darkest layer, e.g. `#0e1014`)
-- `--sidebar-bg`: ~L9–12% (sidebar panel)
-- `--bg` / `--content-bg`: ~L12–16% (main content surfaces)
-- `--bg-card`: same as `--content-bg` or slightly lighter
+### Dark theme glass targets
+Dark themes should feel rich and deep, not black. The canvas is dark slate, panels are glass over it:
+- `--bg-app`: ~L8% (darkest layer — `hsl(tint-h, 12%, 8%)`)
+- `--bg-panel`: glass at ~L17%, 55% opacity via `color-mix()`
+- `--bg-card`: glass at ~L22%, 55% opacity via `color-mix()`
+- `--bg` (solid): ~L14% — used for editors, code blocks, inputs
 
-### Light theme surface targets
-- `--bg`: slightly warm/tinted page bg (e.g. `#faf7f4`)
-- `--bg-card` / `--content-bg`: tinted near-white matching theme hue (e.g. `#fefcf9` warm, `#fbfaff` purple, `#fafdf9` green)
-- `--color-app-root-bg`: noticeably darker/desaturated canvas (e.g. `#D0CEC8`)
-- `--sidebar-bg`: between root and content (e.g. `#E8E5E2`)
+### Light theme glass targets
+- `--bg-app`: ~L72% (tinted canvas, noticeably darker than panels)
+- `--bg-panel`: glass at ~L82%, 52% opacity via `color-mix()`
+- `--bg-card`: glass at ~L88%, 50% opacity via `color-mix()`
+- `--bg` (solid): ~L97% — used for editors, inputs
+
+### Themes define only tint + semantic values
+Themes in `themes.ts` declare:
+- `--tint-h` and `--tint-s` (drive all glass surfaces automatically)
+- `--bg` and `--bg-subtle` (solid surfaces for editors/inputs)
+- All `--fg-*`, `--accent-*`, `--border-*`, `--priority-*`, `--section-*`, `--shadow-*` tokens
+
+Themes do NOT set `--bg-card`, `--bg-panel`, `--bg-app`, `--sidebar-bg`, `--content-bg`, or `--color-app-root-bg` — those are derived from tint in globals.css.
 
 ---
 
@@ -459,7 +540,9 @@ Dark themes should feel like "deep slate, not black." Target base lightness:
 
 - Never use `bg-zinc-*`, `text-zinc-*`, `border-white/*` Tailwind classes for UI surfaces — use CSS variables
 - Never hardcode colors like `#18181b`, `#27272a`, `#3f3f46` — use CSS variables
-- **Never set `--bg-card` or `--content-bg` to pure `#ffffff` or `#FFFFFF`** — use a tinted near-white that matches the theme's hue character
+- **Never set `--bg-card`, `--bg-panel`, or `--bg-app` to a solid hex value** — these are glass surfaces derived from tint via `color-mix()`
+- **Never add `--bg-card` or glass surface tokens to individual themes in themes.ts** — they derive from `--tint-h`/`--tint-s` globally
+- **Never use `border: "1px solid var(--border-mid)"` on floating surfaces** — use `var(--glass-border)` + `var(--glass-border-top)` instead
 - Never write a new context menu from scratch — extend the existing pattern
 - Never add a new modal backdrop — use the standard one above
 - Never use `z-index` values other than those in the hierarchy above

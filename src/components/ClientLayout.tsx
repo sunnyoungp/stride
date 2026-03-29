@@ -18,9 +18,8 @@ import { FocusPill } from "@/components/FocusPill";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MobileFABs } from "@/components/MobileFABs";
 
-// Floating panel shadow — used on both sidebar and content cards
-const PANEL_SHADOW = "var(--shadow-panel)";
-const PANEL_RADIUS = 12;
+// Glass panel treatment — applied to both sidebar and content panels
+const PANEL_RADIUS = 14;
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -58,15 +57,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         {/* Root canvas — carries the app background behind the floating panels */}
                         <div
                             className="flex h-screen w-screen overflow-hidden md:p-3 md:gap-3"
-                            style={{ background: "var(--color-app-root-bg)" }}
+                            style={{ background: "var(--bg-app)" }}
                         >
                             {!hideSidebar && (
                                 <aside
                                     className={`flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
                                     style={{
-                                        background: "var(--sidebar-bg)",
+                                        background: "var(--bg-panel)",
+                                        backdropFilter: "var(--glass-blur-panel)",
+                                        WebkitBackdropFilter: "var(--glass-blur-panel)",
+                                        border: "1px solid var(--glass-border)",
+                                        borderTop: "1px solid var(--glass-border-top)",
+                                        boxShadow: "var(--glass-shadow-panel)",
                                         borderRadius: PANEL_RADIUS,
-                                        boxShadow: PANEL_SHADOW,
                                     }}
                                 >
                                     <Sidebar />
@@ -75,9 +78,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             <main
                                 className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
                                 style={{
-                                    background: "var(--content-bg)",
+                                    background: "var(--bg-panel)",
+                                    backdropFilter: "var(--glass-blur-panel)",
+                                    WebkitBackdropFilter: "var(--glass-blur-panel)",
+                                    border: "1px solid var(--glass-border)",
+                                    borderTop: "1px solid var(--glass-border-top)",
+                                    boxShadow: "var(--glass-shadow-panel)",
                                     borderRadius: PANEL_RADIUS,
-                                    boxShadow: PANEL_SHADOW,
                                     paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
                                 }}
                             >
@@ -104,16 +111,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Root canvas — carries the app background behind the floating panels */}
             <div
                 className="flex h-screen w-screen overflow-hidden md:p-3 md:gap-3"
-                style={{ background: "var(--color-app-root-bg)" }}
+                style={{ background: "var(--bg-app)" }}
             >
                 {/* Sidebar floating card: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
                 {!hideSidebar && (
                     <aside
                         className={`flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
                         style={{
-                            background: "var(--sidebar-bg)",
+                            background: "var(--bg-panel)",
+                            backdropFilter: "var(--glass-blur-panel)",
+                            WebkitBackdropFilter: "var(--glass-blur-panel)",
+                            border: "1px solid var(--glass-border)",
+                            borderTop: "1px solid var(--glass-border-top)",
+                            boxShadow: "var(--glass-shadow-panel)",
                             borderRadius: PANEL_RADIUS,
-                            boxShadow: PANEL_SHADOW,
                         }}
                     >
                         <Sidebar />
@@ -124,9 +135,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <main
                     className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
                     style={{
-                        background: "var(--content-bg)",
+                        background: "var(--bg-panel)",
+                        backdropFilter: "var(--glass-blur-panel)",
+                        WebkitBackdropFilter: "var(--glass-blur-panel)",
+                        border: "1px solid var(--glass-border)",
+                        borderTop: "1px solid var(--glass-border-top)",
+                        boxShadow: "var(--glass-shadow-panel)",
                         borderRadius: PANEL_RADIUS,
-                        boxShadow: PANEL_SHADOW,
                         paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
                     }}
                 >

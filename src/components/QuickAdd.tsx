@@ -270,18 +270,28 @@ export function QuickAdd() {
       />
 
       <div
-        className="cmd-palette w-full max-w-[500px] overflow-hidden bg-[var(--bg-card)] shadow-float"
+        className="cmd-palette w-full max-w-[500px] overflow-hidden"
         style={isMobile ? {
+          background: "var(--bg-card)",
+          backdropFilter: "var(--glass-blur-card)",
+          WebkitBackdropFilter: "var(--glass-blur-card)",
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
-          border: "1px solid var(--border-mid)",
+          border: "1px solid var(--glass-border)",
+          borderTop: "1px solid var(--glass-border-top)",
           bottom: keyboardHeight > 0 ? keyboardHeight : 0,
           paddingBottom: keyboardHeight > 0 ? 0 : "calc(32px + env(safe-area-inset-bottom))",
           transition: "bottom 200ms ease",
+          boxShadow: "var(--shadow-float)",
         } : {
+          background: "var(--bg-card)",
+          backdropFilter: "var(--glass-blur-card)",
+          WebkitBackdropFilter: "var(--glass-blur-card)",
           marginBottom: 40,
           borderRadius: 16,
-          border: "1px solid var(--border-mid)",
+          border: "1px solid var(--glass-border)",
+          borderTop: "1px solid var(--glass-border-top)",
+          boxShadow: "var(--shadow-float)",
         }}
       >
         {/* Drag handle for mobile */}

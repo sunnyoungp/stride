@@ -44,7 +44,8 @@ export function SlashCommandMenu({
       ref={menuRef}
       style={{
         position: "fixed", left: pos.x, top: pos.y, zIndex: 9999,
-        background: "var(--bg-card)", border: "1px solid var(--border-mid)",
+        background: "var(--bg-card)", backdropFilter: "var(--glass-blur-card)", WebkitBackdropFilter: "var(--glass-blur-card)",
+        border: "1px solid var(--glass-border)", borderTop: "1px solid var(--glass-border-top)",
         borderRadius: 12, boxShadow: "var(--shadow-float)",
         width: 280, maxHeight: 320, overflowY: "auto", padding: 4,
       }}

@@ -81,7 +81,7 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
   return (
     <div
       ref={menuRef}
-      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", border: "1px solid var(--border-mid)", boxShadow: "var(--shadow-float)" }}
+      style={{ left: clampedPos.x, top: clampedPos.y, background: "var(--bg-card)", backdropFilter: "var(--glass-blur-card)", WebkitBackdropFilter: "var(--glass-blur-card)", border: "1px solid var(--glass-border)", borderTop: "1px solid var(--glass-border-top)", boxShadow: "var(--shadow-float)" }}
       className="fixed z-[9999] w-[200px] select-none rounded-xl p-1"
       role="menu"
     >

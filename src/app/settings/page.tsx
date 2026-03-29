@@ -162,7 +162,7 @@ function ThemeTile({ theme, active, onSelect }: { theme: typeof THEMES[number]; 
       onClick={onSelect}
       style={{
         position: "relative",
-        background: theme["--bg-card"],
+        background: theme["--bg"],
         border: active ? "2px solid var(--accent)" : "2px solid transparent",
         outline: active ? "none" : `1px solid ${theme["--border-mid"]}`,
         outlineOffset: active ? 0 : -1,
@@ -175,7 +175,7 @@ function ThemeTile({ theme, active, onSelect }: { theme: typeof THEMES[number]; 
       }}
     >
       <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-        {(["--bg", "--bg-card", "--accent", "--fg"] as const).map(prop => (
+        {(["--bg", "--bg-subtle", "--accent", "--fg"] as const).map(prop => (
           <div
             key={prop}
             style={{
@@ -200,6 +200,15 @@ function ThemeTile({ theme, active, onSelect }: { theme: typeof THEMES[number]; 
   );
 }
 
+const TINT_PRESETS = [
+  { label: "Warm",     h: 30,  s: 16 },
+  { label: "Cool",     h: 210, s: 14 },
+  { label: "Sage",     h: 150, s: 12 },
+  { label: "Lavender", h: 260, s: 14 },
+  { label: "Rose",     h: 340, s: 14 },
+  { label: "Neutral",  h: 30,  s: 4  },
+];
+
 function AppearanceCard() {
   const { currentTheme, setTheme } = useTheme();
   const [accent,       setAccentState] = useState(() => ls("stride-accent",        "#e8603c"));
@@ -207,7 +216,9 @@ function AppearanceCard() {
   const [fontSize,     setFontSize]    = useState(() => ls("stride-font-ui",       "14px"));
   const [sidebarWidth, setSidebarW]    = useState(() => ls("stride-sidebar-width", "220"));
   const [compact,      setCompact]     = useState(() => ls("stride-compact",       "false") === "true");
+  const [tintH,        setTintHState]  = useState(() => parseInt(ls("stride-tint-h", "30")));
   const colorInputRef = useRef<HTMLInputElement>(null);
+  const tintInputRef  = useRef<HTMLInputElement>(null);
 
   const applyAccent = (hex: string) => {
     setAccentState(hex);
@@ -255,6 +266,33 @@ function AppearanceCard() {
     document.documentElement.setAttribute("data-compact", String(v));
   };
 
+  // Extract H+S from a hex color and apply as tint vars
+  const applyTintFromHex = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const delta = max - min;
+    let h = 0;
+    if (delta !== 0) {
+      if (max === r) h = ((g - b) / delta) % 6;
+      else if (max === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = Math.round(h * 60);
+      if (h < 0) h += 360;
+    }
+    const s = Math.min(20, Math.round(delta / (1 - Math.abs(max + min - 1) || 1) * 100));
+    applyTint(h, s);
+  };
+
+  const applyTint = (h: number, s: number) => {
+    setTintHState(h);
+    void saveSettings("stride-tint-h", String(h));
+    void saveSettings("stride-tint-s", `${s}%`);
+    setCSSVar("--tint-h", String(h));
+    setCSSVar("--tint-s", `${s}%`);
+  };
+
   return (
     <SettingCard id="appearance" title="Appearance">
       <div style={{ paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
@@ -275,6 +313,45 @@ function AppearanceCard() {
           ))}
         </div>
       </div>
+
+      <SettingRow label="Glass tint" description="Shifts the hue of all glass surfaces">
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {TINT_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              title={p.label}
+              onClick={() => applyTint(p.h, p.s)}
+              style={{
+                width: 22, height: 22, borderRadius: "50%",
+                background: `hsl(${p.h}, ${p.s + 40}%, 60%)`,
+                border: "none", cursor: "pointer", padding: 0,
+                outline: tintH === p.h ? `2px solid var(--fg)` : "2px solid transparent",
+                outlineOffset: 2,
+                transition: "outline 120ms ease",
+              }}
+            />
+          ))}
+          <button
+            type="button"
+            title="Custom tint"
+            onClick={() => tintInputRef.current?.click()}
+            style={{
+              width: 22, height: 22, borderRadius: "50%",
+              background: `conic-gradient(red, yellow, lime, cyan, blue, magenta, red)`,
+              border: "2px solid var(--border-mid)", cursor: "pointer", padding: 0,
+              flexShrink: 0,
+            }}
+          />
+          <input
+            ref={tintInputRef}
+            type="color"
+            defaultValue="#e8a060"
+            onChange={(e) => applyTintFromHex(e.target.value)}
+            style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+          />
+        </div>
+      </SettingRow>
 
       <SettingRow label="Accent color">
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
