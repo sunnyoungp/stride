@@ -7,7 +7,7 @@ import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import { TaskGroup, TaskSelectionProvider } from "@/components/TaskList";
+import { TaskGroup, TaskSelectionProvider, ConnectedTaskContextMenu } from "@/components/TaskList";
 import { SortFilterPopover, type GroupBy, type SortBy } from "@/components/SortFilterPopover";
 import type { Task } from "@/types/index";
 
@@ -18,6 +18,7 @@ function todayStr() { return localDate(new Date()); }
 
 function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
   switch (sortBy) {
+    case "manual": return [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     case "title": return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
     case "priority": {
       const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -277,6 +278,13 @@ function InboxPageContent() {
               onTaskRightClick={handleTaskRightClick}
             />
           </div>
+          {contextMenu && (
+            <ConnectedTaskContextMenu
+              task={contextMenu.task}
+              position={{ x: contextMenu.x, y: contextMenu.y }}
+              onClose={() => setContextMenu(null)}
+            />
+          )}
         </TaskSelectionProvider>
       )}
 
@@ -288,7 +296,8 @@ function InboxPageContent() {
           onClose={() => setSelectedTaskId(null)}
         />
       )}
-      {contextMenu && (
+      {/* Context menu for kanban view (no multi-select, so no selectedIds needed) */}
+      {view === "kanban" && contextMenu && (
         <TaskContextMenu
           task={contextMenu.task}
           position={{ x: contextMenu.x, y: contextMenu.y }}

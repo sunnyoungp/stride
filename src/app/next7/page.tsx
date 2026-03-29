@@ -24,12 +24,13 @@ import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
-import { TaskGroup, TaskSelectionProvider, localDateStr, TaskRow, AddTaskRow } from "@/components/TaskList";
+import { TaskGroup, TaskSelectionProvider, ConnectedTaskContextMenu, localDateStr, TaskRow, AddTaskRow } from "@/components/TaskList";
 import { SortFilterPopover, type GroupBy, type SortBy } from "@/components/SortFilterPopover";
 import type { Task } from "@/types/index";
 
 function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
   switch (sortBy) {
+    case "manual": return [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     case "title": return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
     case "priority": {
       const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -576,6 +577,14 @@ export default function Next7Page() {
               ) : null}
             </DragOverlay>
           </DndContext>
+          {/* Context menu inside provider so selectedIds are available */}
+          {contextMenu && (
+            <ConnectedTaskContextMenu
+              task={contextMenu.task}
+              position={{ x: contextMenu.x, y: contextMenu.y }}
+              onClose={() => setContextMenu(null)}
+            />
+          )}
         </TaskSelectionProvider>
       )}
 
@@ -587,7 +596,8 @@ export default function Next7Page() {
           onClose={() => setSelectedTaskId(null)}
         />
       )}
-      {contextMenu && (
+      {/* Context menu for kanban view (no multi-select) */}
+      {view === "kanban" && contextMenu && (
         <TaskContextMenu
           task={contextMenu.task}
           position={{ x: contextMenu.x, y: contextMenu.y }}

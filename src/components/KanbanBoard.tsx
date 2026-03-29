@@ -17,8 +17,10 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
   useSortable,
   sortableKeyboardCoordinates,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTaskStore } from "@/store/taskStore";
@@ -63,6 +65,8 @@ type Props = {
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
   onAddTask?: (columnId: string, title: string) => void;
+  /** If provided, column headers become drag handles to reorder columns */
+  onColumnReorder?: (newColumnIds: string[]) => void;
 };
 
 // ── Priority dot color ────────────────────────────────────────────────────────
@@ -282,6 +286,7 @@ function KanbanCardVisual({
                 }}
                 onClick={(e) => { e.stopPropagation(); onSubtaskClick?.(st, { x: e.clientX, y: e.clientY }); }}
                 onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onSubtaskRightClick?.(st, { x: e.clientX, y: e.clientY }); }}
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 <button
                   type="button"
@@ -428,14 +433,31 @@ function KanbanColumnView({
   onTaskClick,
   onTaskRightClick,
   onAddTask,
+  enableColumnDrag,
 }: {
   column: KanbanColumn;
   allTasks: Task[];
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
   onAddTask?: (columnId: string, title: string) => void;
+  enableColumnDrag?: boolean;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: column.id });
+  const { isOver, setNodeRef: setDropRef } = useDroppable({ id: column.id });
+  const {
+    attributes: colAttrs,
+    listeners: colListeners,
+    setNodeRef: setColSortRef,
+    transform: colTransform,
+    transition: colTransition,
+    isDragging: colIsDragging,
+  } = useSortable({ id: `col-${column.id}` });
+
+  // Combine drop and sort refs onto the same element
+  const setRef = (node: HTMLDivElement | null) => {
+    setDropRef(node);
+    setColSortRef(node);
+  };
+
   const color = column.color ?? "#94a3b8";
   const [addingAt, setAddingAt] = useState<"top" | "bottom" | null>(null);
 
@@ -464,18 +486,27 @@ function KanbanColumnView({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setRef}
       style={{
         minWidth: 320, maxWidth: 320, flexShrink: 0,
         display: "flex", flexDirection: "column",
         borderRadius: 14, background: "var(--bg-card)",
         border: isOver ? `2px solid var(--accent)` : "1px solid var(--border)",
-        transition: "border 150ms ease",
+        transition: `border 150ms ease, ${colTransition ?? ""}`,
         overflow: "clip",
+        transform: CSS.Transform.toString(colTransform),
+        opacity: colIsDragging ? 0.5 : 1,
       }}
     >
-      {/* Header */}
-      <div style={{ background: "var(--bg-card)", padding: "12px 16px", position: "sticky", top: 0, zIndex: 10 }}>
+      {/* Header — becomes drag handle when column reordering is enabled */}
+      <div
+        style={{
+          background: "var(--bg-card)", padding: "12px 16px",
+          position: "sticky", top: 0, zIndex: 10,
+          cursor: enableColumnDrag ? "grab" : "default",
+        }}
+        {...(enableColumnDrag ? { ...colAttrs, ...colListeners } : {})}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {column.icon && <span style={{ fontSize: 14 }}>{column.icon}</span>}
           <span style={{ fontWeight: 600, fontSize: 13, color: "var(--fg)" }}>{column.title}</span>
@@ -554,7 +585,7 @@ function KanbanColumnView({
 
 // ── KanbanBoard ───────────────────────────────────────────────────────────────
 
-export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTaskRightClick, onAddTask }: Props) {
+export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTaskRightClick, onAddTask, onColumnReorder }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -581,13 +612,30 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
     setActiveId(event.active.id as string);
   };
 
+  const columnSortableIds = columns.map((c) => `col-${c.id}`);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     if (!over) return;
 
-    const taskId = active.id as string;
-    const overId = over.id as string;
+    const activeIdStr = active.id as string;
+    const overIdStr = over.id as string;
+
+    // ── Column reorder ──────────────────────────────────────────────────────
+    if (activeIdStr.startsWith("col-")) {
+      if (!overIdStr.startsWith("col-") || activeIdStr === overIdStr) return;
+      const oldIdx = columnSortableIds.indexOf(activeIdStr);
+      const newIdx = columnSortableIds.indexOf(overIdStr);
+      if (oldIdx === -1 || newIdx === -1) return;
+      const reordered = arrayMove(columns, oldIdx, newIdx);
+      onColumnReorder?.(reordered.map((c) => c.id));
+      return;
+    }
+
+    // ── Card move ───────────────────────────────────────────────────────────
+    const taskId = activeIdStr;
+    const overId = overIdStr;
     if (taskId === overId) return;
 
     const sourceCol = columns.find((c) => c.tasks.some((t) => t.id === taskId));
@@ -623,29 +671,32 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div
-        className="touch-pan-y"
-        style={{
-          display: "flex",
-          gap: 20,
-          overflowX: "auto",
-          padding: 16,
-          minHeight: "100%",
-          alignItems: "flex-start",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {columns.map((col) => (
-          <KanbanColumnView
-            key={col.id}
-            column={col}
-            allTasks={allTasks}
-            onTaskClick={onTaskClick}
-            onTaskRightClick={onTaskRightClick}
-            onAddTask={onAddTask}
-          />
-        ))}
-      </div>
+      <SortableContext items={columnSortableIds} strategy={horizontalListSortingStrategy}>
+        <div
+          className="touch-pan-y"
+          style={{
+            display: "flex",
+            gap: 20,
+            overflowX: "auto",
+            padding: 16,
+            minHeight: "100%",
+            alignItems: "flex-start",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {columns.map((col) => (
+            <KanbanColumnView
+              key={col.id}
+              column={col}
+              allTasks={allTasks}
+              onTaskClick={onTaskClick}
+              onTaskRightClick={onTaskRightClick}
+              onAddTask={onAddTask}
+              enableColumnDrag={!!onColumnReorder}
+            />
+          ))}
+        </div>
+      </SortableContext>
 
       <DragOverlay>
         {activeTask && activeColumn ? (

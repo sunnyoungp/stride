@@ -23,6 +23,8 @@ function todayStr() { return localDate(new Date()); }
 
 function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
   switch (sortBy) {
+    case "manual":
+      return [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     case "title": return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
     case "priority": {
       const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -78,6 +80,7 @@ function TasksPageInner({
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
   const sections = useSectionStore((s) => s.sections);
   const subsections = useSectionStore((s) => s.subsections);
+  const updateSection = useSectionStore((s) => s.updateSection);
 
   const today = todayStr();
 
@@ -207,8 +210,43 @@ function TasksPageInner({
       } else {
         await reorderTasks([{ id: taskId, order: newOrder, sectionId: newSecId }]);
       }
+    } else if (groupBy === "date") {
+      // Map column ID to a concrete due date
+      const dateForColumn = (colId: string): string | undefined => {
+        if (colId === "__nodate__") return undefined;
+        if (colId === "__today__") return localDate(new Date());
+        if (colId === "__tomorrow__") {
+          const d = new Date(); d.setDate(d.getDate() + 1); return localDate(d);
+        }
+        if (colId === "__later__") {
+          // Set to 2 days from now as a reasonable default for "later"
+          const d = new Date(); d.setDate(d.getDate() + 2); return localDate(d);
+        }
+        if (colId === "__overdue__") {
+          // Keep existing overdue date; if no date set to yesterday
+          const t = tasks.find((t) => t.id === taskId);
+          if (t?.dueDate) return t.dueDate;
+          const d = new Date(); d.setDate(d.getDate() - 1); return localDate(d);
+        }
+        return undefined;
+      };
+
+      const sourceColId = kanbanColumns.find((c) => c.tasks.some((t) => t.id === taskId))?.id;
+      const newDueDate = dateForColumn(targetColId);
+      const isIntraCol = sourceColId === targetColId;
+
+      if (isIntraCol) {
+        const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
+        const old = colTasks.findIndex((t) => t.id === taskId);
+        if (old === -1) return;
+        const reordered = arrayMove([...colTasks], old, newOrder);
+        await reorderTasks(reordered.map((t, i) => ({ id: t.id, order: i })));
+      } else {
+        // Update due date to match target column
+        await updateTask(taskId, { dueDate: newDueDate, order: newOrder });
+      }
     } else {
-      // For non-list groupings, only allow same-column reorder
+      // For other non-list groupings (priority, tag), only allow same-column reorder
       const colTasks = kanbanColumns.find((c) => c.id === targetColId)?.tasks ?? [];
       const isInCol = colTasks.some((t) => t.id === taskId);
       if (!isInCol) return;
@@ -236,6 +274,16 @@ function TasksPageInner({
 
   const filterDates = todayOnly ? [today] : undefined;
 
+  const handleColumnReorder = async (newColIds: string[]) => {
+    // Only meaningful for list groupBy — update section orders
+    if (groupBy !== "list") return;
+    await Promise.all(
+      newColIds
+        .filter((id) => id !== "__unsorted__")
+        .map((id, idx) => updateSection(id, { order: idx }))
+    );
+  };
+
   if (view === "kanban") {
     return (
       <div style={{ height: "100%", overflowY: "auto" }}>
@@ -246,6 +294,7 @@ function TasksPageInner({
           onTaskClick={onTaskClick}
           onTaskRightClick={onTaskRightClick}
           onAddTask={handleAddTask}
+          onColumnReorder={groupBy === "list" ? (ids) => void handleColumnReorder(ids) : undefined}
         />
       </div>
     );

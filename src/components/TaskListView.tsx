@@ -67,6 +67,24 @@ function SortableTaskRow({ task, renderTaskRow }: {
   );
 }
 
+function SortableSubtaskRow({ task, renderSubtaskRow }: {
+  task: Task;
+  renderSubtaskRow: (t: Task) => React.ReactElement;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
+      {...attributes}
+      {...listeners}
+      className="outline-none"
+    >
+      {renderSubtaskRow(task)}
+    </div>
+  );
+}
+
 function DroppableSection({ id, children }: { id: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
@@ -286,6 +304,46 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
     const draggedTask = tasks.find((t) => t.id === active.id);
     if (!draggedTask) return;
     const overTask = tasks.find((t) => t.id === over.id);
+
+    // ── Subtask drag handling ────────────────────────────────────────────────
+    if (draggedTask.parentTaskId) {
+      const draggedParent = tasks.find((t) => t.id === draggedTask.parentTaskId);
+      if (!draggedParent) return;
+
+      if (overTask?.parentTaskId === draggedTask.parentTaskId) {
+        // Reorder within same parent — update subtaskIds array
+        const currentIds = draggedParent.subtaskIds.length > 0
+          ? draggedParent.subtaskIds
+          : tasks.filter((st) => st.parentTaskId === draggedParent.id).map((st) => st.id);
+        const oldIdx = currentIds.indexOf(active.id as string);
+        const newIdx = currentIds.indexOf(over.id as string);
+        if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
+          await updateTask(draggedParent.id, { subtaskIds: arrayMove(currentIds, oldIdx, newIdx) });
+        }
+      } else if (overTask) {
+        // Reparent — drop on a different parent or its subtask
+        const newParentId = overTask.parentTaskId ?? overTask.id;
+        const newParent = tasks.find((t) => t.id === newParentId);
+        if (!newParent || newParent.id === draggedParent.id) return;
+        // Remove from old parent
+        await updateTask(draggedParent.id, { subtaskIds: draggedParent.subtaskIds.filter((id) => id !== draggedTask.id) });
+        // Insert into new parent at target position
+        const insertAt = overTask.parentTaskId
+          ? newParent.subtaskIds.indexOf(overTask.id)
+          : newParent.subtaskIds.length;
+        const newSubIds = [...newParent.subtaskIds];
+        newSubIds.splice(insertAt >= 0 ? insertAt : newSubIds.length, 0, draggedTask.id);
+        await updateTask(newParent.id, { subtaskIds: newSubIds });
+        await updateTask(draggedTask.id, { parentTaskId: newParent.id, sectionId: newParent.sectionId });
+      } else {
+        // Promote to standalone — drop on section droppable
+        const newSectionId = over.id === "__unsorted__" ? undefined : (over.id as string);
+        await updateTask(draggedParent.id, { subtaskIds: draggedParent.subtaskIds.filter((id) => id !== draggedTask.id) });
+        await updateTask(draggedTask.id, { parentTaskId: undefined, sectionId: newSectionId });
+      }
+      return;
+    }
+
     const targetSection = overTask
       ? overTask.sectionId
       : over.id === "__unsorted__" ? undefined : (over.id as string);
@@ -325,7 +383,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
     ];
   }, [unsorted, groups, tasks, expandedSubs]);
 
-  const renderRow = (task: Task): React.ReactElement => {
+  const renderRow = (task: Task, skipSubtasks = false): React.ReactElement => {
     const isDone       = task.status === "done";
     // Only show subtasks that share the same section as the parent
     const subtaskItemsAll = tasks.filter((t) => t.parentTaskId === task.id);
@@ -471,7 +529,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
         </div>
 
         {/* Subtasks — indented, lightweight */}
-        {hasSubtasks && expanded && (
+        {!skipSubtasks && hasSubtasks && expanded && (
           <div>
             {subtaskItems.map((st, stIdx) => {
               const stDone    = st.status === "done";
@@ -604,6 +662,126 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
     );
   };
 
+  // ── Standalone subtask row renderer (for flat DnD list) ──────────────────
+
+  const renderSubtaskItem = (st: Task, isLast: boolean): React.ReactElement => {
+    const stDone    = st.status === "done";
+    const isEditing = editSubId === st.id;
+    const stSelected = selectedTaskIds.has(st.id);
+    const stChip = st.dueDate
+      ? (() => {
+          const d = st.dueDate.includes("T") ? st.dueDate.slice(0, 10) : st.dueDate;
+          return isOverdue(d)
+            ? { label: friendlyDate(d), bg: "rgba(239,68,68,0.08)", color: "var(--priority-high)" }
+            : { label: friendlyDate(d), bg: "var(--accent-bg)", color: "var(--accent)" };
+        })()
+      : null;
+
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (e.shiftKey) {
+        e.preventDefault();
+        window.getSelection()?.removeAllRanges();
+        if (anchorTaskIdRef.current) {
+          const aIdx = flatVisibleOrder.findIndex((t) => t.id === anchorTaskIdRef.current);
+          const bIdx = flatVisibleOrder.findIndex((t) => t.id === st.id);
+          if (aIdx >= 0 && bIdx >= 0) {
+            const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+            setSelectedTaskIds(new Set(flatVisibleOrder.slice(lo, hi + 1).map((t) => t.id)));
+          }
+        }
+        return;
+      }
+      clearSelection();
+      anchorTaskIdRef.current = st.id;
+      onTaskClick(st, { x: e.clientX, y: e.clientY });
+    };
+
+    return (
+      <div
+        data-task-id={st.id}
+        data-task-title={st.title}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 36,
+          paddingRight: 16,
+          paddingTop: 5,
+          paddingBottom: isLast ? 11 : 5,
+          background: stSelected ? "var(--accent-bg)" : undefined,
+          outline: stSelected ? "1px solid rgba(99,102,241,0.20)" : undefined,
+          cursor: "pointer",
+          gap: 10,
+        }}
+        onClick={handleClick}
+        onContextMenu={(e) => { e.preventDefault(); setContextMenu({ task: st, x: e.clientX, y: e.clientY }); }}
+        onMouseEnter={(e) => { if (!stSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = stSelected ? "var(--accent-bg)" : ""; }}
+      >
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); void updateTask(st.id, { status: stDone ? "todo" : "done" }); }}
+          className="flex flex-none items-center justify-center rounded-[4px] transition-all duration-150"
+          style={{
+            width: 17, height: 17, flexShrink: 0,
+            ...(stDone
+              ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
+              : { border: "1.5px solid var(--border-strong)", background: "transparent" }),
+          }}
+        >
+          {stDone && (
+            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+              <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+        {isEditing ? (
+          <input
+            autoFocus
+            value={editSubVal}
+            onChange={(e) => setEditSubVal(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter" || e.key === "Escape") {
+                if (editSubVal.trim() && editSubVal.trim() !== st.title)
+                  void updateTask(st.id, { title: editSubVal.trim() });
+                setEditSubId(null);
+              }
+            }}
+            onBlur={() => {
+              if (editSubVal.trim() && editSubVal.trim() !== st.title)
+                void updateTask(st.id, { title: editSubVal.trim() });
+              setEditSubId(null);
+            }}
+            className="flex-1 bg-transparent outline-none"
+            style={{ color: "var(--fg)", fontSize: "16px" }}
+          />
+        ) : (
+          <span
+            onClick={(e) => { e.stopPropagation(); setEditSubId(st.id); setEditSubVal(st.title); }}
+            className="task-title-text flex-1 truncate"
+            style={{
+              cursor: "text",
+              ...(stDone
+                ? { textDecoration: "line-through", color: "var(--fg-faint)" }
+                : { color: "var(--fg)" }),
+            }}
+          >
+            {st.title || "(Untitled)"}
+          </span>
+        )}
+        {stChip && (
+          <span
+            className="flex-none rounded-lg px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
+            style={{ background: stChip.bg, color: stChip.color }}
+          >
+            {stChip.label}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   // ── Section panel renderer ────────────────────────────────────────────────
 
   const renderSection = (
@@ -665,16 +843,31 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                 </div>
               )}
 
-              {/* Main tasks in this section */}
-              {mainTasks.length > 0 && (
-                <SortableContext items={mainTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                  {mainTasks.map((t) => (
-                    <div key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                      <SortableTaskRow task={t} renderTaskRow={renderRow} />
-                    </div>
-                  ))}
-                </SortableContext>
-              )}
+              {/* Main tasks in this section — flat list including subtasks as separate sortable items */}
+              {mainTasks.length > 0 && (() => {
+                const flatItems = mainTasks.flatMap((t) => {
+                  const visibleSubs = (expandedSubs[t.id] ?? true)
+                    ? tasks.filter((st) => st.parentTaskId === t.id && st.sectionId === t.sectionId)
+                    : [];
+                  return [
+                    { task: t, isSubtask: false, isLast: visibleSubs.length === 0 },
+                    ...visibleSubs.map((st, idx) => ({ task: st, isSubtask: true, isLast: idx === visibleSubs.length - 1 })),
+                  ];
+                });
+                return (
+                  <SortableContext items={flatItems.map((item) => item.task.id)} strategy={verticalListSortingStrategy}>
+                    {flatItems.map(({ task: t, isSubtask, isLast }) => (
+                      <div key={t.id} style={isLast ? { borderBottom: "1px solid var(--border)" } : {}}>
+                        {isSubtask ? (
+                          <SortableSubtaskRow task={t} renderSubtaskRow={(st) => renderSubtaskItem(st, isLast)} />
+                        ) : (
+                          <SortableTaskRow task={t} renderTaskRow={(task) => renderRow(task, true)} />
+                        )}
+                      </div>
+                    ))}
+                  </SortableContext>
+                );
+              })()}
 
               {/* Subsections */}
               {subs.map((sub) => {
@@ -701,15 +894,30 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                         {sub.items.length}
                       </span>
                     </button>
-                    {!subCollapsed && (
-                      <SortableContext items={sub.items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                        {sub.items.map((t) => (
-                          <div key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                            <SortableTaskRow task={t} renderTaskRow={renderRow} />
-                          </div>
-                        ))}
-                      </SortableContext>
-                    )}
+                    {!subCollapsed && (() => {
+                      const flatSubItems = sub.items.flatMap((t) => {
+                        const visibleSubs = (expandedSubs[t.id] ?? true)
+                          ? tasks.filter((st) => st.parentTaskId === t.id && st.sectionId === t.sectionId)
+                          : [];
+                        return [
+                          { task: t, isSubtask: false, isLast: visibleSubs.length === 0 },
+                          ...visibleSubs.map((st, idx) => ({ task: st, isSubtask: true, isLast: idx === visibleSubs.length - 1 })),
+                        ];
+                      });
+                      return (
+                        <SortableContext items={flatSubItems.map((item) => item.task.id)} strategy={verticalListSortingStrategy}>
+                          {flatSubItems.map(({ task: t, isSubtask, isLast }) => (
+                            <div key={t.id} style={isLast ? { borderBottom: "1px solid var(--border)" } : {}}>
+                              {isSubtask ? (
+                                <SortableSubtaskRow task={t} renderSubtaskRow={(st) => renderSubtaskItem(st, isLast)} />
+                              ) : (
+                                <SortableTaskRow task={t} renderTaskRow={(task) => renderRow(task, true)} />
+                              )}
+                            </div>
+                          ))}
+                        </SortableContext>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -930,7 +1138,10 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
               boxShadow: "var(--shadow-lg)",
             }}
           >
-            {renderRow(activeTask)}
+            {activeTask.parentTaskId
+              ? renderSubtaskItem(activeTask, false)
+              : renderRow(activeTask)
+            }
           </div>
         )}
       </DragOverlay>

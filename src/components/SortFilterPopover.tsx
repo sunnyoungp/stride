@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 export type GroupBy = "list" | "date" | "tag" | "priority";
-export type SortBy = "date" | "title" | "tag" | "priority";
+export type SortBy = "date" | "title" | "tag" | "priority" | "manual";
 
 export const GROUP_OPTIONS: { key: GroupBy; label: string }[] = [
   { key: "list", label: "List" },
@@ -17,6 +17,7 @@ export const SORT_OPTIONS: { key: SortBy; label: string }[] = [
   { key: "title", label: "Title" },
   { key: "tag", label: "Tag" },
   { key: "priority", label: "Priority" },
+  { key: "manual", label: "Manual" },
 ];
 
 type Props = {
@@ -81,7 +82,7 @@ export function SortFilterPopover({
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const isDefault = sortBy === "date" && groupBy === "list";
+  const isDefault = (sortBy === "date" || sortBy === "manual") && groupBy === "list";
   const groupLabel = GROUP_OPTIONS.find(o => o.key === groupBy)?.label ?? "List";
   const sortLabel = SORT_OPTIONS.find(o => o.key === sortBy)?.label ?? "Date";
 

@@ -35,7 +35,6 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const tasks      = useTaskStore((s) => s.tasks);
   const menuRef    = useRef<HTMLDivElement | null>(null);
-  const dateInputRef = useRef<HTMLInputElement | null>(null);
   const [activePanel, setActivePanel] = useState<"main" | "priority" | "parentPicker">("main");
   const [clampedPos, setClampedPos]   = useState(position);
   const [parentSearch, setParentSearch] = useState("");
@@ -154,15 +153,12 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
                 }
               >{label}</button>
             ))}
-            <button type="button" onClick={() => dateInputRef.current?.showPicker?.()}
-              className="rounded-lg px-2.5 py-1 text-xs transition-all duration-150 hover:bg-[var(--bg-hover)]"
-              style={{ color: "var(--fg-muted)", border: "1px solid var(--border)" }}
-            >📅 Pick</button>
           </div>
 
-          <input ref={dateInputRef} type="date"
+          <input type="date"
             className="mx-3 mb-2 w-[calc(100%-24px)] rounded-xl px-3 py-1.5 text-xs outline-none"
             style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg)" }}
+            defaultValue={task.dueDate ?? ""}
             onChange={(e) => { if (e.target.value) void reschedule(e.target.value); }}
           />
 

@@ -26,6 +26,136 @@ export function useTaskSelection() {
   return useContext(SelectionContext);
 }
 
+// ── Date helpers for reschedule ───────────────────────────────────────────────
+
+function localDateString(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function nextWeekday(targetDay: number) {
+  const now = new Date();
+  let diff = (targetDay - now.getDay() + 7) % 7;
+  if (diff === 0) diff = 7;
+  now.setDate(now.getDate() + diff);
+  return localDateString(now);
+}
+
+// ── RescheduleDatePopover ─────────────────────────────────────────────────────
+
+/** Viewport-aware date picker popover. Positions above/below anchor, stays within viewport. */
+export function RescheduleDatePopover({
+  anchor,
+  onSelect,
+  onClose,
+  currentDate,
+}: {
+  anchor: { x: number; y: number; width: number; height: number };
+  onSelect: (date: string) => void;
+  onClose: () => void;
+  currentDate?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const today    = localDateString(new Date());
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDateString(d); })();
+
+  // Compute position: prefer above the anchor, flip below if not enough space
+  const pos = (() => {
+    const pw = 220, ph = 200, p = 8;
+    const vw = typeof window !== "undefined" ? window.innerWidth  : 1200;
+    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+    // Horizontal: center on anchor, clamp to viewport
+    let left = anchor.x + anchor.width / 2 - pw / 2;
+    if (left + pw > vw - p) left = vw - pw - p;
+    if (left < p) left = p;
+    // Vertical: prefer above
+    const spaceAbove = anchor.y;
+    const spaceBelow = vh - (anchor.y + anchor.height);
+    let top: number;
+    if (spaceAbove >= ph + 8) {
+      top = anchor.y - ph - 6;
+    } else if (spaceBelow >= ph + 8) {
+      top = anchor.y + anchor.height + 6;
+    } else {
+      // Not enough space either way — put above and clamp
+      top = Math.max(p, anchor.y - ph - 6);
+    }
+    return { left, top };
+  })();
+
+  useEffect(() => {
+    const h = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const timer = setTimeout(() => window.addEventListener("pointerdown", h), 80);
+    return () => { clearTimeout(timer); window.removeEventListener("pointerdown", h); };
+  }, [onClose]);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const quickDates = [
+    { label: "Today",    date: today },
+    { label: "Tomorrow", date: tomorrow },
+    { label: "Weekend",  date: nextWeekday(6) },
+    { label: "Next Mon", date: nextWeekday(1) },
+  ];
+
+  return createPortal(
+    <div
+      ref={ref}
+      data-selection-bar
+      style={{
+        position: "fixed",
+        left: pos.left,
+        top: pos.top,
+        width: 220,
+        zIndex: 9999,
+        background: "var(--bg-card)",
+        border: "1px solid var(--border-mid)",
+        borderRadius: 12,
+        boxShadow: "var(--shadow-float)",
+        padding: "8px",
+        animation: "gs-scale 120ms cubic-bezier(0.16,1,0.3,1) both",
+      }}
+    >
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
+        {quickDates.map(({ label, date }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => { onSelect(date); onClose(); }}
+            style={{
+              fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 8,
+              cursor: "pointer", border: "1px solid transparent",
+              ...(currentDate === date
+                ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
+                : { background: "var(--bg-hover)", color: "var(--fg-muted)" }),
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <input
+        ref={dateInputRef}
+        type="date"
+        defaultValue={currentDate ?? ""}
+        onChange={(e) => { if (e.target.value) { onSelect(e.target.value); onClose(); } }}
+        style={{
+          width: "100%", padding: "6px 10px", borderRadius: 8, fontSize: 12,
+          border: "1px solid var(--border)", background: "var(--bg-subtle)",
+          color: "var(--fg)", outline: "none", boxSizing: "border-box",
+        }}
+      />
+    </div>,
+    document.body
+  );
+}
+
 // ── SelectionActionBar ────────────────────────────────────────────────────────
 
 export function SelectionActionBar({
@@ -37,7 +167,9 @@ export function SelectionActionBar({
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  const rescheduleBtnRef = useRef<HTMLButtonElement>(null);
+  const [reschedulePanelOpen, setReschedulePanelOpen] = useState(false);
+  const [rescheduleAnchor, setRescheduleAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const count = selectedIds.size;
 
   const handleCompleteAll = async () => {
@@ -52,123 +184,110 @@ export function SelectionActionBar({
 
   const handleReschedule = async (date: string) => {
     if (!date) return;
-    const ids = [...selectedIds]; // snapshot before onClear can change the set
-    console.log(`[bulk reschedule] processing ${ids.length} tasks to ${date}`);
+    const ids = [...selectedIds];
     for (const id of ids) await updateTask(id, { dueDate: date });
     onClear();
   };
 
+  const openReschedulePanel = () => {
+    if (reschedulePanelOpen) { setReschedulePanelOpen(false); return; }
+    const r = rescheduleBtnRef.current?.getBoundingClientRect();
+    if (r) {
+      setRescheduleAnchor({ x: r.left, y: r.top, width: r.width, height: r.height });
+      setReschedulePanelOpen(true);
+    }
+  };
+
   return createPortal(
-    <div
-      data-selection-bar
-      style={{
-        position: "fixed",
-        bottom: 24,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "10px 14px",
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-        animation: "gs-scale 150ms cubic-bezier(0.16,1,0.3,1) both",
-      }}
-    >
-      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", marginRight: 4 }}>
-        {count} selected
-      </span>
-      <div style={{ width: 1, height: 16, background: "var(--border)" }} />
-      <button
-        type="button"
-        onClick={() => void handleCompleteAll()}
+    <>
+      <div
+        data-selection-bar
         style={{
-          fontSize: 12,
-          fontWeight: 500,
-          color: "var(--fg)",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "4px 8px",
-          borderRadius: 6,
-          transition: "background 100ms ease",
+          position: "fixed",
+          bottom: 24,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 14px",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+          animation: "gs-scale 150ms cubic-bezier(0.16,1,0.3,1) both",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
-        Complete all
-      </button>
-      <button
-        type="button"
-        onClick={() => dateInputRef.current?.showPicker?.()}
-        style={{
-          fontSize: 12,
-          fontWeight: 500,
-          color: "var(--fg)",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "4px 8px",
-          borderRadius: 6,
-          transition: "background 100ms ease",
-          position: "relative",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-      >
-        Reschedule
-        <input
-          ref={dateInputRef}
-          type="date"
-          onChange={(e) => void handleReschedule(e.target.value)}
-          style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-          tabIndex={-1}
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", marginRight: 4 }}>
+          {count} selected
+        </span>
+        <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+        <button
+          type="button"
+          onClick={() => void handleCompleteAll()}
+          style={{
+            fontSize: 12, fontWeight: 500, color: "var(--fg)",
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px 8px", borderRadius: 6, transition: "background 100ms ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          Complete all
+        </button>
+        <button
+          ref={rescheduleBtnRef}
+          type="button"
+          onClick={openReschedulePanel}
+          style={{
+            fontSize: 12, fontWeight: 500, color: "var(--fg)",
+            background: reschedulePanelOpen ? "var(--bg-hover)" : "none",
+            border: "none", cursor: "pointer",
+            padding: "4px 8px", borderRadius: 6, transition: "background 100ms ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+          onMouseLeave={(e) => { if (!reschedulePanelOpen) e.currentTarget.style.background = "transparent"; }}
+        >
+          Reschedule
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          style={{
+            fontSize: 12, fontWeight: 500, color: "var(--priority-high)",
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px 8px", borderRadius: 6, transition: "background 100ms ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          Delete
+        </button>
+        <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label="Clear selection"
+          style={{
+            fontSize: 14, lineHeight: 1, color: "var(--fg-faint)",
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px 6px", borderRadius: 6, transition: "background 100ms ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          ✕
+        </button>
+      </div>
+      {reschedulePanelOpen && rescheduleAnchor && (
+        <RescheduleDatePopover
+          anchor={rescheduleAnchor}
+          onSelect={(date) => void handleReschedule(date)}
+          onClose={() => setReschedulePanelOpen(false)}
         />
-      </button>
-      <button
-        type="button"
-        onClick={() => void handleDelete()}
-        style={{
-          fontSize: 12,
-          fontWeight: 500,
-          color: "var(--priority-high)",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "4px 8px",
-          borderRadius: 6,
-          transition: "background 100ms ease",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-      >
-        Delete
-      </button>
-      <div style={{ width: 1, height: 16, background: "var(--border)" }} />
-      <button
-        type="button"
-        onClick={onClear}
-        aria-label="Clear selection"
-        style={{
-          fontSize: 14,
-          lineHeight: 1,
-          color: "var(--fg-faint)",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "4px 6px",
-          borderRadius: 6,
-          transition: "background 100ms ease",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-      >
-        ✕
-      </button>
-    </div>,
+      )}
+    </>,
     document.body
   );
 }
@@ -260,6 +379,31 @@ export function TaskSelectionProvider({ orderedTaskIds, children }: TaskSelectio
         <SelectionActionBar selectedIds={selectedIds} onClear={clearSelection} />
       )}
     </SelectionContext.Provider>
+  );
+}
+
+// ── ConnectedTaskContextMenu ──────────────────────────────────────────────────
+// Renders TaskContextMenu with selectedIds from the nearest TaskSelectionProvider.
+// Use this instead of TaskContextMenu directly when inside a TaskSelectionProvider tree.
+
+export function ConnectedTaskContextMenu({
+  task,
+  position,
+  onClose,
+}: {
+  task: Task;
+  position: { x: number; y: number };
+  onClose: () => void;
+}) {
+  const ctx = useTaskSelection();
+  const selectedIds = ctx?.selectedIds;
+  return (
+    <TaskContextMenu
+      task={task}
+      position={position}
+      onClose={onClose}
+      selectedIds={selectedIds && selectedIds.size > 1 ? selectedIds : undefined}
+    />
   );
 }
 

@@ -39,6 +39,17 @@ Kanban view exists on **Tasks** (`/app/tasks/page.tsx`), **Inbox** (`/app/inbox/
 
 **Any change to Kanban behavior — cards, interactions, right-click menus, inline inputs, column headers, `onAddTask` — must be applied to all three pages.** Never patch only one page.
 
+### Kanban column drag-to-reorder
+
+Pass `onColumnReorder?: (newColumnIds: string[]) => void` to `KanbanBoard`. When provided, column headers become drag handles (`enableColumnDrag` prop on `KanbanColumnView`). Columns use `useSortable({ id: "col-${column.id}" })` combined with `useDroppable({ id: column.id })` on the same element via a combined `setRef` callback. The outer `DndContext` wraps columns in `<SortableContext items={columnSortableIds} strategy={horizontalListSortingStrategy}>`. In `handleDragEnd`, detect column drags by checking `activeId.startsWith("col-")`.
+
+- Only pass `onColumnReorder` when `groupBy === "list"` (section-based columns). Date/priority/tag groupings derive column identity from data, so reordering makes no sense.
+- Column reorder persists via `updateSection({ order })` for each affected section.
+
+### Kanban inline subtask rows
+
+Inline subtask rows inside `KanbanCardVisual` must have `onPointerDown={(e) => e.stopPropagation()}` to prevent the parent card's drag listeners from firing when interacting with a subtask.
+
 ---
 
 ## Design System — ALWAYS use these, never hardcode values
@@ -309,6 +320,16 @@ Headers in task list groups and Kanban columns are sticky. Rules:
 - Subtask rows use the `compact` prop on `TaskRow` (`padding: "5px 16px"` instead of `"11px 16px"`) to match the compact spacing in `TaskListView`
 - Subtask indentation: wrap the `<TaskRow compact />` in a `<div style={{ paddingLeft: 20 }}>` container
 
+### Subtask drag-and-drop in `TaskListView`
+
+Subtasks are rendered as **flat, independent sortable items** alongside their parent in the same `SortableContext`. Do NOT render subtasks inline inside `renderRow` when DnD is active — use `renderRow(task, skipSubtasks=true)` for parent rows and a separate `SortableSubtaskRow` component for each subtask.
+
+- `SortableSubtaskRow` wraps a subtask with `useSortable({ id: subtask.id })` and spreads `{...attributes} {...listeners}` — no `onPointerDown stopPropagation` needed since it's a sibling, not a child, of the parent's `SortableTaskRow`
+- The flat items array for `SortableContext`: `[parent, subtask1, subtask2, nextParent, ...]` — built with `isLast` flag for each item
+- Border rule in flat list: show `borderBottom` on an item only if the **next item is a parent task** (or there's no next item)
+- `handleDragEnd` detects subtask drags via `draggedTask.parentTaskId`, then handles: reorder within parent (update `parent.subtaskIds` via `arrayMove`), reparent (remove from old parent's `subtaskIds`, insert into new parent's `subtaskIds`, update `parentTaskId`), or promote to standalone (clear `parentTaskId`, assign `sectionId`)
+- Subtask ordering is stored in `parent.subtaskIds[]`, not in the subtask's own `order` field. Use `updateTask(parentId, { subtaskIds: [...] })` — never `reorderTasks` — for subtask reordering.
+
 ---
 
 ## Layout — Floating Panel System
@@ -386,6 +407,28 @@ Root canvas  (var(--color-app-root-bg))  — darkest, behind everything
 | `DocumentContextMenu.tsx` | Uses `bg-zinc-900`, `text-zinc-200`, `border-white/10` — migrate to CSS variables |
 | `FocusTunnel.tsx` | Uses inline `style={{ background: "var(--bg)" }}` for full-screen — OK, intentional |
 | Various | Mixed `rounded-lg` / `rounded-xl` / `rounded-2xl` on same component types — standardize per the radius scale above |
+
+---
+
+## Viewport-aware date popovers
+
+Never use `<input type="date">` with `showPicker()` for date selection — the browser's native picker appears at an unpredictable location, often off-screen. Instead use `RescheduleDatePopover` from `TaskList.tsx`:
+
+- Anchor is `{ x, y, width, height }` from `getBoundingClientRect()` of the trigger element
+- Prefers rendering **above** the anchor; flips **below** if insufficient vertical space
+- Horizontally centered on anchor, clamped to viewport edges
+- Renders via `createPortal(…, document.body)` so it's never clipped by `overflow: hidden` parents
+- Add `data-selection-bar` attribute to the popover root to prevent the selection-clear `pointerdown` listener from firing
+
+## ConnectedTaskContextMenu — bulk selection awareness
+
+When a context menu needs to act on multi-selected tasks, it must read `selectedIds` from the nearest `SelectionContext`. Use `ConnectedTaskContextMenu` (exported from `TaskList.tsx`) instead of `TaskContextMenu` directly inside list views. `ConnectedTaskContextMenu` reads `selectedIds` from context and forwards them to `TaskContextMenu` only when `size > 1`.
+
+**Critical:** The context menu component must be rendered **inside** `<TaskSelectionProvider>` to have access to the selection context. Rendering it outside (e.g., as a sibling to the provider) means `selectedIds` will always be `undefined`, breaking bulk date-change and bulk-complete.
+
+## Manual sort (`SortBy: "manual"`)
+
+When `sortBy === "manual"`, tasks are ordered by their `order` field (lowest first) with no automatic re-sorting by date/title/etc. Users can freely drag-to-reorder tasks and the order persists via `reorderTasks`. The "Restore default" button in `SortFilterPopover` resets to `sortBy: "date"`. `isDefault` check includes `sortBy === "manual"` since manual is also a valid baseline (not an "active filter").
 
 ---
 

@@ -1194,18 +1194,15 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
 
   return (
     <div className="group relative flex flex-col h-full w-full max-w-2xl mx-auto overflow-hidden">
-      {/* Floating controls — subtle, only visible on hover */}
+      {/* Floating controls — only visible on hover of the note container */}
       {!hideHeader && (
         <div
-          className="absolute flex items-center gap-2 transition-opacity duration-200"
+          className="absolute flex items-center gap-2 transition-opacity duration-200 opacity-0 group-hover:opacity-100"
           style={{
-            bottom: 24,
-            left: 24,
+            bottom: 12,
+            left: 16,
             zIndex: 100,
-            opacity: 0.8
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.8")}
         >
           <span
             title="Font size — use Cmd+= / Cmd+- to adjust, Cmd+0 to reset"
