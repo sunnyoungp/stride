@@ -238,7 +238,7 @@ function TasksPageInner({
 
   if (view === "kanban") {
     return (
-      <div style={{ height: "100%", overflow: "hidden" }}>
+      <div style={{ height: "100%", overflowY: "auto" }}>
         <KanbanBoard
           columns={kanbanColumns}
           allTasks={tasks}

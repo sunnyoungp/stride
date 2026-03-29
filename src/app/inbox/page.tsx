@@ -251,7 +251,7 @@ function InboxPageContent() {
           </div>
         </div>
       ) : view === "kanban" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflowY: "auto" }}>
           <KanbanBoard
             columns={kanbanColumns}
             allTasks={tasks}

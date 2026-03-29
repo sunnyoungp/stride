@@ -498,7 +498,7 @@ export default function Next7Page() {
 
       {/* Content */}
       {view === "kanban" ? (
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflowY: "auto" }}>
           <KanbanBoard
             columns={kanbanColumns}
             allTasks={tasks}
