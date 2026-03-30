@@ -202,39 +202,68 @@ a, button, input, select, textarea {
 
 /* ═══════════════════════════════════════════
    GLASS UTILITY CLASSES
-   Apply these to surfaces that need blur treatment.
-   The blur renders against whatever is visually behind
-   the element in the stacking context.
 ═══════════════════════════════════════════ */
 
-/* Layer 1 — panels (sidebar, main content) */
 .glass-panel {
-  background: var(--bg-panel) !important;
-  backdrop-filter: var(--glass-blur-panel);
-  -webkit-backdrop-filter: var(--glass-blur-panel);
+  position: relative;
   border: 1px solid var(--glass-border) !important;
   border-top: 1px solid var(--glass-border-top) !important;
   box-shadow: var(--glass-shadow-panel) !important;
 }
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--bg-panel);
+  backdrop-filter: var(--glass-blur-panel);
+  -webkit-backdrop-filter: var(--glass-blur-panel);
+  pointer-events: none;
+  z-index: 0;
+}
 
-/* Layer 2 — cards, task groups, kanban columns */
 .glass-card {
-  background: var(--bg-card) !important;
-  backdrop-filter: var(--glass-blur-card);
-  -webkit-backdrop-filter: var(--glass-blur-card);
+  position: relative;
   border: 1px solid var(--glass-border) !important;
   border-top: 1px solid var(--glass-border-top) !important;
   box-shadow: var(--glass-shadow-card) !important;
 }
-
-/* Floating surfaces — modals, context menus, popovers, date pickers */
-.glass-float {
-  background: var(--bg-card) !important;
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--bg-card);
   backdrop-filter: var(--glass-blur-card);
   -webkit-backdrop-filter: var(--glass-blur-card);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glass-float {
+  position: relative;
   border: 1px solid var(--glass-border) !important;
   border-top: 1px solid var(--glass-border-top) !important;
   box-shadow: var(--shadow-float) !important;
+}
+.glass-float::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur-card);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Lift direct children above the blur pseudo-element */
+.glass-panel > *,
+.glass-card > *,
+.glass-float > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ═══════════════════════════════════════════
@@ -424,11 +453,12 @@ a, button, input, select, textarea {
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
-  width: 1em;
-  height: 1em;
+  width: var(--font-size-notes, 15px);
+  height: var(--font-size-notes, 15px);
   margin: 0;
   cursor: pointer;
   accent-color: var(--accent);
+  flex-shrink: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > div {
