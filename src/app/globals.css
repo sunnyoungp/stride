@@ -450,7 +450,6 @@ a, button, input, select, textarea {
   align-items: center;
   justify-content: center;
   margin-top: 0;
-  height: var(--font-size-notes, 15px);
   align-self: flex-start;
   padding-top: calc((1.2 * var(--font-size-notes, 15px) - var(--font-size-notes, 15px)) / 2);
 }
