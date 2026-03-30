@@ -18,8 +18,33 @@ import { FocusPill } from "@/components/FocusPill";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MobileFABs } from "@/components/MobileFABs";
 
-// Glass panel treatment — applied to both sidebar and content panels
 const PANEL_RADIUS = 14;
+
+// Reusable blur backdrop — sits behind content, never creates a containing block for fixed children
+const GlassBackdrop = ({ radius = PANEL_RADIUS }: { radius?: number }) => (
+    <div
+        aria-hidden="true"
+        style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: radius,
+            background: "var(--bg-panel)",
+            backdropFilter: "var(--glass-blur-panel)",
+            WebkitBackdropFilter: "var(--glass-blur-panel)",
+            pointerEvents: "none",
+            zIndex: 0,
+        }}
+    />
+);
+
+// Shared panel style — NO backdropFilter here, that lives in GlassBackdrop
+const panelStyle = (radius: number): React.CSSProperties => ({
+    position: "relative",
+    border: "1px solid var(--glass-border)",
+    borderTop: "1px solid var(--glass-border-top)",
+    boxShadow: "var(--glass-shadow-panel)",
+    borderRadius: radius,
+});
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -31,12 +56,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         const supabase = createClient();
-        // Hydrate store with current session
         supabase.auth.getSession().then(({ data }) => {
             setUser(data.session?.user ?? null);
             if (data.session?.user) void loadSettings();
         });
-        // Keep store in sync on auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
         });
@@ -46,15 +69,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (focusState.isActive) {
         return (
             <ThemeProvider>
-                {/* Always keep FocusTunnel mounted to preserve timer state; hide via CSS when minimized */}
                 <div className={isMinimized ? "hidden" : ""}>
                     <FocusTunnel />
                 </div>
 
-                {/* Minimized: show normal app layout + floating pill */}
                 {isMinimized && (
                     <>
-                        {/* Root canvas — carries the app background behind the floating panels */}
                         <div
                             className="flex h-screen w-screen overflow-hidden md:p-3 md:gap-3"
                             style={{ background: "var(--bg-app)" }}
@@ -62,33 +82,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             {!hideSidebar && (
                                 <aside
                                     className={`flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
-                                    style={{
-                                        background: "var(--bg-panel)",
-                                        backdropFilter: "var(--glass-blur-panel)",
-                                        WebkitBackdropFilter: "var(--glass-blur-panel)",
-                                        border: "1px solid var(--glass-border)",
-                                        borderTop: "1px solid var(--glass-border-top)",
-                                        boxShadow: "var(--glass-shadow-panel)",
-                                        borderRadius: PANEL_RADIUS,
-                                    }}
+                                    style={panelStyle(PANEL_RADIUS)}
                                 >
-                                    <Sidebar />
+                                    <GlassBackdrop />
+                                    <div style={{ position: "relative", zIndex: 1, height: "100%" }}>
+                                        <Sidebar />
+                                    </div>
                                 </aside>
                             )}
                             <main
                                 className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
                                 style={{
-                                    background: "var(--bg-panel)",
-                                    backdropFilter: "var(--glass-blur-panel)",
-                                    WebkitBackdropFilter: "var(--glass-blur-panel)",
-                                    border: "1px solid var(--glass-border)",
-                                    borderTop: "1px solid var(--glass-border-top)",
-                                    boxShadow: "var(--glass-shadow-panel)",
-                                    borderRadius: PANEL_RADIUS,
+                                    ...panelStyle(PANEL_RADIUS),
                                     paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
                                 }}
                             >
-                                {children}
+                                <GlassBackdrop />
+                                <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+                                    {children}
+                                </div>
                             </main>
                             <BottomTabBar />
                             <MobileFABs />
@@ -108,47 +120,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     return (
         <ThemeProvider>
-            {/* Root canvas — carries the app background behind the floating panels */}
             <div
                 className="flex h-screen w-screen overflow-hidden md:p-3 md:gap-3"
                 style={{ background: "var(--bg-app)" }}
             >
-                {/* Sidebar floating card: hidden on mobile, icon-only on md (768–1023px), full on lg (1024px+) */}
                 {!hideSidebar && (
                     <aside
                         className={`flex-none transition-all duration-300 ease-in-out overflow-hidden hidden md:block ${isZenMode ? "w-0 opacity-0" : "md:w-14 lg:w-[220px] opacity-100"}`}
-                        style={{
-                            background: "var(--bg-panel)",
-                            backdropFilter: "var(--glass-blur-panel)",
-                            WebkitBackdropFilter: "var(--glass-blur-panel)",
-                            border: "1px solid var(--glass-border)",
-                            borderTop: "1px solid var(--glass-border-top)",
-                            boxShadow: "var(--glass-shadow-panel)",
-                            borderRadius: PANEL_RADIUS,
-                        }}
+                        style={panelStyle(PANEL_RADIUS)}
                     >
-                        <Sidebar />
+                        <GlassBackdrop />
+                        <div style={{ position: "relative", zIndex: 1, height: "100%" }}>
+                            <Sidebar />
+                        </div>
                     </aside>
                 )}
 
-                {/* Content floating card: flex-1, overflow hidden — each page handles its own scroll */}
                 <main
                     className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
                     style={{
-                        background: "var(--bg-panel)",
-                        backdropFilter: "var(--glass-blur-panel)",
-                        WebkitBackdropFilter: "var(--glass-blur-panel)",
-                        border: "1px solid var(--glass-border)",
-                        borderTop: "1px solid var(--glass-border-top)",
-                        boxShadow: "var(--glass-shadow-panel)",
-                        borderRadius: PANEL_RADIUS,
+                        ...panelStyle(PANEL_RADIUS),
                         paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
                     }}
                 >
-                    {children}
+                    <GlassBackdrop />
+                    <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+                        {children}
+                    </div>
                 </main>
 
-                {/* Mobile bottom navigation and FABs */}
                 <BottomTabBar />
                 <MobileFABs />
 

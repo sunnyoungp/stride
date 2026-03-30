@@ -449,7 +449,10 @@ a, button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.2em;
+  margin-top: 0;
+  height: var(--font-size-notes, 15px);
+  align-self: flex-start;
+  padding-top: calc((1.2 * var(--font-size-notes, 15px) - var(--font-size-notes, 15px)) / 2);
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
