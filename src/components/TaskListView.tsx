@@ -57,12 +57,12 @@ function SortableTaskRow({ task, renderTaskRow }: {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
+      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0 : 1, position: "relative" }}
       {...attributes}
-      {...listeners}
       className="outline-none"
     >
       {renderTaskRow(task)}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }} {...listeners} />
     </div>
   );
 }
@@ -75,12 +75,12 @@ function SortableSubtaskRow({ task, renderSubtaskRow }: {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
+      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0 : 1, position: "relative" }}
       {...attributes}
-      {...listeners}
       className="outline-none"
     >
       {renderSubtaskRow(task)}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }} {...listeners} />
     </div>
   );
 }
@@ -418,6 +418,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
         }
         return;
       }
+      // Regular click: open modal
       clearSelection();
       anchorTaskIdRef.current = task.id;
       onTaskClick(task, { x: e.clientX, y: e.clientY });

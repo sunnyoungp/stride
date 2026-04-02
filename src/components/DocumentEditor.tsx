@@ -427,7 +427,19 @@ export function DocumentEditor({ documentId }: Props) {
       {/* Editor — full-bleed, no card wrapper */}
       {editor ? (
         <>
-          <EditorContent editor={editor} />
+          {/* Intercept clicks on link marks so they open in a new tab */}
+          <div
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+              if (anchor?.href) {
+                e.preventDefault();
+                window.open(anchor.href, "_blank", "noopener,noreferrer");
+              }
+            }}
+          >
+            <EditorContent editor={editor} />
+          </div>
           <EditorBubbleMenu editor={editor} />
           <FormatPanel editor={editor} isOpen={formatPanelOpen} onClose={() => setFormatPanelOpen(false)} documentId={doc.id} />
         </>

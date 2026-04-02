@@ -249,6 +249,26 @@ export const useTaskStore = create<TaskStore>((set, get) => {
   };
 
   const deleteTask: TaskStore["deleteTask"] = async (id) => {
+    // 1. Remove from parent's subtaskIds to prevent ghost refs causing duplication
+    const taskToDelete = get().tasks.find((t) => t.id === id);
+    if (taskToDelete?.parentTaskId) {
+      const parent = get().tasks.find((t) => t.id === taskToDelete.parentTaskId);
+      if (parent) {
+        const newSubtaskIds = parent.subtaskIds.filter((sid) => sid !== id);
+        const updatedAt = new Date().toISOString();
+        await supabase
+          .from("tasks")
+          .update({ subtask_ids: newSubtaskIds, updated_at: updatedAt })
+          .eq("id", parent.id);
+        set({
+          tasks: get().tasks.map((t) =>
+            t.id === parent.id ? { ...t, subtaskIds: newSubtaskIds, updatedAt } : t
+          ),
+        });
+      }
+    }
+
+    // 2. Remove from any document linkedTaskIds
     const docStore = useDocumentStore.getState();
     const affectedDocs = docStore.documents.filter(
       (d) => d.linkedTaskIds && d.linkedTaskIds.includes(id),
@@ -257,6 +277,8 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       const nextLinked = doc.linkedTaskIds.filter((tid) => tid !== id);
       await docStore.updateDocument(doc.id, { linkedTaskIds: nextLinked });
     }
+
+    // 3. Delete the task itself
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) console.error("Failed to delete task:", error);
     set({ tasks: get().tasks.filter((t) => t.id !== id) });

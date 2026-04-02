@@ -8,6 +8,8 @@ import { useTimeBlockStore } from "@/store/timeBlockStore";
 import type { Task } from "@/types/index";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
+import { useDocumentStore } from "@/store/documentStore";
+import { useRouter } from "next/navigation";
 
 function localDateString(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -64,6 +66,8 @@ export function QuickAdd() {
   const createTask        = useTaskStore((s) => s.createTask);
   const createTimeBlock   = useTimeBlockStore((s) => s.createTimeBlock);
   const sections          = useSectionStore((s) => s.sections);
+  const createDocument    = useDocumentStore((s) => s.createDocument);
+  const router            = useRouter();
   const isMobile          = useIsMobile();
   const { height: vpHeight } = useVisualViewport();
   const [windowHeight, setWindowHeight] = useState(0);
@@ -79,7 +83,7 @@ export function QuickAdd() {
   const keyboardHeight = Math.max(0, windowHeight - vpHeight);
 
   const [open, setOpen]               = useState(false);
-  const [mode, setMode]               = useState<"task" | "event">("task");
+  const [mode, setMode]               = useState<"task" | "event" | "document">("task");
   const [value, setValue]             = useState("");
   const [sectionId, setSectionId]     = useState<string>(() =>
     typeof window !== "undefined" ? (localStorage.getItem(LAST_SECTION_KEY) ?? "") : ""
@@ -92,6 +96,7 @@ export function QuickAdd() {
   const [eventStart, setEventStart]       = useState("09:00");
   const [eventEnd, setEventEnd]           = useState("10:00");
   const [eventAllDay, setEventAllDay]     = useState(false);
+  const [docTitle, setDocTitle]           = useState("");
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => { setMounted(true); }, []);
@@ -117,6 +122,7 @@ export function QuickAdd() {
     setSectionId(typeof window !== "undefined" ? (localStorage.getItem(LAST_SECTION_KEY) ?? "") : "");
     setSelectedDate(todayStr());
     setMode("task");
+    setDocTitle("");
     setEventTitle("");
     setEventDate(todayStr());
     setEventStart("09:00");
@@ -125,6 +131,14 @@ export function QuickAdd() {
   };
 
   const submit = () => {
+    if (mode === "document") {
+      const title = docTitle.trim() || "Untitled";
+      void createDocument(title).then((doc) => {
+        close();
+        router.push(`/documents?id=${doc.id}`);
+      });
+      return;
+    }
     if (mode === "event") {
       const title = eventTitle.trim() || "New Event";
       let startTime: string, endTime: string;
@@ -184,7 +198,7 @@ export function QuickAdd() {
   // ── Mode toggle (shared) ──────────────────────────────────────────────────
   const modeToggle = (
     <div style={{ display: "flex", gap: 4, padding: "10px 20px 0" }}>
-      {(["task", "event"] as const).map(m => (
+      {(["task", "event", "document"] as const).map(m => (
         <button
           key={m}
           type="button"
@@ -194,7 +208,7 @@ export function QuickAdd() {
             : { background: "var(--bg-hover)", color: "var(--fg-muted)", borderRadius: 8, padding: "4px 14px", fontSize: 12.5, fontWeight: 500, border: "none", cursor: "pointer", transition: "all 150ms ease" }
           }
         >
-          {m === "task" ? "Task" : "Event"}
+          {m === "task" ? "Task" : m === "event" ? "Event" : "Document"}
         </button>
       ))}
     </div>
@@ -259,8 +273,8 @@ export function QuickAdd() {
   return createPortal(
     <div
       ref={modalRef}
-      className="fixed inset-0 flex flex-col items-center justify-end"
-      style={{ zIndex: 105 }}
+      className="fixed inset-0 flex flex-col items-center"
+      style={{ zIndex: 105, justifyContent: isMobile ? "flex-end" : "center" }}
     >
       {/* Backdrop */}
       <div
@@ -287,7 +301,6 @@ export function QuickAdd() {
           background: "var(--bg-card)",
           backdropFilter: "var(--glass-blur-card)",
           WebkitBackdropFilter: "var(--glass-blur-card)",
-          marginBottom: 40,
           borderRadius: 16,
           border: "1px solid var(--glass-border)",
           borderTop: "1px solid var(--glass-border-top)",
@@ -304,7 +317,32 @@ export function QuickAdd() {
         {/* Mode toggle */}
         {modeToggle}
 
-        {mode === "event" ? eventFields : (
+        {mode === "document" ? (
+          <div style={{ padding: "12px 20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <input
+              ref={inputRef}
+              value={docTitle}
+              onChange={e => setDocTitle(e.target.value)}
+              placeholder="Document title…"
+              style={{
+                width: "100%", boxSizing: "border-box",
+                background: "var(--bg-subtle)", border: "1px solid var(--border)",
+                borderRadius: 10, padding: "9px 12px",
+                fontSize: "16px", fontWeight: 600, color: "var(--fg)", outline: "none",
+              }}
+            />
+            <p style={{ fontSize: 12, color: "var(--fg-faint)", margin: 0 }}>
+              Creates a new document and opens it. You can move it to a folder later.
+            </p>
+            <button type="button" onClick={submit}
+              disabled={!docTitle.trim()}
+              className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150 disabled:opacity-40"
+              style={{ background: "var(--accent)", color: "white", border: "none", cursor: "pointer" }}
+            >
+              Create Document
+            </button>
+          </div>
+        ) : mode === "event" ? eventFields : (
           <>
             {/* Input row */}
             <div className="flex items-center gap-4 px-5 py-[18px]">

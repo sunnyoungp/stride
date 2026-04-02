@@ -61,6 +61,10 @@ export function FocusTunnel() {
 
   const activeCardRef = useRef<HTMLDivElement>(null);
   const quickAddRef = useRef<HTMLInputElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const [pillOffset, setPillOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDraggingPill, setIsDraggingPill] = useState(false);
 
   // Today's date string
   const today = useMemo(() => {
@@ -175,6 +179,26 @@ export function FocusTunnel() {
 
   const handleLeave = () => clearSession();
 
+  const handlePillPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only drag from the pill container itself, not from buttons inside it
+    if ((e.target as HTMLElement).closest("button")) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragState.current = { startX: e.clientX, startY: e.clientY, originX: pillOffset.x, originY: pillOffset.y };
+    setIsDraggingPill(true);
+  };
+
+  const handlePillPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = e.clientY - dragState.current.startY;
+    setPillOffset({ x: dragState.current.originX + dx, y: dragState.current.originY + dy });
+  };
+
+  const handlePillPointerUp = () => {
+    dragState.current = null;
+    setIsDraggingPill(false);
+  };
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -186,14 +210,16 @@ export function FocusTunnel() {
       if (e.key === "Escape") {
         if (panelOpen) { setPanelOpen(false); return; }
         if (showTimerSettings) { setShowTimerSettings(false); return; }
-        handleLeave();
+        // Escape minimizes the session — only "Finish" button ends it
+        toggleMinimized();
+        return;
       }
       if (e.key === " " && !panelOpen) togglePause();
     };
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [togglePause, panelOpen, showTimerSettings]);
+  }, [togglePause, panelOpen, showTimerSettings, toggleMinimized]);
 
   const isVaultLocked = mode === "vault" && sessionElapsed < 300;
 
@@ -212,7 +238,7 @@ export function FocusTunnel() {
     <div className="relative flex flex-col h-screen w-screen transition-colors duration-1000" style={{ background: "var(--bg)" }}>
       {/* ESC label */}
       <div className="absolute top-10 right-10 z-[100] pointer-events-none">
-        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", opacity: 0.5 }}>Esc to exit</span>
+        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", opacity: 0.5 }}>Esc to minimize</span>
       </div>
 
       {/* ── Timer ring ──────────────────────────────────────────────────────────── */}
@@ -359,10 +385,23 @@ export function FocusTunnel() {
       </div>
 
       {/* ── Control pill ─────────────────────────────────────────────────────────── */}
-      <div className="absolute bottom-12 left-0 right-0 z-[120] pointer-events-none flex items-center justify-center gap-4 px-6">
+      <div
+        ref={pillRef}
+        className="absolute bottom-12 left-0 right-0 z-[120] pointer-events-none flex items-center justify-center gap-4 px-6"
+        style={{ transform: `translate(${pillOffset.x}px, ${pillOffset.y}px)` }}
+      >
         <div
           className="flex items-center gap-1 pointer-events-auto rounded-full px-2 py-2"
-          style={{ background: "rgba(var(--bg-card-rgb, 255,255,255), 0.85)", backdropFilter: "blur(24px)", border: "1px solid var(--border)", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}
+          style={{
+            background: "rgba(var(--bg-card-rgb, 255,255,255), 0.85)",
+            backdropFilter: "blur(24px)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+            cursor: isDraggingPill ? "grabbing" : "grab",
+          }}
+          onPointerDown={handlePillPointerDown}
+          onPointerMove={handlePillPointerMove}
+          onPointerUp={handlePillPointerUp}
         >
           <AnimatePresence>
             {hasDoneAnything && (
@@ -422,7 +461,7 @@ export function FocusTunnel() {
           onMouseEnter={e => { if (!isVaultLocked) e.currentTarget.style.color = "var(--accent)"; }}
           onMouseLeave={e => { e.currentTarget.style.color = "var(--fg-faint)"; }}
         >
-          {isVaultLocked ? "Locked" : "Leave"}
+          {isVaultLocked ? "Locked" : "Finish"}
         </button>
       </div>
 

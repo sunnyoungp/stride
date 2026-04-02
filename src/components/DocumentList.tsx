@@ -21,6 +21,7 @@ export function DocumentList() {
   const documents = useDocumentStore((s) => s.documents);
   const loadDocuments = useDocumentStore((s) => s.loadDocuments);
   const createDocument = useDocumentStore((s) => s.createDocument);
+  const deleteDocument = useDocumentStore((s) => s.deleteDocument);
 
   const [contextMenu, setContextMenu] = useState<{
     doc: StrideDocument;
@@ -62,20 +63,15 @@ export function DocumentList() {
           </div>
         ) : (
           sorted.map((doc) => (
-            <button
+            <div
               key={doc.id}
-              type="button"
+              className="group relative flex flex-col gap-2 rounded-xl p-5 text-left transition-all duration-150 cursor-pointer"
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
               onClick={() => router.push(`/documents?id=${doc.id}`)}
               onContextMenu={(e) => {
                 e.preventDefault();
-                setContextMenu({
-                  doc,
-                  x: e.clientX,
-                  y: e.clientY,
-                });
+                setContextMenu({ doc, x: e.clientX, y: e.clientY });
               }}
-              className="flex flex-col gap-2 rounded-xl p-5 text-left transition-all duration-150"
-              style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)"; (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"; }}
             >
@@ -85,7 +81,28 @@ export function DocumentList() {
               <div className="mt-auto text-xs" style={{ color: "var(--fg-muted)" }}>
                 Updated {formatUpdatedAt(doc.updatedAt)}
               </div>
-            </button>
+              {/* Delete button — visible on hover */}
+              <button
+                type="button"
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-md transition-all duration-150 hover:bg-red-500/10"
+                style={{ color: "#ef4444" }}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (confirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {
+                    try {
+                      await deleteDocument(doc.id);
+                    } catch {
+                      alert("Failed to delete document. Please try again.");
+                    }
+                  }
+                }}
+                title="Delete document"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M1.5 3h9M4.5 3V2h3v1M5 3l.5 7M7 3l-.5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
           ))
         )}
       </div>
