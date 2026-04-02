@@ -126,6 +126,7 @@ function isIncomplete(task: Task): boolean {
 export const useTaskStore = create<TaskStore>((set, get) => {
   const loadTasks: TaskStore["loadTasks"] = async () => {
     try {
+      set({ isLoading: true });
       const { data: rows, error } = await supabase.from("tasks").select("*");
       if (error) throw error;
       const tasks = (rows ?? []).map(taskFromRow);
@@ -133,7 +134,6 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       await get().rolloverPastDueTasks();
     } catch (error) {
       console.error("Failed to load tasks:", error);
-      set({ tasks: [] });
     } finally {
       set({ isLoading: false });
     }
@@ -402,8 +402,6 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     const byId = new Map(updated.map((t) => [t.id, t] as const));
     set({ tasks: get().tasks.map((t) => byId.get(t.id) ?? t) });
   };
-
-  if (typeof window !== "undefined") void loadTasks();
 
   return {
     tasks: [],

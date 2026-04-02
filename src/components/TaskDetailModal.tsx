@@ -78,19 +78,22 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const isMobile    = useIsMobile();
   const { height: vpHeight } = useVisualViewport();
   const [windowHeight, setWindowHeight] = useState(0);
+
   useEffect(() => {
     setWindowHeight(window.innerHeight);
     const update = () => setWindowHeight(window.innerHeight);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
   const keyboardHeight = Math.max(0, windowHeight - vpHeight);
 
   const modalRef   = useRef<HTMLDivElement>(null);
   const notesRef   = useRef<HTMLTextAreaElement>(null);
   const subtaskRef = useRef<HTMLInputElement>(null);
 
-  const [pos, setPos]           = useState({ x: -9999, y: 0 }); // hidden until clamped
+  // Initial position slightly off-screen or at click, will be clamped by useLayoutEffect
+  const [pos, setPos]           = useState({ x: position.x, y: position.y });
   const [titleDraft, setTitle]  = useState(task.title);
   const [notesDraft, setNotes]  = useState(task.notes ?? "");
   const [notesFocused, setNotesFocused] = useState(false);
@@ -99,7 +102,10 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const [editSubId, setEditSubId]   = useState<string | null>(null);
   const [editSubVal, setEditSubVal] = useState("");
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => { 
+    setMounted(true); 
+  }, []);
 
   const isDone   = task.status === "done";
   const subtasks = useMemo(() => tasks.filter((t) => t.parentTaskId === task.id), [tasks, task.id]);
@@ -115,7 +121,6 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDate(d); })();
   const nextWeekStr = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return localDate(d); })();
 
-  // Clamp to viewport — runs after every render so expanding panels stay on-screen
   useLayoutEffect(() => {
     const el = modalRef.current;
     if (!el) return;
@@ -123,11 +128,13 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
     const { width, height } = el.getBoundingClientRect();
+    if (width === 0 || height === 0) return; // Not yet sized
+
     setPos({
       x: Math.min(Math.max(position.x, pad), vw - width  - pad),
       y: Math.min(Math.max(position.y, pad), vh - height - pad),
     });
-  }, [position, panel]); // re-clamp whenever a panel opens/closes
+  }, [position, panel, mounted]); // re-clamp on mount and panels
 
   const save = () => {
     const t = titleDraft.trim();
@@ -140,6 +147,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
       if (e.key === "Escape") { save(); onClose(); }
     };
     const onOut = (e: PointerEvent) => {
+      // Small delay to prevent closing when clicking on things that might unmount
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
         save(); onClose();
       }
@@ -150,7 +158,6 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onOut);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [titleDraft, notesDraft]);
 
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? "none" : p));
@@ -169,30 +176,31 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
     <>
       {isMobile && (
         <div
-          className="fixed inset-0 z-[100] backdrop-fade"
+          className="fixed inset-0 z-[10000] backdrop-fade"
           style={{ background: "rgba(0,0,0,0.28)" }}
           onClick={() => { save(); onClose(); }}
         />
       )}
-        <div
-          ref={modalRef}
-          onClick={(e) => e.stopPropagation()}
-          className="fixed z-[100] flex flex-col overflow-hidden"
-          style={isMobile ? {
-            bottom: keyboardHeight > 0 ? keyboardHeight : 0,
-            paddingBottom: keyboardHeight > 0 ? 0 : "calc(32px + env(safe-area-inset-bottom))",
-            left: 0,
-            right: 0,
-            maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : "85vh",
-            background: "var(--bg-card)",
-            backdropFilter: "var(--glass-blur-card)",
-            WebkitBackdropFilter: "var(--glass-blur-card)",
-            borderTop: "1px solid var(--glass-border-top)",
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            boxShadow: "var(--shadow-float)",
-            transition: "bottom 200ms ease",
-          } : {
+      <div
+        id="task-detail-modal"
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+        className="fixed z-[10001] flex flex-col overflow-hidden"
+        style={isMobile ? {
+          bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+          paddingBottom: keyboardHeight > 0 ? 0 : "calc(32px + env(safe-area-inset-bottom))",
+          left: 0,
+          right: 0,
+          maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : "85vh",
+          background: "var(--bg-card)",
+          backdropFilter: "var(--glass-blur-card)",
+          WebkitBackdropFilter: "var(--glass-blur-card)",
+          borderTop: "1px solid var(--glass-border-top)",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          boxShadow: "var(--shadow-float)",
+          transition: "bottom 200ms ease",
+        } : {
           left: pos.x,
           top:  pos.y,
           width: 400,
@@ -208,476 +216,269 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
       >
         {isMobile && (
           <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
-            <div style={{ width: 36, height: 4, borderRadius: 9999, background: "var(--border-strong)" }} />
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--border-mid)" }} />
           </div>
         )}
 
-      {/* ── Top chrome ── */}
-      <div className="flex flex-none items-center gap-1 px-3 pt-3 pb-2 flex-wrap">
-        {/* Section chip */}
-        <button
-          onClick={() => togglePanel("section")}
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-          style={{
-            color: panel === "section"
-              ? "var(--accent)"
-              : currentSection ? "var(--fg-muted)" : "var(--fg-faint)",
-            background: panel === "section" ? "var(--bg-active)" : "transparent",
-          }}
-        >
-          {currentSection?.icon && <span>{currentSection.icon}</span>}
-          <span>{currentSection?.title ?? "No section"}</span>
-        </button>
-
-        <span className="text-[10px]" style={{ color: "var(--border-strong)" }}>·</span>
-
-        {/* Date chip */}
-        <button
-          onClick={() => togglePanel("date")}
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-          style={{
-            background: panel === "date" ? "var(--bg-active)" : "transparent",
-            color: task.dueDate
-              ? isOverdue(dateOnly(task.dueDate)) ? "var(--priority-high)" : "var(--accent)"
-              : panel === "date" ? "var(--accent)" : "var(--fg-faint)",
-          }}
-        >
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" className="flex-none">
-            <rect x=".6" y="1.1" width="9.8" height="9.3" rx="1.6" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M3.5.5v1.5M7.5.5v1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            <line x1=".6" y1="4.2" x2="10.4" y2="4.2" stroke="currentColor" strokeWidth="1.1"/>
-          </svg>
-          <span>{task.dueDate ? friendlyDate(dateOnly(task.dueDate)) : "Date"}</span>
-        </button>
-
-        <div className="flex-1" />
-
-        {/* Complete toggle */}
-        <button
-          onClick={() => void updateTask(task.id, { status: isDone ? "todo" : "done" })}
-          title={isDone ? "Mark incomplete" : "Mark complete"}
-          className="flex h-[20px] w-[20px] flex-none items-center justify-center rounded-[4px] transition-all duration-200 ease-out"
-          style={isDone
-            ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
-            : { border: "1.5px solid var(--border-strong)", background: "transparent" }
-          }
-        >
-          {isDone && (
-            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-              <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          )}
-        </button>
-
-        {/* Close */}
-        <button
-          onClick={() => { save(); onClose(); }}
-          className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-lg transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-          style={{ color: "var(--fg-faint)" }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* ── Scrollable body ── */}
-      <div className="flex flex-col overflow-y-auto" style={{ minHeight: 0 }}>
-
-        {/* Title */}
-        <div className="px-4 pb-1 pt-1">
-          <textarea
-            value={titleDraft}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => {
-              const t = titleDraft.trim();
-              if (t !== task.title) void updateTask(task.id, { title: t || task.title });
-            }}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === "Enter") { e.preventDefault(); notesRef.current?.focus(); }
-            }}
-            rows={1}
-            placeholder="Task title"
-            className="w-full resize-none bg-transparent font-semibold outline-none"
-            style={{
-              fontSize: "16px",
-              color: isDone ? "var(--fg-faint)" : "var(--fg)",
-              textDecoration: isDone ? "line-through" : "none",
-              fieldSizing: "content",
-            } as React.CSSProperties}
-          />
-        </div>
-
-        {/* Notes */}
-        <div className="px-4 pb-3">
-          {!notesFocused && notesDraft ? (
-            <div
-              onClick={() => { setNotesFocused(true); setTimeout(() => notesRef.current?.focus(), 0); }}
-              className="w-full cursor-text text-sm"
-              style={{ color: "var(--fg-muted)", whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: 44 }}
-            >
-              {renderWithLinks(notesDraft)}
+        <div className="flex-1 overflow-auto p-5 pb-0 custom-scrollbar">
+          {/* Header with Title */}
+          <div className="flex flex-col gap-4">
+            <input
+              autoFocus={!isMobile}
+              value={titleDraft}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={save}
+              className="w-full bg-transparent text-lg font-semibold outline-none"
+              style={{ color: "var(--fg)" }}
+              placeholder="Task name"
+            />
+            
+            {/* Notes Section */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--fg-faint)" }}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+                  <path d="M3 4.5h10M3 8h10M3 11.5h6" strokeLinecap="round" strokeWidth={1.5} />
+                </svg>
+                Notes
+              </div>
+              <textarea
+                ref={notesRef}
+                value={notesDraft}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={() => { setNotesFocused(false); save(); }}
+                onFocus={() => setNotesFocused(true)}
+                className="w-full bg-transparent text-sm leading-relaxed outline-none"
+                style={{ 
+                  color: "var(--fg-muted)", 
+                  minHeight: notesFocused ? 120 : 60,
+                  transition: "min-height 200ms ease"
+                }}
+                placeholder="Description…"
+              />
             </div>
-          ) : (
-          <textarea
-            ref={notesRef}
-            value={notesDraft}
-            onChange={(e) => setNotes(e.target.value)}
-            onFocus={() => setNotesFocused(true)}
-            onBlur={() => {
-              setNotesFocused(false);
-              if (notesDraft !== task.notes) void updateTask(task.id, { notes: notesDraft });
-            }}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === "Enter") {
-                const pos       = e.currentTarget.selectionStart;
-                const lineStart = notesDraft.lastIndexOf("\n", pos - 1) + 1;
-                const line      = notesDraft.slice(lineStart, pos);
-                if (/^[xX] \S/.test(line)) {
-                  e.preventDefault();
-                  const title    = line.slice(2).trim();
-                  const before   = lineStart > 0 ? notesDraft.slice(0, lineStart - 1) : "";
-                  const after    = notesDraft.slice(pos);
-                  const newNotes = before + after;
-                  setNotes(newNotes);
-                  void updateTask(task.id, { notes: newNotes });
-                  void addSubtask(title);
-                }
-              }
-            }}
-            placeholder="Notes… (type 'x Task name' + Enter to add a subtask)"
-            rows={2}
-            className="w-full resize-none bg-transparent text-sm outline-none"
-            style={{
-              color: "var(--fg-muted)",
-              fieldSizing: "content",
-              minHeight: 44,
-              fontSize: "16px",
-            } as React.CSSProperties}
-          />
-          )}
-        </div>
 
-        {/* ── Subtasks — always visible ── */}
-        {(subtasks.length > 0 || true) && (
-          <div className="px-4 pb-3">
-            {subtasks.length > 0 && (
-              <div className="mb-2 flex flex-col gap-1.5">
+            {/* Subtasks Section */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--fg-faint)" }}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+                  <path d="M4 3h8M4 6h8M4 9h8" strokeLinecap="round" strokeWidth={1.5}/>
+                </svg>
+                Subtasks
+              </div>
+              <div className="flex flex-col gap-1">
                 {subtasks.map((st) => (
-                  <div key={st.id} className="group flex items-center gap-2">
+                  <div key={st.id} className="group relative flex items-center gap-2 rounded-md py-1">
                     <button
                       onClick={() => void updateTask(st.id, { status: st.status === "done" ? "todo" : "done" })}
-                      className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] transition-all duration-150 ease-out"
-                      style={st.status === "done"
-                        ? { background: "var(--accent)", border: "1.5px solid var(--accent)" }
-                        : { border: "1.5px solid var(--border-strong)", background: "transparent" }
-                      }
+                      className="flex h-4 w-4 items-center justify-center rounded border transition-colors"
+                      style={{
+                        borderColor: st.status === "done" ? "var(--accent)" : "var(--border-mid)",
+                        background: st.status === "done" ? "var(--accent)" : "transparent"
+                      }}
                     >
                       {st.status === "done" && (
-                        <svg width="7" height="6" viewBox="0 0 7 6" fill="none">
-                          <path d="M1 3L3 5L6 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={3}>
+                          <path d="M3.5 8l3 3 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       )}
                     </button>
                     {editSubId === st.id ? (
                       <input
-                        autoFocus value={editSubVal}
+                        autoFocus
+                        value={editSubVal}
                         onChange={(e) => setEditSubVal(e.target.value)}
+                        onBlur={() => {
+                          if (editSubVal.trim()) void updateTask(st.id, { title: editSubVal.trim() });
+                          setEditSubId(null);
+                        }}
                         onKeyDown={(e) => {
-                          e.stopPropagation();
-                          if (e.key === "Enter") { if (editSubVal.trim()) void updateTask(st.id, { title: editSubVal.trim() }); setEditSubId(null); }
+                          if (e.key === "Enter") {
+                            if (editSubVal.trim()) void updateTask(st.id, { title: editSubVal.trim() });
+                            setEditSubId(null);
+                          }
                           if (e.key === "Escape") setEditSubId(null);
                         }}
-                        onBlur={() => { if (editSubVal.trim()) void updateTask(st.id, { title: editSubVal.trim() }); setEditSubId(null); }}
-                        className="flex-1 bg-transparent outline-none"
-                        style={{ borderBottom: "1px solid var(--border-mid)", color: "var(--fg)", paddingBottom: "1px", fontSize: "16px" }}
+                        className="flex-1 bg-transparent text-sm outline-none"
                       />
                     ) : (
                       <span
                         onClick={() => { setEditSubId(st.id); setEditSubVal(st.title); }}
-                        className="flex-1 cursor-text text-[13px]"
-                        style={st.status === "done"
-                          ? { textDecoration: "line-through", color: "var(--fg-faint)" }
-                          : { color: "var(--fg-muted)" }
-                        }
-                      >{st.title || "Untitled"}</span>
+                        className="flex-1 cursor-text text-sm transition-colors"
+                        style={{
+                          color: st.status === "done" ? "var(--fg-faint)" : "var(--fg-muted)",
+                          textDecoration: st.status === "done" ? "line-through" : "none"
+                        }}
+                      >
+                        {st.title}
+                      </span>
                     )}
                     <button
                       onClick={() => void deleteTask(st.id)}
-                      className="flex-none opacity-0 group-hover:opacity-60 transition-opacity text-xs hover:opacity-100"
-                      style={{ color: "var(--fg-faint)" }}
-                    >✕</button>
+                      className="opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+                        <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" strokeWidth={1.5}/>
+                      </svg>
+                    </button>
                   </div>
                 ))}
+                <div className="flex items-center gap-2 py-1">
+                  <div className="flex h-4 w-4 items-center justify-center text-[var(--fg-faint)]">+</div>
+                  <input
+                    ref={subtaskRef}
+                    value={newSubtask}
+                    onChange={(e) => setNewSub(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") addSubtask(); }}
+                    className="flex-1 bg-transparent text-sm outline-none"
+                    placeholder="Add subtask…"
+                    style={{ color: "var(--fg-faint)" }}
+                  />
+                </div>
               </div>
-            )}
-            {/* Inline add subtask */}
-            <div className="flex items-center gap-2">
-              <span
-                className="flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] text-[10px]"
-                style={{ border: "1.5px dashed var(--border-strong)", color: "var(--fg-faint)" }}
-              >+</span>
-              <input
-                ref={subtaskRef} value={newSubtask}
-                onChange={(e) => setNewSub(e.target.value)}
-                onKeyDown={(e) => {
-                  e.stopPropagation();
-                  if (e.key === "Enter") void addSubtask();
-                  if (e.key === "Escape") setNewSub("");
-                }}
-                placeholder="Add subtask…"
-                className="flex-1 bg-transparent outline-none"
-                style={{ color: "var(--fg)", caretColor: "var(--accent)", fontSize: "16px" }}
-              />
             </div>
           </div>
-        )}
+        </div>
 
-        {/* ── Expanding panels — sit between notes and toolbar ── */}
-
-        {panel === "date" && (
-          <div
-            className="mx-3 mb-3 rounded-xl p-3 space-y-2.5"
-            style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { label: "Today",     val: todayStr    },
-                { label: "Tomorrow",  val: tomorrowStr },
-                { label: "Next week", val: nextWeekStr },
-              ].map(({ label, val }) => {
-                const active = task.dueDate && dateOnly(task.dueDate) === val;
-                return (
+        {/* --- Relative panels --- */}
+        <div className="relative">
+          {panel === "date" && (
+            <div className="absolute bottom-full right-0 mb-2 w-48 overflow-hidden rounded-xl border p-1 shadow-lg"
+                 style={{ background: "var(--bg-card)", borderColor: "var(--glass-border)", backdropFilter: "var(--glass-blur-card)" }}>
+              <div className="flex flex-col gap-0.5">
+                {[
+                  { label: "Today", val: todayStr, icon: "T" },
+                  { label: "Tomorrow", val: tomorrowStr, icon: "Tm" },
+                  { label: "Next Week", val: nextWeekStr, icon: "W" },
+                  { label: "No Date", val: undefined, icon: "X" },
+                ].map((opt) => (
                   <button
-                    key={label}
-                    onClick={() => { void updateTask(task.id, { dueDate: val }); setPanel("none"); }}
-                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 ease-out"
-                    style={active
-                      ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
-                      : { background: "var(--bg-card)", color: "var(--fg-muted)", border: "1px solid var(--border)" }
-                    }
+                    key={opt.label}
+                    onClick={() => { void updateTask(task.id, { dueDate: opt.val as any }); togglePanel("none"); }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--bg-hover)]"
                   >
-                    {label}
-                  </button>
-                );
-              })}
-              {task.dueDate && (
-                <button
-                  onClick={() => { void updateTask(task.id, { dueDate: undefined }); setPanel("none"); }}
-                  className="rounded-lg px-3 py-1.5 text-xs transition-all duration-150 ease-out hover:bg-[var(--bg-card)]"
-                  style={{ color: "var(--fg-faint)" }}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <input
-              type="date"
-              value={task.dueDate ? dateOnly(task.dueDate) : ""}
-              onChange={(e) => void updateTask(task.id, { dueDate: e.target.value || undefined })}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                color: "var(--fg)",
-                fontSize: "16px",
-              }}
-            />
-          </div>
-        )}
-
-        {panel === "section" && (
-          <div
-            className="mx-3 mb-3 rounded-xl p-1.5"
-            style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
-          >
-            <button
-              onClick={() => { void updateTask(task.id, { sectionId: undefined, subsectionId: undefined }); setPanel("none"); }}
-              className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-left transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-              style={{ color: !task.sectionId ? "var(--fg)" : "var(--fg-muted)" }}
-            >
-              <span className="flex-1">No section</span>
-              {!task.sectionId && <span style={{ color: "var(--accent)" }}>✓</span>}
-            </button>
-            {sections.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => { void updateTask(task.id, { sectionId: s.id, subsectionId: undefined }); setPanel("none"); }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-left transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-                style={{ color: "var(--fg-muted)" }}
-              >
-                {s.icon && <span>{s.icon}</span>}
-                <span className="flex-1">{s.title}</span>
-                {task.sectionId === s.id && <span style={{ color: "var(--accent)" }}>✓</span>}
-              </button>
-            ))}
-            {task.sectionId && sectionSubsections.length > 0 && (
-              <>
-                <div className="mx-2 my-1 h-px" style={{ background: "var(--border)" }} />
-                <p className="px-3 py-1 text-[10px] uppercase" style={{ color: "var(--fg-faint)" }}>Subsection</p>
-                <button
-                  onClick={() => void updateTask(task.id, { subsectionId: undefined })}
-                  className="flex w-full items-center rounded-lg px-3 py-1.5 text-xs text-left transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-                  style={{ color: !task.subsectionId ? "var(--fg)" : "var(--fg-muted)" }}
-                >
-                  <span className="flex-1">None</span>
-                  {!task.subsectionId && <span style={{ color: "var(--accent)" }}>✓</span>}
-                </button>
-                {sectionSubsections.map((su) => (
-                  <button
-                    key={su.id}
-                    onClick={() => void updateTask(task.id, { subsectionId: su.id })}
-                    className="flex w-full items-center rounded-lg px-3 py-1.5 text-xs text-left transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-                    style={{ color: "var(--fg-muted)" }}
-                  >
-                    <span className="flex-1"># {su.title}</span>
-                    {task.subsectionId === su.id && <span style={{ color: "var(--accent)" }}>✓</span>}
+                    <span className="w-5 text-center font-bold text-[var(--accent)]">{opt.icon}</span>
+                    {opt.label}
                   </button>
                 ))}
-              </>
-            )}
-          </div>
-        )}
-
-        {panel === "more" && (
-          <div
-            className="mx-3 mb-3 rounded-xl p-3 space-y-3"
-            style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}
-          >
-            {/* Repeat */}
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Repeat</p>
-              <select
-                value={task.recurrence?.frequency ?? "none"}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  void updateTask(task.id, v === "none" ? { recurrence: undefined } : { recurrence: { frequency: v as any, interval: 1 } });
-                }}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--fg)" }}
-              >
-                <option value="none">Never</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
+              </div>
             </div>
-
-            {/* Project */}
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Project</p>
-              <select
-                value={task.projectId ?? ""}
-                onChange={(e) => void updateTask(task.id, { projectId: e.target.value || undefined })}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--fg)" }}
-              >
-                <option value="">None</option>
-                {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-              </select>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Tags</p>
-              <div className="flex flex-wrap gap-1.5">
-                {task.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="group inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px]"
-                    style={{ background: "var(--bg-hover)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+          )}
+          {panel === "section" && (
+            <div className="absolute bottom-full left-0 mb-2 w-56 overflow-hidden rounded-xl border p-1 shadow-lg"
+                 style={{ background: "var(--bg-card)", borderColor: "var(--glass-border)", backdropFilter: "var(--glass-blur-card)" }}>
+              <div className="max-h-64 overflow-auto py-1 custom-scrollbar">
+                {sections.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => { void updateTask(task.id, { sectionId: s.id }); togglePanel("none"); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--bg-hover)]"
                   >
-                    #{tag}
-                    <button
-                      onClick={() => void updateTask(task.id, { tags: task.tags.filter((t) => t !== tag) })}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: "var(--fg-faint)" }}
-                    >✕</button>
-                  </span>
+                    <div className="h-2 w-2 rounded-full" style={{ background: s.color || "#94a3b8" }} />
+                    {s.title}
+                  </button>
                 ))}
-                <TagAdder task={task} updateTask={updateTask} />
               </div>
             </div>
-
-            {/* Source doc */}
-            {task.sourceDocumentId && (
-              <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase" style={{ color: "var(--fg-faint)" }}>Source</p>
-                <Link
-                  href={`/documents?id=${task.sourceDocumentId}`}
-                  onClick={() => { save(); onClose(); }}
-                  className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
-                  style={{ color: "var(--fg-muted)" }}
-                >
-                  📄 {task.sourceDocumentTitle || "Untitled"}
-                </Link>
+          )}
+          {panel === "more" && (
+            <div className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-xl border p-3 shadow-lg"
+                 style={{ background: "var(--bg-card)", borderColor: "var(--glass-border)", backdropFilter: "var(--glass-blur-card)" }}>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--fg-faint)]">Tags</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {task.tags.map(t => (
+                      <span key={t} className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]" style={{ background: "var(--bg-subtle)", color: "var(--fg-muted)" }}>
+                        #{t}
+                        <button onClick={() => void updateTask(task.id, { tags: task.tags.filter(x=>x!==t) })} className="hover:text-red-400">×</button>
+                      </span>
+                    ))}
+                    <TagAdder task={task} updateTask={updateTask} />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--fg-faint)]">Project</div>
+                  <div className="flex flex-col gap-0.5">
+                    {projects.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => void updateTask(task.id, { projectId: p.id })}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs text-[var(--fg-muted)] hover:bg-[var(--bg-hover)]"
+                        style={task.projectId === p.id ? { background: "var(--bg-active)", color: "var(--accent)" } : {}}
+                      >
+                        {p.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
 
-      {/* ── Toolbar ── */}
-      <div
-        className="flex flex-none items-center gap-0.5 px-2 py-2"
-        style={{ borderTop: "1px solid var(--border)" }}
-      >
-        <ToolBtn active={panel === "date" || !!task.dueDate} onClick={() => togglePanel("date")} title="Due date">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
-            <rect x="1.5" y="2.5" width="13" height="12" rx="2"/><path d="M5 1v3M11 1v3" strokeLinecap="round"/><line x1="1.5" y1="7" x2="14.5" y2="7"/>
-          </svg>
-        </ToolBtn>
+        {/* --- Toolbar --- */}
+        <div className="flex items-center border-t px-3 py-2" style={{ borderColor: "var(--glass-border-top)", gap: "4px" }}>
+          
+          {/* Section picker */}
+          <ToolBtn active={panel === "section"} onClick={() => togglePanel("section")} title="Move to section">
+            <div className="h-2 w-2 rounded-full" style={{ background: currentSection?.color || "#94a3b8" }} />
+            <span className="max-w-[80px] truncate text-xs font-medium">{currentSection?.title || "Inbox"}</span>
+          </ToolBtn>
 
-        <ToolBtn active={panel === "section" || !!task.sectionId} onClick={() => togglePanel("section")} title="Section">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
-            <path d="M2 12V4.5A1.5 1.5 0 013.5 3h4.3l1.7 2H13A1.5 1.5 0 0114.5 6.5V12A1.5 1.5 0 0113 13.5H3.5A1.5 1.5 0 012 12z"/>
-          </svg>
-        </ToolBtn>
+          <div style={{ width: 1, height: 16, background: "var(--border-mid)", opacity: 0.5, margin: "0 2px" }} />
 
-        {/* Priority cycle */}
-        <button
-          type="button"
-          title={`Priority: ${currentPriority.label}`}
-          onClick={() => {
-            const order: Array<typeof task.priority> = ["none","low","medium","high"];
-            const next = order[(order.indexOf(task.priority) + 1) % order.length]!;
-            void updateTask(task.id, { priority: next });
-          }}
-          className="relative flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-          style={task.priority !== "none" ? { color: currentPriority.color } : { color: "var(--fg-faint)" }}
-        >
-          <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ flexShrink: 0 }}>
-            <line x1="1.5" y1="1" x2="1.5" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M1.5 1.5H8.5L6.5 5L8.5 8.5H1.5V1.5Z" fill="currentColor" opacity=".85"/>
-          </svg>
-        </button>
+          {/* Date picker */}
+          <ToolBtn active={panel === "date"} onClick={() => togglePanel("date")} title="Set due date">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+              <rect x="3" y="3.5" width="10" height="10" rx="2" strokeWidth={1.5}/>
+              <path d="M3 7h10M5.5 2v2.5M10.5 2v2.5" strokeLinecap="round" strokeWidth={1.5}/>
+            </svg>
+            <span className="text-xs font-medium" style={{ color: task.dueDate ? "var(--accent)" : "var(--fg-faint)" }}>
+              {task.dueDate ? friendlyDate(task.dueDate) : "No date"}
+            </span>
+          </ToolBtn>
 
-        <ToolBtn active={panel === "more"} onClick={() => togglePanel("more")} title="Repeat, tags, project">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-            <circle cx="4"  cy="8" r="1.3" fill="currentColor"/>
-            <circle cx="8"  cy="8" r="1.3" fill="currentColor"/>
-            <circle cx="12" cy="8" r="1.3" fill="currentColor"/>
-          </svg>
-        </ToolBtn>
+          {/* Priority cycle */}
+          <button
+            type="button"
+            title={`Priority: ${currentPriority.label}`}
+            onClick={() => {
+              const order: Array<typeof task.priority> = ["none","low","medium","high"];
+              const next = order[(order.indexOf(task.priority) + 1) % order.length]!;
+              void updateTask(task.id, { priority: next });
+            }}
+            className="relative flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+            style={task.priority !== "none" ? { color: currentPriority.color } : { color: "var(--fg-faint)" }}
+          >
+            <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ flexShrink: 0 }}>
+              <line x1="1.5" y1="1" x2="1.5" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M1.5 1.5H8.5L6.5 5L8.5 8.5H1.5V1.5Z" fill="currentColor" opacity=".85"/>
+            </svg>
+          </button>
 
-        <div className="flex-1" />
+          <ToolBtn active={panel === "more"} onClick={() => togglePanel("more")} title="Repeat, tags, project">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+              <circle cx="4"  cy="8" r="1.3" fill="currentColor"/>
+              <circle cx="8"  cy="8" r="1.3" fill="currentColor"/>
+              <circle cx="12" cy="8" r="1.3" fill="currentColor"/>
+            </svg>
+          </ToolBtn>
 
-        <button
-          onClick={async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } }}
-          title="Delete task"
-          className="flex items-center justify-center rounded-lg p-2 transition-all duration-150 ease-out hover:bg-red-500/10 hover:text-red-400"
-          style={{ color: "var(--fg-faint)" }}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
-            <path d="M2.5 4.5h11M6 4.5V3h4v1.5M5.5 4.5l.5 9h4l.5-9" strokeLinecap="round" strokeLinejoin="round"/>
-            <line x1="7" y1="7.5" x2="7" y2="11" strokeLinecap="round"/>
-            <line x1="9" y1="7.5" x2="9" y2="11" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
+          <div className="flex-1" />
+
+          <button
+            onClick={async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } }}
+            title="Delete task"
+            className="flex items-center justify-center rounded-lg p-2 transition-all duration-150 ease-out hover:bg-red-500/10 hover:text-red-400"
+            style={{ color: "var(--fg-faint)" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M2.5 4.5h11M6 4.5V3h4v1.5M5.5 4.5l.5 9h4l.5-9" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="7" y1="7.5" x2="7" y2="11" strokeLinecap="round"/>
+              <line x1="9" y1="7.5" x2="9" y2="11" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </>,
     document.body

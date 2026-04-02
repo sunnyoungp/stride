@@ -61,8 +61,7 @@ function SortableTaskRow({ task, renderTaskRow }: {
       {...attributes}
       className="outline-none"
     >
-      {renderTaskRow(task)}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }} {...listeners} />
+      {renderTaskRow({ ...task, dndListeners: listeners } as any)}
     </div>
   );
 }
@@ -79,8 +78,7 @@ function SortableSubtaskRow({ task, renderSubtaskRow }: {
       {...attributes}
       className="outline-none"
     >
-      {renderSubtaskRow(task)}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }} {...listeners} />
+      {renderSubtaskRow({ ...task, dndListeners: listeners } as any)}
     </div>
   );
 }
@@ -435,15 +433,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTaskClick(task, { x: 0, y: 0 }); }}
           data-task-id={task.id}
           data-task-title={task.title}
-          draggable={true}
-          onDragStart={(e) => {
-            e.dataTransfer.setData("text/task-id", task.id);
-            e.dataTransfer.setData("text/task-title", task.title);
-            e.dataTransfer.setData("stride/taskId", task.id);
-            e.dataTransfer.setData("stride/taskTitle", task.title);
-            e.dataTransfer.setData("text/plain", task.title);
-            e.dataTransfer.effectAllowed = "move";
-          }}
+          {...(task as any).dndListeners}
           className="group/row flex cursor-pointer items-center gap-3 px-4 py-[11px] transition-colors duration-100"
           style={{
             background: isSelected ? "var(--accent-bg)" : undefined,

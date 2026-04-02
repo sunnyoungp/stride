@@ -552,15 +552,6 @@ export function TaskRow({ task, onClick, onRightClick, noContextMenu, compact }:
         }}
         data-task-id={task.id}
         data-task-title={task.title}
-        draggable={true}
-        onDragStart={(e) => {
-          e.dataTransfer.setData("text/task-id", task.id);
-          e.dataTransfer.setData("text/task-title", task.title);
-          e.dataTransfer.setData("stride/taskId", task.id);
-          e.dataTransfer.setData("stride/taskTitle", task.title);
-          e.dataTransfer.setData("text/plain", task.title);
-          e.dataTransfer.effectAllowed = "move";
-        }}
         style={{
           display: "flex",
           alignItems: "center",

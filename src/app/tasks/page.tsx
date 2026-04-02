@@ -376,6 +376,10 @@ export default function Page() {
 
   const sortActive = sortBy !== "date" || groupBy !== "list";
 
+  useEffect(() => {
+    console.log("[TasksPage] selectedTaskId updated:", selectedTaskId);
+  }, [selectedTaskId]);
+
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
       <div

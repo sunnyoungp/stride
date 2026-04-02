@@ -79,7 +79,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set({ projects: seeded });
     } catch (error) {
       console.error("Failed to load projects:", error);
-      set({ projects: [] });
     }
   };
 
@@ -117,8 +116,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     if (error) console.error("Failed to delete project:", error);
     set({ projects: get().projects.filter((p) => p.id !== id) });
   };
-
-  if (typeof window !== "undefined") void loadProjects();
 
   return {
     projects: [],

@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useFocusStore } from "@/store/focusStore";
 import { useAuthStore } from "@/store/authStore";
 import { createClient } from "@/lib/supabase/client";
+import { useTaskStore } from "@/store/taskStore";
+import { useProjectStore } from "@/store/projectStore";
 import { loadSettings } from "@/lib/settings";
 import { Sidebar } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -56,11 +58,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         const supabase = createClient();
-        supabase.auth.getSession().then(({ data }) => {
+        supabase.auth.getSession().then(({ data }: any) => {
             setUser(data.session?.user ?? null);
-            if (data.session?.user) void loadSettings();
+            if (data.session?.user) {
+                void loadSettings();
+                void useTaskStore.getState().loadTasks();
+                void useProjectStore.getState().loadProjects();
+            }
         });
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
             setUser(session?.user ?? null);
         });
         return () => subscription.unsubscribe();

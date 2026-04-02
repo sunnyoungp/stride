@@ -88,6 +88,7 @@ function KanbanCardVisual({
   onSubtaskClick,
   onSubtaskRightClick,
   style,
+  dndListeners,
 }: {
   task: Task;
   accentColor: string;
@@ -96,6 +97,7 @@ function KanbanCardVisual({
   onSubtaskClick?: (task: Task, pos: { x: number; y: number }) => void;
   onSubtaskRightClick?: (task: Task, pos: { x: number; y: number }) => void;
   style?: CSSProperties;
+  dndListeners?: any;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
 
@@ -128,6 +130,7 @@ function KanbanCardVisual({
 
   return (
     <div
+      {...dndListeners}
       style={{
         background: "var(--bg-card)",
         borderRadius: 12,
@@ -365,7 +368,6 @@ function KanbanCard({
       ref={setNodeRef}
       style={wrapperStyle}
       {...attributes}
-      {...listeners}
       onClick={(e) => onTaskClick(task, { x: e.clientX, y: e.clientY })}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -382,6 +384,7 @@ function KanbanCard({
         onSubtaskClick={onTaskClick}
         onSubtaskRightClick={onTaskRightClick}
         style={cardStyle}
+        dndListeners={listeners as any}
       />
     </div>
   );
