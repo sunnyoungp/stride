@@ -102,8 +102,8 @@ function DocIcon() {
     <svg width="13" height="13" viewBox="0 0 15 15" fill="none" style={{ color: "var(--fg-muted)" }}>
       <path d="M3 1.5h6l3 3V13a.5.5 0 01-.5.5h-8.5a.5.5 0 01-.5-.5V2a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.3"/>
       <path d="M9 1.5V4.5H12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      <line x1="5" y1="7"   x2="10" y2="7"   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".7"/>
-      <line x1="5" y1="9.5" x2="9"  y2="9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".7"/>
+      <line x1="5" y1="7"   x2="10" y2="7"   stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="5" y1="9.5" x2="9"  y2="9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -172,18 +172,18 @@ function ResultRow({
         {/* Title */}
         <span style={{ flex: 1, fontSize: 14, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {highlightMatch(task.title, query)}
-          {task.sourceDocumentId && <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.5 }}>📄</span>}
+          {task.sourceDocumentId && <span style={{ marginLeft: 6, fontSize: 11 }}>📄</span>}
         </span>
 
         {/* Chips */}
         <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
           {section && (
-            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 9999, background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
+            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 9999, background: "var(--accent-bg-strong)", color: "var(--accent)", fontWeight: 500 }}>
               {section.icon ? `${section.icon} ` : ""}{section.title}
             </span>
           )}
           {task.dueDate && (
-            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 9999, background: "var(--bg-hover)", color: "var(--fg-muted)" }}>
+            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 9999, background: "var(--accent-bg-strong)", color: "var(--accent)", fontWeight: 500 }}>
               {task.dueDate}
             </span>
           )}
@@ -416,8 +416,9 @@ export function GlobalSearch() {
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", alignItems: "flex-start", justifyContent: "center",
         paddingTop: "14vh",
-        background: "rgba(0,0,0,0.30)",
-        backdropFilter: "blur(2px)",
+        background: "rgba(0,0,0,0.50)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
         animation: "gs-fade 0.1s ease",
       }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) closeSearch(); }}
@@ -464,8 +465,8 @@ export function GlobalSearch() {
           />
           <kbd style={{
             fontSize: 11, padding: "2px 6px", borderRadius: 6, flexShrink: 0,
-            background: "var(--bg-hover)", border: "1px solid var(--border-mid)",
-            color: "var(--fg-faint)",
+            background: "var(--bg-active)", border: "1px solid var(--border-strong)",
+            color: "var(--fg-muted)", fontWeight: 600,
           }}>
             Esc
           </kbd>

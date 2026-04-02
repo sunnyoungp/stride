@@ -465,7 +465,9 @@ export default function Next7Page() {
           justifyContent: "space-between",
           padding: "16px 24px",
           borderBottom: "1px solid var(--border)",
-          background: "var(--bg)",
+          background: "transparent",
+          backdropFilter: "var(--glass-blur-panel)",
+          WebkitBackdropFilter: "var(--glass-blur-panel)",
         }}
       >
         <h1 style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", margin: 0 }}>Next 7 Days</h1>

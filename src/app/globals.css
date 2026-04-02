@@ -22,8 +22,8 @@
   /* Layer 1 — Panels (sidebar + content) — glass, same color */
   --bg-panel:  color-mix(in srgb, hsl(var(--tint-h), var(--tint-s), 82%) 52%, transparent);
 
-  /* Layer 2 — Cards / groups — glass, slightly lighter */
-  --bg-card:   color-mix(in srgb, hsl(var(--tint-h), var(--tint-s), 88%) 50%, transparent);
+  /* Layer 2 — Cards / groups — Unified with panel bg as requested */
+  --bg-card:   var(--bg-panel);
 
   /* Solid surfaces (editor, code blocks, inputs) */
   --bg:        hsl(var(--tint-h), var(--tint-s), 97%);
@@ -112,8 +112,8 @@
   /* Layer 1 — panels: semi-transparent glass */
   --bg-panel:  color-mix(in srgb, hsl(var(--tint-h), 14%, 17%) 55%, transparent);
 
-  /* Layer 2 — cards: slightly lighter glass */
-  --bg-card:   color-mix(in srgb, hsl(var(--tint-h), 14%, 22%) 55%, transparent);
+  /* Layer 2 — cards: Unified with panel bg as requested */
+  --bg-card:   var(--bg-panel);
 
   /* Solid surfaces (editor, inputs) */
   --bg:        hsl(var(--tint-h), 14%, 14%);

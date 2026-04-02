@@ -225,15 +225,18 @@ export default function NotesPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "var(--bg)" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
 
       {/* ── Page header ── */}
-      <div style={{
-        flexShrink: 0, height: 44,
-        display: "flex", alignItems: "center", justifyContent: "flex-end",
-        padding: "0 16px",
-        borderBottom: "1px solid var(--border)",
-      }}>
+      <div
+        className="flex-none flex items-center justify-between px-6 py-4 sticky top-0 z-[10]"
+        style={{ 
+          borderBottom: "1px solid var(--border)", 
+          background: "transparent",
+          backdropFilter: "var(--glass-blur-panel)",
+          WebkitBackdropFilter: "var(--glass-blur-panel)",
+        }}
+      >
         {calendarToggleBtn}
       </div>
 
@@ -247,7 +250,6 @@ export default function NotesPage() {
             background: "var(--bg-card)",
             border: "1px solid var(--border)",
             borderRadius: 16,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           }}>
             {dateNav}
             {/* Editor body */}

@@ -1067,7 +1067,9 @@ export default function SettingsPage() {
             gap: 4,
             padding: "10px 12px",
             borderBottom: "1px solid var(--border)",
-            background: "var(--bg-sidebar)",
+            background: "var(--bg-panel)",
+            backdropFilter: "var(--glass-blur-card)",
+            WebkitBackdropFilter: "var(--glass-blur-card)",
           }}
         >
           {CATEGORIES.map((cat) => (
@@ -1079,9 +1081,9 @@ export default function SettingsPage() {
                 flexShrink: 0,
                 padding: "6px 14px",
                 borderRadius: 999,
-                fontSize: 13, fontWeight: active === cat.id ? 600 : 400,
+                fontSize: 13, fontWeight: active === cat.id ? 600 : 500,
                 color: active === cat.id ? "var(--accent-fg)" : "var(--fg-muted)",
-                background: active === cat.id ? "var(--accent)" : "var(--bg-subtle)",
+                background: active === cat.id ? "var(--accent)" : "var(--bg-hover)",
                 border: "none", cursor: "pointer",
                 transition: "all 120ms ease",
                 whiteSpace: "nowrap",
@@ -1123,18 +1125,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden", background: "var(--bg)" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden", background: "transparent" }}>
 
-      {/* ── Left category sidebar ── */}
       <div style={{
         width: 200, flexShrink: 0,
         borderRight: "1px solid var(--border)",
-        background: "var(--bg-sidebar)",
+        background: "var(--bg-panel)",
+        backdropFilter: "var(--glass-blur-card)",
+        WebkitBackdropFilter: "var(--glass-blur-card)",
         display: "flex", flexDirection: "column",
         padding: "24px 0",
         overflowY: "auto",
       }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", padding: "0 16px 12px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-muted)", textTransform: "uppercase", padding: "0 16px 12px" }}>
           Settings
         </div>
         {CATEGORIES.map((cat) => (
@@ -1145,7 +1148,7 @@ export default function SettingsPage() {
             style={{
               display: "block", width: "100%", textAlign: "left",
               padding: "7px 16px",
-              fontSize: 13.5, fontWeight: active === cat.id ? 600 : 400,
+              fontSize: 13.5, fontWeight: active === cat.id ? 600 : 500,
               color: active === cat.id ? "var(--accent)" : "var(--fg-muted)",
               background: active === cat.id ? "var(--bg-active)" : "transparent",
               border: "none", cursor: "pointer",

@@ -238,7 +238,7 @@ export function FocusTunnel() {
     <div className="relative flex flex-col h-screen w-screen transition-colors duration-1000" style={{ background: "var(--bg)" }}>
       {/* ESC label */}
       <div className="absolute top-10 right-10 z-[100] pointer-events-none">
-        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", opacity: 0.5 }}>Esc to minimize</span>
+        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-muted)", textTransform: "uppercase" }}>Esc to minimize</span>
       </div>
 
       {/* ── Timer ring ──────────────────────────────────────────────────────────── */}
@@ -246,7 +246,7 @@ export function FocusTunnel() {
         <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 70, display: "flex", flexDirection: "column", alignItems: "center" }}>
           {/* Round counter + settings */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", position: "relative" }}>
-            <span style={{ fontSize: "11px", color: "var(--fg-faint)", textTransform: "uppercase" }}>
+            <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase" }}>
               {timerPhase === 'break' ? 'Break time' : `Round ${roundsCompleted + 1}`}
             </span>
             <button
@@ -314,10 +314,10 @@ export function FocusTunnel() {
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: "52px", fontWeight: 300, fontFamily: "var(--font-geist-sans, sans-serif)", color: "var(--fg)", lineHeight: 1 }}>
+                  <span style={{ fontSize: "52px", fontWeight: 400, fontFamily: "var(--font-geist-sans, sans-serif)", color: "var(--fg)", lineHeight: 1 }}>
                     {formatTime(timeRemaining)}
                   </span>
-                  <span style={{ fontSize: "10px", color: "var(--fg-faint)", textTransform: "uppercase", }}>
+                  <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase", }}>
                     {timerPhase === 'break' ? 'Break' : isPaused ? 'Paused' : 'Focus'}
                   </span>
                 </>
@@ -393,9 +393,10 @@ export function FocusTunnel() {
         <div
           className="flex items-center gap-1 pointer-events-auto rounded-full px-2 py-2"
           style={{
-            background: "rgba(var(--bg-card-rgb, 255,255,255), 0.85)",
-            backdropFilter: "blur(24px)",
-            border: "1px solid var(--border)",
+            background: "var(--bg-card)",
+            backdropFilter: "var(--glass-blur-card)",
+            WebkitBackdropFilter: "var(--glass-blur-card)",
+            border: "1px solid var(--border-strong)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
             cursor: isDraggingPill ? "grabbing" : "grab",
           }}
@@ -429,9 +430,9 @@ export function FocusTunnel() {
           <button
             onClick={() => setIsSpotlightOn(!isSpotlightOn)}
             className="p-3 transition-all rounded-full"
-            style={{ color: isSpotlightOn ? "var(--accent)" : "var(--fg-faint)", background: isSpotlightOn ? "var(--accent-bg)" : "transparent" }}
+            style={{ color: isSpotlightOn ? "var(--accent)" : "var(--fg)", background: isSpotlightOn ? "var(--accent-bg)" : "transparent" }}
           >
-            {isSpotlightOn ? <Eye className="w-6 h-6" strokeWidth={1.2} /> : <EyeOff className="w-6 h-6" strokeWidth={1.2} />}
+            {isSpotlightOn ? <Eye className="w-6 h-6" strokeWidth={1.5} /> : <EyeOff className="w-6 h-6" strokeWidth={1.5} />}
           </button>
 
           {mode === 'timer' && (
@@ -457,9 +458,7 @@ export function FocusTunnel() {
         <button
           onClick={handleLeave}
           className="pointer-events-auto backdrop-blur-3xl rounded-full transition-all"
-          style={{ padding: "16px 40px", background: "rgba(var(--bg-card-rgb, 255,255,255), 0.7)", border: "1px solid var(--border)", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", color: "var(--fg-faint)", opacity: isVaultLocked ? 0.2 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer" }}
-          onMouseEnter={e => { if (!isVaultLocked) e.currentTarget.style.color = "var(--accent)"; }}
-          onMouseLeave={e => { e.currentTarget.style.color = "var(--fg-faint)"; }}
+          style={{ padding: "16px 40px", background: "var(--accent)", border: "none", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "white", opacity: isVaultLocked ? 0.3 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer", boxShadow: "var(--shadow-float)" }}
         >
           {isVaultLocked ? "Locked" : "Finish"}
         </button>
@@ -472,7 +471,7 @@ export function FocusTunnel() {
             {/* Backdrop */}
             <motion.div
               className="fixed inset-0 z-[200]"
-              style={{ background: "rgba(0,0,0,0.35)" }}
+              style={{ background: "rgba(0,0,0,0.50)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

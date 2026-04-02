@@ -383,8 +383,13 @@ export default function Page() {
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
       <div
-        className="flex-none flex items-center justify-between px-6 py-4"
-        style={{ borderBottom: "1px solid var(--border)", background: "var(--sidebar-bg)" }}
+        className="flex-none flex items-center justify-between px-6 py-4 sticky top-0 z-[10]"
+        style={{ 
+          borderBottom: "1px solid var(--border)", 
+          background: "transparent",
+          backdropFilter: "var(--glass-blur-panel)",
+          WebkitBackdropFilter: "var(--glass-blur-panel)",
+        }}
       >
         <h1 className="text-[15px] font-semibold" style={{ color: "var(--fg)" }}>Tasks</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

@@ -65,10 +65,10 @@ export function RoutineChip({
       }}
     >
       <span style={{ fontSize: "13px", lineHeight: 1 }}>{template.icon || "⏱️"}</span>
-      <span style={{ fontSize: "12px", fontWeight: 500, color: template.color }}>
+      <span style={{ fontSize: "12px", fontWeight: 600, color: `color-mix(in srgb, ${template.color}, black 20%)` }}>
         {template.title}
       </span>
-      <span style={{ fontSize: "11px", color: template.color, opacity: 0.5 }}>
+      <span style={{ fontSize: "11px", color: `color-mix(in srgb, ${template.color}, black 30%)`, opacity: 0.8 }}>
         · {formatDuration(template.durationMinutes ?? 60)}
       </span>
     </div>

@@ -278,7 +278,7 @@ export function QuickAdd() {
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] backdrop-fade"
+        className="fixed inset-0 bg-black/50 backdrop-blur-md backdrop-fade"
         onClick={close}
         style={{ zIndex: -1 }}
       />
@@ -336,7 +336,7 @@ export function QuickAdd() {
             </p>
             <button type="button" onClick={submit}
               disabled={!docTitle.trim()}
-              className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150 disabled:opacity-40"
+              className="rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50 transition-all"
               style={{ background: "var(--accent)", color: "white", border: "none", cursor: "pointer" }}
             >
               Create Document

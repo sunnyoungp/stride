@@ -176,7 +176,9 @@ function InboxPageContent() {
           justifyContent: "space-between",
           padding: "16px 24px",
           borderBottom: "1px solid var(--border)",
-          background: "var(--bg)",
+          background: "transparent",
+          backdropFilter: "var(--glass-blur-panel)",
+          WebkitBackdropFilter: "var(--glass-blur-panel)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
