@@ -96,7 +96,7 @@ function InboxPageContent() {
 
   const incompleteTasks = useMemo(() => {
     let base = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled" && !t.parentTaskId);
-    if (todayOnly) base = base.filter((t) => !t.dueDate || t.dueDate.slice(0, 10) === today);
+    if (todayOnly) base = base.filter((t) => t.dueDate && t.dueDate.slice(0, 10) === today);
     return base;
   }, [tasks, todayOnly, today]);
 

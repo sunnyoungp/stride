@@ -146,6 +146,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const anchorTaskIdRef    = useRef<string | null>(null);
   const selectedTaskIdsRef = useRef<Set<string>>(new Set());
+  // dragSelectionRef: snapshot of selection taken at drag-start, so drag-end always sees the right set
+  const dragSelectionRef   = useRef<Set<string>>(new Set());
   useEffect(() => { selectedTaskIdsRef.current = selectedTaskIds; }, [selectedTaskIds]);
 
   const clearSelection = useCallback(() => {
@@ -211,7 +213,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
   const filteredTasks = useMemo(() => {
     let base = rootIncompleteTasks;
     if (filterDates) {
-      base = base.filter((t) => !t.dueDate || filterDates.includes(dateOnly(t.dueDate)));
+      base = base.filter((t) => t.dueDate && filterDates.includes(dateOnly(t.dueDate)));
     } else if (filterDate) {
       base = base.filter((t) => t.dueDate && dateOnly(t.dueDate) === filterDate);
     } else if (sectionIdFilter) {
@@ -241,7 +243,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
 
   const filteredCompleted = useMemo(() => {
     let base = rootCompletedTasks;
-    if (filterDates) base = base.filter((t) => !t.dueDate || filterDates.includes(dateOnly(t.dueDate ?? "")));
+    if (filterDates) base = base.filter((t) => t.dueDate && filterDates.includes(dateOnly(t.dueDate)));
     else if (filterDate) base = base.filter((t) => t.dueDate && dateOnly(t.dueDate) === filterDate);
     else if (sectionIdFilter) {
       base = sectionIdFilter === "unsorted"
@@ -291,6 +293,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
 
   const handleDragStart = (e: DragStartEvent) => {
     setActiveId(e.active.id as string);
+    dragSelectionRef.current = new Set(selectedTaskIds);
     useDragStore.getState().setDragging(e.active.id as string);
   };
 
@@ -360,6 +363,13 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
           sectionId: t.id === active.id ? targetSection : t.sectionId,
         })),
       );
+      // If dragged to a different section, move all other selected tasks there too
+      if (draggedTask.sectionId !== targetSection) {
+        const othersToMove = [...dragSelectionRef.current].filter((id) => id !== active.id);
+        if (othersToMove.length > 0) {
+          await reorderTasks(othersToMove.map((id) => ({ id, order: 9999, sectionId: targetSection })));
+        }
+      }
     }
   };
 

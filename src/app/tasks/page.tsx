@@ -87,7 +87,7 @@ function TasksPageInner({
   const incompleteTasks = useMemo(() => {
     // All incomplete tasks (including subtasks) — used for kanban columns
     let base = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
-    if (todayOnly) base = base.filter((t) => !t.dueDate || t.dueDate.slice(0, 10) === today);
+    if (todayOnly) base = base.filter((t) => t.dueDate && t.dueDate.slice(0, 10) === today);
     return applySortBy(base, sortBy);
   }, [tasks, todayOnly, today, sortBy]);
 

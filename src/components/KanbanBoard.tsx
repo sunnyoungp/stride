@@ -24,7 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTaskStore } from "@/store/taskStore";
-import { getNotesPreview } from "@/components/TaskList";
+import { getNotesPreview, SelectionActionBar } from "@/components/TaskList";
 import type { Task } from "@/types/index";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -89,6 +89,7 @@ function KanbanCardVisual({
   onSubtaskRightClick,
   style,
   dndListeners,
+  isSelected,
 }: {
   task: Task;
   accentColor: string;
@@ -98,6 +99,7 @@ function KanbanCardVisual({
   onSubtaskRightClick?: (task: Task, pos: { x: number; y: number }) => void;
   style?: CSSProperties;
   dndListeners?: any;
+  isSelected?: boolean;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
 
@@ -132,10 +134,12 @@ function KanbanCardVisual({
     <div
       {...dndListeners}
       style={{
-        background: "var(--bg-card)",
+        background: isSelected ? "var(--accent-bg)" : "var(--bg-card)",
         borderRadius: 12,
-        border: "1px solid var(--border)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+        border: isSelected ? "1px solid var(--accent)" : "1px solid var(--border)",
+        boxShadow: isSelected
+          ? "0 0 0 2px var(--accent-bg-strong), 0 1px 3px rgba(0,0,0,0.07)"
+          : "0 1px 3px rgba(0,0,0,0.07)",
         padding: "12px 14px",
         transition: "all 150ms ease",
         cursor: "grab",
@@ -339,6 +343,8 @@ function KanbanCard({
   inlineSubtasks,
   onTaskClick,
   onTaskRightClick,
+  isSelected,
+  onCardSelect,
 }: {
   task: Task;
   accentColor: string;
@@ -346,6 +352,8 @@ function KanbanCard({
   inlineSubtasks?: Task[];
   onTaskClick: (task: Task, pos: { x: number; y: number }) => void;
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
+  isSelected: boolean;
+  onCardSelect: (task: Task, shiftKey: boolean, metaKey: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
@@ -359,8 +367,8 @@ function KanbanCard({
   };
 
   const cardStyle: CSSProperties = {
-    boxShadow: hovered ? "0 4px 12px rgba(0,0,0,0.11)" : "0 1px 3px rgba(0,0,0,0.07)",
-    transform: hovered ? "translateY(-1px)" : undefined,
+    boxShadow: hovered && !isSelected ? "0 4px 12px rgba(0,0,0,0.11)" : undefined,
+    transform: hovered && !isSelected ? "translateY(-1px)" : undefined,
   };
 
   return (
@@ -368,7 +376,16 @@ function KanbanCard({
       ref={setNodeRef}
       style={wrapperStyle}
       {...attributes}
-      onClick={(e) => onTaskClick(task, { x: e.clientX, y: e.clientY })}
+      data-task-id={task.id}
+      onClick={(e) => {
+        if (e.metaKey || e.shiftKey) {
+          e.preventDefault();
+          window.getSelection()?.removeAllRanges();
+          onCardSelect(task, e.shiftKey, e.metaKey);
+        } else {
+          onTaskClick(task, { x: e.clientX, y: e.clientY });
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onTaskRightClick(task, { x: e.clientX, y: e.clientY });
@@ -385,6 +402,7 @@ function KanbanCard({
         onSubtaskRightClick={onTaskRightClick}
         style={cardStyle}
         dndListeners={listeners as any}
+        isSelected={isSelected}
       />
     </div>
   );
@@ -437,6 +455,8 @@ function KanbanColumnView({
   onTaskRightClick,
   onAddTask,
   enableColumnDrag,
+  selectedIds,
+  onCardSelect,
 }: {
   column: KanbanColumn;
   allTasks: Task[];
@@ -444,6 +464,8 @@ function KanbanColumnView({
   onTaskRightClick: (task: Task, pos: { x: number; y: number }) => void;
   onAddTask?: (columnId: string, title: string) => void;
   enableColumnDrag?: boolean;
+  selectedIds: Set<string>;
+  onCardSelect: (task: Task, shiftKey: boolean, metaKey: boolean) => void;
 }) {
   const { isOver, setNodeRef: setDropRef } = useDroppable({ id: column.id });
   const {
@@ -554,6 +576,8 @@ function KanbanColumnView({
                 inlineSubtasks={subtasksByParent.get(task.id)}
                 onTaskClick={onTaskClick}
                 onTaskRightClick={onTaskRightClick}
+                isSelected={selectedIds.has(task.id)}
+                onCardSelect={onCardSelect}
               />
             ))
           )}
@@ -590,6 +614,63 @@ function KanbanColumnView({
 
 export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTaskRightClick, onAddTask, onColumnReorder }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [anchorId, setAnchorId] = useState<string | null>(null);
+  const selectedIdsRef = useRef<Set<string>>(new Set());
+  // dragSelectionRef: snapshot of selection taken at drag-start
+  const dragSelectionRef = useRef<Set<string>>(new Set());
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setAnchorId(null);
+  };
+
+  // Flat task order across all columns for shift-range select
+  const flatTaskIds = useMemo(() => columns.flatMap((c) => c.tasks.map((t) => t.id)), [columns]);
+
+  const handleCardSelect = (task: Task, shiftKey: boolean, metaKey: boolean) => {
+    if (metaKey) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(task.id)) { next.delete(task.id); } else { next.add(task.id); setAnchorId(task.id); }
+        return next;
+      });
+      return;
+    }
+    if (shiftKey && anchorId && flatTaskIds.includes(anchorId) && flatTaskIds.includes(task.id)) {
+      const aIdx = flatTaskIds.indexOf(anchorId);
+      const bIdx = flatTaskIds.indexOf(task.id);
+      const [lo, hi] = aIdx < bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+      setSelectedIds(new Set(flatTaskIds.slice(lo, hi + 1)));
+      return;
+    }
+    // Fallback: toggle with no modifier
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(task.id)) { next.delete(task.id); } else { next.add(task.id); setAnchorId(task.id); }
+      return next;
+    });
+  };
+
+  // Escape clears selection
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clearSelection(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Click outside task cards clears selection
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest("[data-task-id]") && !target?.closest("[data-selection-bar]")) {
+        clearSelection();
+      }
+    };
+    window.addEventListener("pointerdown", onPointer, true);
+    return () => window.removeEventListener("pointerdown", onPointer, true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -613,6 +694,7 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    dragSelectionRef.current = new Set(selectedIds);
   };
 
   const columnSortableIds = columns.map((c) => `col-${c.id}`);
@@ -665,53 +747,70 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
     }
 
     onTaskMove(taskId, targetColId, newOrder);
+
+    // If cross-column, move all other selected tasks to the same column
+    if (sourceCol.id !== targetColId) {
+      const others = [...dragSelectionRef.current].filter((id) => id !== taskId);
+      for (const id of others) {
+        onTaskMove(id, targetColId, 9999);
+      }
+    }
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={columnSortableIds} strategy={horizontalListSortingStrategy}>
-        <div
-          className="touch-pan-y"
-          style={{
-            display: "flex",
-            gap: 20,
-            overflowX: "auto",
-            padding: 16,
-            minHeight: "100%",
-            alignItems: "flex-start",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
-          {columns.map((col) => (
-            <KanbanColumnView
-              key={col.id}
-              column={col}
-              allTasks={allTasks}
-              onTaskClick={onTaskClick}
-              onTaskRightClick={onTaskRightClick}
-              onAddTask={onAddTask}
-              enableColumnDrag={!!onColumnReorder}
-            />
-          ))}
-        </div>
-      </SortableContext>
-
-      <DragOverlay>
-        {activeTask && activeColumn ? (
-          <div style={{ transform: "scale(0.95)", boxShadow: "var(--shadow-float)" }}>
-            <KanbanCardVisual
-              task={activeTask}
-              accentColor={activeColumn.color ?? "#94a3b8"}
-              allTasks={allTasks}
-            />
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={columnSortableIds} strategy={horizontalListSortingStrategy}>
+          <div
+            className="touch-pan-y"
+            style={{
+              display: "flex",
+              gap: 20,
+              overflowX: "auto",
+              padding: 16,
+              minHeight: "100%",
+              alignItems: "flex-start",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {columns.map((col) => (
+              <KanbanColumnView
+                key={col.id}
+                column={col}
+                allTasks={allTasks}
+                onTaskClick={onTaskClick}
+                onTaskRightClick={onTaskRightClick}
+                onAddTask={onAddTask}
+                enableColumnDrag={!!onColumnReorder}
+                selectedIds={selectedIds}
+                onCardSelect={handleCardSelect}
+              />
+            ))}
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        </SortableContext>
+
+        <DragOverlay>
+          {activeTask && activeColumn ? (
+            <div style={{ transform: "scale(0.95)", boxShadow: "var(--shadow-float)" }}>
+              <KanbanCardVisual
+                task={activeTask}
+                accentColor={activeColumn.color ?? "#94a3b8"}
+                allTasks={allTasks}
+                isSelected={selectedIds.has(activeTask.id)}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {selectedIds.size >= 2 && (
+        <SelectionActionBar selectedIds={selectedIds} onClear={clearSelection} />
+      )}
+    </>
   );
 }
