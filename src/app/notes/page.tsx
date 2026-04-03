@@ -228,22 +228,14 @@ export default function NotesPage() {
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", padding: 16, gap: 0 }}>
 
-      {/* ── Note editor card ── */}
+      {/* ── Note editor ── */}
       <div style={{
         flex: 1,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         minWidth: 0,
-        background: "var(--bg-card)",
-        backdropFilter: "var(--glass-blur-card)",
-        WebkitBackdropFilter: "var(--glass-blur-card)",
-        border: "1px solid var(--glass-border)",
-        borderTop: "1px solid var(--glass-border-top)",
-        borderRight: calendarOpen ? "1px solid var(--border)" : "1px solid var(--glass-border)",
-        borderRadius: calendarOpen ? "16px 0 0 16px" : 16,
-        boxShadow: calendarOpen ? "none" : "var(--glass-shadow-card)",
-        transition: "border-radius 250ms cubic-bezier(0.4,0,0.2,1), box-shadow 250ms ease",
+        borderRight: calendarOpen ? "1px solid var(--border)" : undefined,
       }}>
         {dateNav}
         <div style={{ flex: 1, overflow: "auto" }}>
