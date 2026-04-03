@@ -261,8 +261,7 @@ export default function NotesPage() {
           WebkitBackdropFilter: "var(--glass-blur-card)",
           border: "1px solid var(--glass-border)",
           borderTop: "1px solid var(--glass-border-top)",
-          borderLeft: "none",
-          borderRadius: "0 16px 16px 0",
+          borderRadius: 16,
           boxShadow: "var(--glass-shadow-card)",
         }}>
           <MiniCalendar
