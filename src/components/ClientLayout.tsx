@@ -97,10 +97,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 </aside>
                             )}
                             <main
-                                className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col"
+                                className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
                                 style={{
                                     ...panelStyle(PANEL_RADIUS),
-                                    paddingBottom: "var(--main-pb)",
+                                    paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
                                 }}
                             >
                                 <GlassBackdrop />

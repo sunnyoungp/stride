@@ -160,7 +160,7 @@ export const THEMES = [
   {
     id: 'neutral-light', name: 'Neutral', description: 'Original warm cream, coral accent', type: 'light' as const,
     '--tint-h': '30', '--tint-s': '16%',
-    '--bg': 'hsl(30, 16%, 97%)', '--bg-subtle': 'hsl(30, 16%, 94%)',
+    '--bg': 'hsl(10, 16%, 97%)', '--bg-subtle': 'hsl(10, 16%, 94%)',
     '--bg-hover': 'rgba(30,20,10,0.04)', '--bg-active': 'rgba(232,96,60,0.07)',
     '--fg': '#1a1310', '--fg-muted': '#5c524b', '--fg-faint': '#85776d', '--fg-placeholder': '#a8998f',
     '--accent': '#e8603c', '--accent-hover': '#d44e2a', '--accent-fg': '#ffffff',
@@ -236,7 +236,7 @@ export const THEMES = [
   {
     id: 'peach', name: 'Peach', description: 'Warm cream, tangerine accent', type: 'light' as const,
     '--tint-h': '22', '--tint-s': '18%',
-    '--bg': 'hsl(22, 18%, 98%)', '--bg-subtle': 'hsl(22, 18%, 94%)',
+    '--bg': 'hsl(330, 8%, 95%)', '--bg-subtle': 'hsl(330, 8%, 94%)',
     '--bg-hover': 'rgba(234,108,32,0.04)', '--bg-active': 'rgba(234,108,32,0.08)',
     '--fg': '#2a1206', '--fg-muted': '#8a5035', '--fg-faint': '#a87a60', '--fg-placeholder': '#d4a888',
     '--accent': '#ea6c20', '--accent-hover': '#d45a10', '--accent-fg': '#ffffff',

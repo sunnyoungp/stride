@@ -235,7 +235,7 @@ export default function NotesPage() {
         flexDirection: "column",
         overflow: "hidden",
         minWidth: 0,
-        borderRight: calendarOpen ? "1px solid var(--border)" : undefined,
+        borderRight: calendarOpen ? "0px solid var(--border)" : undefined,
       }}>
         {dateNav}
         <div style={{ flex: 1, overflow: "auto" }}>

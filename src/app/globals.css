@@ -14,7 +14,7 @@
 :root {
   /* Tint control — hue + saturation only, lightness is layer-defined */
   --tint-h: 30;
-  --tint-s: 16%;
+  --tint-s: 12%;
 
   /* Layer 0 — App canvas (behind everything) */
   --bg-app:    hsl(var(--tint-h), var(--tint-s), 72%);
