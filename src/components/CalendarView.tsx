@@ -980,8 +980,29 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                     </div>
                   </div>
                 )}
+                dayHeaderContent={(arg) => {
+                  const isToday = arg.isToday;
+                  const dayName = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(arg.date).toUpperCase();
+                  const dateNum = arg.date.getDate();
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "7px 0 6px", gap: 3 }}>
+                      <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", color: "var(--fg-faint)", lineHeight: 1 }}>
+                        {dayName}
+                      </span>
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 26, height: 26, borderRadius: "50%",
+                        background: isToday ? "var(--fg)" : "transparent",
+                        color: isToday ? "var(--bg)" : "var(--fg-muted)",
+                        fontSize: 14, fontWeight: isToday ? 600 : 400,
+                        lineHeight: 1,
+                      }}>
+                        {dateNum}
+                      </span>
+                    </div>
+                  );
+                }}
                 eventClassNames={() => ["rounded-xl"]}
-                dayHeaderClassNames={() => ["text-xs"]}
                 slotLabelClassNames={() => ["text-xs"]}
               />
             </div>

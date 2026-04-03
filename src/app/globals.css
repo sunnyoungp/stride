@@ -540,18 +540,23 @@ a, button, input, select, textarea {
 }
 
 /* ═══════════════════════════════════════════
-   FULLCALENDAR — warm palette overrides
+   FULLCALENDAR — Notion-style minimal aesthetic
 ═══════════════════════════════════════════ */
 .fc {
-  --fc-border-color: var(--border);
-  --fc-today-bg-color: var(--accent-bg);
+  --fc-border-color: rgba(0, 0, 0, 0.05);
+  --fc-today-bg-color: transparent;       /* no column fill — today shown in header only */
   --fc-neutral-bg-color: transparent;
   --fc-page-bg-color: transparent;
   --fc-small-font-size: 0.77rem;
   --fc-event-border-color: transparent;
 }
 
-.fc .fc-col-header-cell-cushion,
+/* Column headers — padding reset; content rendered via dayHeaderContent in component */
+.fc .fc-col-header-cell-cushion {
+  text-decoration: none;
+  padding: 0;
+}
+
 .fc .fc-daygrid-day-number {
   color: var(--fg-muted);
   font-size: 0.75rem;
@@ -559,9 +564,11 @@ a, button, input, select, textarea {
   font-weight: 500;
 }
 
+/* Time slot labels — lighter weight */
 .fc .fc-timegrid-slot-label-cushion {
   color: var(--fg-faint);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 300;
 }
 
 /* Pastel event blocks — colored bg, darker text of same hue */
@@ -584,26 +591,45 @@ a, button, input, select, textarea {
   border: none !important;
 }
 
+/* Slightly taller rows for breathing room */
 .fc .fc-timegrid-slot {
-  height: 2.5rem;
+  height: 3rem;
 }
 
+/* Hairline grid — vertical day dividers */
 .fc-theme-standard td,
 .fc-theme-standard th {
-  border-color: var(--border) !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
 }
 
+/* Half-hour minor lines — even fainter */
+.fc .fc-timegrid-slot-minor {
+  border-top-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Now indicator — thin clean line, arrow removed */
 .fc .fc-timegrid-now-indicator-line {
   border-color: var(--accent) !important;
-  border-width: 0.9px !important;
-  opacity: 0.7;
+  border-width: 1px !important;
+  opacity: 0.55;
 }
 
 .fc .fc-timegrid-now-indicator-arrow {
-  border-top-color: var(--accent) !important;
-  border-bottom-color: var(--accent) !important;
+  display: none !important;
 }
 
+/* Weekend columns — very subtle tint */
+.fc .fc-timegrid-col.fc-day-sat,
+.fc .fc-timegrid-col.fc-day-sun {
+  background-color: rgba(0, 0, 0, 0.018) !important;
+}
+
+/* Today column header — clear FullCalendar's default blue highlight */
+.fc .fc-col-header-cell.fc-day-today {
+  background: transparent !important;
+}
+
+/* Month view today cell */
 .fc .fc-daygrid-day.fc-day-today {
   border: 1px solid var(--accent) !important;
 }
@@ -616,6 +642,25 @@ a, button, input, select, textarea {
 
 .fc-daygrid-event-dot {
   margin-top: 4px !important;
+}
+
+/* ── Dark mode overrides ── */
+.dark .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .fc-theme-standard td,
+.dark .fc-theme-standard th {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .fc .fc-timegrid-slot-minor {
+  border-top-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.dark .fc .fc-timegrid-col.fc-day-sat,
+.dark .fc .fc-timegrid-col.fc-day-sun {
+  background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
 /* ═══════════════════════════════════════════
