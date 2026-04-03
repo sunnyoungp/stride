@@ -83,7 +83,7 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
       const { data: rows, error } = await supabase.from("routine_templates").select("*");
       if (error) throw error;
 
-      let templates = (rows ?? []).map(templateFromRow);
+      let templates: RoutineTemplate[] = (rows ?? []).map(templateFromRow);
 
       // Deduplicate by title (keep first occurrence, delete extras)
       const seen = new Set<string>();

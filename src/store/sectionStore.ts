@@ -112,7 +112,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
       if (error) throw error;
 
       if (rows && rows.length > 0) {
-        const sections = rows.map(sectionFromRow).sort((a, b) => a.order - b.order);
+        const sections: TaskSection[] = (rows.map(sectionFromRow) as TaskSection[]).sort((a, b) => a.order - b.order);
         set({ sections, sectionsLoaded: true });
         return;
       }
@@ -145,8 +145,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
     try {
       const { data: rows } = await supabase.from("deleted_sections").select("*");
       if (rows) {
-        const deleted = rows
-          .map(deletedSectionFromRow)
+        const deleted = (rows.map(deletedSectionFromRow) as DeletedSection[])
           .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
         set({ deletedSections: deleted });
       }
@@ -223,8 +222,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
     try {
       const { data: rows, error } = await supabase.from("task_subsections").select("*");
       if (error) throw error;
-      const subsections = (rows ?? [])
-        .map(subsectionFromRow)
+      const subsections = ((rows ?? []).map(subsectionFromRow) as TaskSubsection[])
         .sort((a, b) => a.order - b.order);
       set({ subsections, subsectionsLoaded: true });
     } catch (error) {

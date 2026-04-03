@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useShortcutStore, DEFAULT_SHORTCUTS, normalizeKey, formatBinding, type ShortcutAction } from "@/store/shortcutStore";
 import { saveSettings } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 import { THEMES, type ThemeId } from "@/lib/themes";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -974,7 +975,7 @@ function AccountBadge() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setEmail(session?.user?.email ?? null);
       setUserId(session?.user?.id ?? null);
     });
