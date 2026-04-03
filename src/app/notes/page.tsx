@@ -156,10 +156,10 @@ export default function NotesPage() {
   );
 
   const dateNav = (
-    <div style={{ flexShrink: 0, padding: "20px 40px 0" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, paddingBottom: 16 }}>
+    <div style={{ flexShrink: 0, padding: "16px 20px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", paddingBottom: 14 }}>
         <ChevronBtn dir="prev" label="Previous day" onClick={() => setSelectedDate(prev => shiftDate(prev, -1))} />
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 210, justifyContent: "center" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 500, textAlign: "center", color: isOffToday ? "var(--fg-muted)" : "var(--fg)", userSelect: "none" }}>
             {formatNoteDate(selectedDate, today)}
           </span>
@@ -169,6 +169,7 @@ export default function NotesPage() {
           )}
         </div>
         <ChevronBtn dir="next" label="Next day" onClick={() => setSelectedDate(prev => shiftDate(prev, 1))} />
+        {!isMobile && calendarToggleBtn}
       </div>
       <div style={{ height: 1, background: "var(--border)" }} />
     </div>
@@ -225,69 +226,63 @@ export default function NotesPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden", padding: 16, gap: 0 }}>
 
-      {/* ── Page header ── */}
-      <div
-        className="flex-none flex items-center justify-between px-6 py-4 sticky top-0 z-[10]"
-        style={{ 
-          borderBottom: "1px solid var(--border)", 
-          background: "transparent",
-          backdropFilter: "var(--glass-blur-panel)",
-          WebkitBackdropFilter: "var(--glass-blur-panel)",
-        }}
-      >
-        {calendarToggleBtn}
+      {/* ── Note editor card ── */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        minWidth: 0,
+        background: "var(--bg-card)",
+        backdropFilter: "var(--glass-blur-card)",
+        WebkitBackdropFilter: "var(--glass-blur-card)",
+        border: "1px solid var(--glass-border)",
+        borderTop: "1px solid var(--glass-border-top)",
+        borderRight: calendarOpen ? "1px solid var(--border)" : "1px solid var(--glass-border)",
+        borderRadius: calendarOpen ? "16px 0 0 16px" : 16,
+        boxShadow: calendarOpen ? "none" : "var(--glass-shadow-card)",
+        transition: "border-radius 250ms cubic-bezier(0.4,0,0.2,1), box-shadow 250ms ease",
+      }}>
+        {dateNav}
+        <div style={{ flex: 1, overflow: "auto" }}>
+          <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} />
+        </div>
       </div>
 
-      {/* ── Content row ── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-
-        {/* Note editor zone */}
-        <div style={{ flex: 1, padding: 16, display: "flex", overflow: "hidden", minWidth: 0 }}>
-          <div style={{
-            flex: 1, display: "flex", flexDirection: "column", overflow: "hidden",
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 16,
-          }}>
-            {dateNav}
-            {/* Editor body */}
-            <div style={{ flex: 1, overflow: "auto" }}>
-              <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} />
-            </div>
-          </div>
-        </div>
-
-        {/* Mini calendar panel — collapses to width 0 when closed */}
+      {/* ── Mini calendar — flush against editor ── */}
+      <div style={{
+        flexShrink: 0,
+        width: calendarOpen ? 280 : 0,
+        opacity: calendarOpen ? 1 : 0,
+        overflow: "hidden",
+        transition: "width 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease",
+      }}>
+        {/* Fixed-width inner so content doesn't reflow as width animates */}
         <div style={{
-          flexShrink: 0,
-          width: calendarOpen ? 296 : 0,
-          opacity: calendarOpen ? 1 : 0,
-          overflow: "hidden",
-          transition: "width 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease",
+          width: 280,
+          height: "100%",
+          overflow: "auto",
+          background: "var(--bg-card)",
+          backdropFilter: "var(--glass-blur-card)",
+          WebkitBackdropFilter: "var(--glass-blur-card)",
+          border: "1px solid var(--glass-border)",
+          borderTop: "1px solid var(--glass-border-top)",
+          borderLeft: "none",
+          borderRadius: "0 16px 16px 0",
+          boxShadow: "var(--glass-shadow-card)",
         }}>
-          {/* Inner is fixed 296px so it doesn't reflow as width animates */}
-          <div style={{ width: 296, height: "100%", padding: "16px 16px 16px 0" }}>
-            <div style={{
-              width: 280, height: "100%", overflow: "auto",
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              borderRadius: 16,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            }}>
-              <MiniCalendar
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-                dailyNotes={dailyNotes}
-                onTaskDrop={handleTaskDrop}
-                onBlockDrop={handleBlockDrop}
-              />
-            </div>
-          </div>
+          <MiniCalendar
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            dailyNotes={dailyNotes}
+            onTaskDrop={handleTaskDrop}
+            onBlockDrop={handleBlockDrop}
+          />
         </div>
-
       </div>
+
     </div>
   );
 }
