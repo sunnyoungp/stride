@@ -215,7 +215,7 @@ function createDragHandlePlugin() {
             const nodeRect = nodeDom.getBoundingClientRect();
             const handleH  = 24;
             handle.style.top  = `${nodeRect.top + (nodeRect.height - handleH) / 2}px`;
-            handle.style.left = `${nodeRect.left - 28}px`;
+            handle.style.left = `${nodeRect.left - 20}px`;
             handle.style.opacity = "0.4";
             currentTopPos = topPos;
           } catch {
