@@ -50,16 +50,18 @@ const panelStyle = (radius: number): React.CSSProperties => ({
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const hideSidebar = pathname === "/login";
+    const hideSidebar = pathname.startsWith("/login") || pathname.startsWith("/auth");
     const isZenMode = useFocusStore((state) => state.isZenMode);
     const focusState = useFocusStore((state) => state.focusState);
     const isMinimized = useFocusStore((state) => state.isMinimized);
     const setUser = useAuthStore((state) => state.setUser);
+    const setInitialized = useAuthStore((state) => state.setInitialized);
 
     useEffect(() => {
         const supabase = createClient();
         supabase.auth.getSession().then(({ data }: any) => {
             setUser(data.session?.user ?? null);
+            setInitialized(true);
             if (data.session?.user) {
                 void loadSettings();
                 void useTaskStore.getState().loadTasks();
@@ -100,7 +102,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 className="flex-1 min-h-0 overflow-hidden min-w-0 flex flex-col md:pb-0"
                                 style={{
                                     ...panelStyle(PANEL_RADIUS),
-                                    paddingBottom: "calc(56px + env(safe-area-inset-bottom))",
+                                    paddingBottom: "var(--main-pb)",
                                 }}
                             >
                                 <GlassBackdrop />

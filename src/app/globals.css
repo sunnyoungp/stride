@@ -199,7 +199,7 @@ body {
 
 /* Content panel bottom padding: clears mobile tab bar, minimal on desktop */
 :root {
-  --main-pb: calc(56px + env(safe-area-inset-bottom));
+  --main-pb: calc(72px + env(safe-area-inset-bottom));
 }
 @media (min-width: 768px) {
   :root {
