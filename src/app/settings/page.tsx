@@ -231,7 +231,7 @@ function AppearanceCard() {
     setFontState(f);
     void saveSettings("stride-font-preference", f);
     const fontMap: Record<string, string> = {
-      system: "-apple-system, BlinkMacSystemFont, sans-serif",
+      system: '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
       inter: "Inter, sans-serif",
       serif: "Georgia, serif",
       mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
@@ -403,7 +403,7 @@ function AppearanceCard() {
       <SettingRow label="Font">
         <PillGroup
           options={[
-            { label: "System", value: "system" },
+            { label: "SF Pro", value: "system" },
             { label: "Inter",  value: "inter" },
             { label: "Serif",  value: "serif" },
             { label: "Mono",   value: "mono" },

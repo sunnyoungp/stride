@@ -31,7 +31,7 @@ export function SettingsApplier() {
     // Apply font family lazily
     const fontPref = localStorage.getItem("stride-font-preference") ?? "system";
     const fontMap: Record<string, string> = {
-      system: "-apple-system, BlinkMacSystemFont, sans-serif",
+      system: '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
       inter: "Inter, sans-serif",
       serif: "Georgia, serif",
       mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",

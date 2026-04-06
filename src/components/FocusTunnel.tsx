@@ -246,7 +246,7 @@ export function FocusTunnel() {
         <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 70, display: "flex", flexDirection: "column", alignItems: "center" }}>
           {/* Round counter + settings */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", position: "relative" }}>
-            <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+            <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em" }}>
               {timerPhase === 'break' ? 'Break time' : `Round ${roundsCompleted + 1}`}
             </span>
             <button
@@ -284,19 +284,19 @@ export function FocusTunnel() {
 
           {/* Ring */}
           <div style={{ position: "relative", width: "220px", height: "220px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+            <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
               <defs>
-                <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f97316" />
-                  <stop offset="100%" stopColor="#ec4899" />
+                <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: "var(--accent)", stopOpacity: 0.55 }} />
+                  <stop offset="100%" style={{ stopColor: "var(--accent)", stopOpacity: 1 }} />
                 </linearGradient>
               </defs>
-              <circle cx="110" cy="110" r={RING_R} fill="none" stroke="var(--border)" strokeWidth="5" />
+              <circle cx="110" cy="110" r={RING_R} fill="none" stroke="var(--border-mid)" strokeWidth="3" />
               <motion.circle
                 cx="110" cy="110" r={RING_R}
                 fill="none"
                 stroke="url(#timerGrad)"
-                strokeWidth="8"
+                strokeWidth="5"
                 strokeDasharray={CIRCUMFERENCE}
                 initial={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
                 animate={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
@@ -305,7 +305,7 @@ export function FocusTunnel() {
               />
             </svg>
 
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", zIndex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", zIndex: 1 }}>
               {timerPhase === 'break-prompt' ? (
                 <>
                   <span style={{ fontSize: "13px", color: "var(--fg-muted)", marginBottom: "4px", fontWeight: 500 }}>Round complete!</span>
@@ -314,10 +314,10 @@ export function FocusTunnel() {
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: "52px", fontWeight: 400, fontFamily: "var(--font-geist-sans, sans-serif)", color: "var(--fg)", lineHeight: 1 }}>
+                  <span style={{ fontSize: "50px", fontWeight: 300, fontFamily: '"SF Pro Display", -apple-system, sans-serif', color: "var(--fg)", lineHeight: 1, letterSpacing: "-0.02em" }}>
                     {formatTime(timeRemaining)}
                   </span>
-                  <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase", }}>
+                  <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em" }}>
                     {timerPhase === 'break' ? 'Break' : isPaused ? 'Paused' : 'Focus'}
                   </span>
                 </>
