@@ -8,7 +8,7 @@ const COLORS = [
   "var(--fg)", "var(--accent)", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#f43f5e"
 ];
 
-export function EditorBubbleMenu({ editor, hidden }: { editor: Editor; hidden?: boolean }) {
+export function EditorBubbleMenu({ editor }: { editor: Editor }) {
   const [showColor, setShowColor] = useState(false);
 
   if (!editor) return null;
@@ -32,13 +32,13 @@ export function EditorBubbleMenu({ editor, hidden }: { editor: Editor; hidden?: 
     <BubbleMenu
       editor={editor}
       options={{ placement: "top" }}
-      shouldShow={hidden ? () => false : undefined}
+
       className="flex items-center gap-1.5 p-1.5"
       style={{
-        background: "var(--bg-card)",
+        background: "var(--bg-subtle)",
         backdropFilter: "var(--glass-blur-card)",
         WebkitBackdropFilter: "var(--glass-blur-card)",
-        boxShadow: "var(--shadow-float)",
+        boxShadow: "var(--shadow-lg)",
         border: "1px solid var(--glass-border)",
         borderTop: "1px solid var(--glass-border-top)",
         borderRadius: 20

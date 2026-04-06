@@ -411,12 +411,12 @@ function NoteItemContextMenu({
   return (
     <div ref={menuRef} style={{
       position: "fixed", left: clPos.x, top: clPos.y, zIndex: 9999, width: 220,
-      background: "var(--bg-card)",
+      background: "var(--bg-subtle)",
       backdropFilter: "var(--glass-blur-card)",
       WebkitBackdropFilter: "var(--glass-blur-card)",
       border: "1px solid var(--glass-border)",
       borderTop: "1px solid var(--glass-border-top)",
-      borderRadius: 12, boxShadow: "var(--shadow-float)", padding: 4,
+      borderRadius: 12, boxShadow: "var(--shadow-lg)", padding: 4,
     }}>
       {/* Title */}
       <div style={{ padding: "6px 12px 4px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
@@ -1267,7 +1267,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         {editor ? (
           <>
             <EditorContent editor={editor} />
-            <EditorBubbleMenu editor={editor} hidden={!!noteContextMenu} />
+            {!noteContextMenu && <EditorBubbleMenu editor={editor} />}
             <FormatPanel editor={editor} isOpen={formatPanelOpen} onClose={() => setFormatPanelOpen(false)} documentId={note.id} />
           </>
         ) : null}
