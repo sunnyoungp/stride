@@ -165,7 +165,7 @@ export function BottomTabBar() {
         style={{
           background: "var(--bg-card)",
           borderTop: "1px solid var(--border-mid)",
-          height: "calc(72px + env(safe-area-inset-bottom))",
+          height: "calc(var(--tab-bar-h) + env(safe-area-inset-bottom))",
           paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
         }}
       >
@@ -214,7 +214,7 @@ export function BottomTabBar() {
           <div
             className="md:hidden fixed left-0 right-0 z-[51] rounded-t-2xl py-2"
             style={{
-              bottom: "calc(72px + env(safe-area-inset-bottom))",
+              bottom: "calc(var(--tab-bar-h) + env(safe-area-inset-bottom))",
               background: "var(--bg-card)",
               border: "1px solid var(--border-mid)",
               boxShadow: "0 -4px 16px rgba(0,0,0,0.1)",

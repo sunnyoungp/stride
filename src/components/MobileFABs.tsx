@@ -20,7 +20,7 @@ export function MobileFABs() {
   const keyboardHeight = Math.max(0, windowHeight - vpHeight);
   const isKeyboardUp = keyboardHeight > 20;
 
-  const TAB_BAR_H = 72;
+  const TAB_BAR_H = 72; // keep in sync with --tab-bar-h in globals.css
   const bottomOffset = isKeyboardUp
     ? keyboardHeight + 16
     : TAB_BAR_H + 8; // Slightly tighter to bottom bar

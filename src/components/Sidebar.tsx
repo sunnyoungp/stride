@@ -650,7 +650,7 @@ export function Sidebar() {
       }}
     >
       {/* ── Search button ── */}
-      <div className="px-2 pb-2 flex-none">
+      <div className="px-2 pt-5 pb-2 flex-none">
         <button
           type="button"
           onClick={openSearch}
