@@ -29,6 +29,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-title" content="Stride" />
+        <link rel="manifest" href="/site.webmanifest" />
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `(function(){try{var darkIds=['neutral-dark','cool-dark','warm-dark','midnight-blue','ocean','forest','aurora','sunset'];var s=localStorage.getItem('stride-theme');if(s==='dark')s='warm-dark';if(s==='light')s='neutral-light';if(!s||s==='system')s='neutral-dark';if(darkIds.indexOf(s)!==-1)document.documentElement.classList.add('dark');}catch(e){}})();` }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
