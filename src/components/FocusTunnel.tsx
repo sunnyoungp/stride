@@ -10,18 +10,14 @@ import {
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import type { Task } from "@/types/index";
 
-// Matte Gallery Palette Logic — intentional visual variety, kept as-is
-const getMatteStyle = (index: number) => {
-  if (index % 2 === 0) {
-    return { bg: "#ffffff", textColor: "#18181b", fill: "#E05252" };
-  }
-  const cycleIndex = (Math.floor(index / 2)) % 3;
-  switch (cycleIndex) {
-    case 0: return { bg: "#E8F5E9", textColor: "#14532d", fill: "#1b4332" };
-    case 1: return { bg: "#F3E5F5", textColor: "#581c87", fill: "#4a148c" };
-    case 2: return { bg: "#FFEBEE", textColor: "#881337", fill: "#880e4f" };
-    default: return { bg: "#ffffff", textColor: "#18181b", fill: "#E05252" };
-  }
+// Theme-aware card styles — adapts to any theme via CSS variables
+const getCardStyle = (index: number) => {
+  const styles = [
+    { bg: "var(--bg-card)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--glass-border)" },
+    { bg: "var(--bg-subtle)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--border)" },
+    { bg: "var(--accent-bg)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--border)" },
+  ];
+  return styles[index % styles.length];
 };
 
 const RING_R = 100;
@@ -291,12 +287,12 @@ export function FocusTunnel() {
                   <stop offset="100%" style={{ stopColor: "var(--accent)", stopOpacity: 1 }} />
                 </linearGradient>
               </defs>
-              <circle cx="110" cy="110" r={RING_R} fill="none" stroke="var(--border-mid)" strokeWidth="3" />
+              <circle cx="110" cy="110" r={RING_R} fill="none" stroke="var(--border-mid)" strokeWidth="6" />
               <motion.circle
                 cx="110" cy="110" r={RING_R}
                 fill="none"
                 stroke="url(#timerGrad)"
-                strokeWidth="5"
+                strokeWidth="10"
                 strokeDasharray={CIRCUMFERENCE}
                 initial={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
                 animate={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
@@ -345,7 +341,7 @@ export function FocusTunnel() {
                   const isChecking = checkingIds.has(task.id);
                   const isVisible = !isSpotlightOn || isActive;
                   if (!isVisible) return null;
-                  const style = getMatteStyle(visibleIdx);
+                  const style = getCardStyle(visibleIdx);
 
                   return (
                     <motion.div
@@ -357,13 +353,13 @@ export function FocusTunnel() {
                       exit={{ opacity: 0, x: -60, scale: 0.9, transition: { duration: 0.5, ease: "anticipate" } }}
                       transition={{ type: "spring", stiffness: 350, damping: 38 }}
                       className="relative w-full rounded-[32px] p-6 md:p-12 mb-4 last:mb-0 transition-all duration-700 shadow-none"
-                      style={{ background: style.bg, border: "1px solid rgba(0,0,0,0.06)" }}
+                      style={{ background: style.bg, border: style.border }}
                     >
                       <div className="flex items-center gap-10">
                         <button
                           onClick={() => handleComplete(task.id, originalIdx)}
                           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all duration-500"
-                          style={{ borderColor: isChecking ? style.fill : 'rgba(0,0,0,0.1)', backgroundColor: isChecking ? style.fill : 'transparent' }}
+                          style={{ borderColor: isChecking ? style.fill : 'var(--border-mid)', backgroundColor: isChecking ? style.fill : 'transparent' }}
                         >
                           <Check className={`w-3.5 h-3.5 text-white transition-opacity ${isChecking ? 'opacity-100' : 'opacity-0'}`} strokeWidth={3} />
                         </button>
