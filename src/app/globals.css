@@ -425,6 +425,11 @@ a, button, input, select, textarea {
   padding: 0;
   margin: 0.05rem 0;
 }
+/* Zero out paragraph margin inside list items — the global p margin-bottom causes double-spacing */
+.ProseMirror ul:not([data-type="taskList"]) li > p,
+.ProseMirror ol li > p {
+  margin-bottom: 0;
+}
 .ProseMirror ul:not([data-type="taskList"]) li::marker,
 .ProseMirror ol li::marker {
   color: var(--fg-muted);
@@ -440,7 +445,7 @@ a, button, input, select, textarea {
 
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.6em;
   padding: 0;
   margin: 0.25rem 0;
@@ -468,14 +473,13 @@ a, button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* No manual padding-top — rely on align-items: center on the li */
-  margin-top: 0;
+  margin-top: 0.2em;
   padding-top: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
-  width: var(--font-size-notes, 15px);
-  height: var(--font-size-notes, 15px);
+  width: 1em;
+  height: 1em;
   margin: 0;
   cursor: pointer;
   accent-color: var(--accent);
