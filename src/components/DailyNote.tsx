@@ -639,8 +639,14 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       if (!lassoStartRef.current) return;
       const dx = e.clientX - lassoStartRef.current.x;
       const dy = e.clientY - lassoStartRef.current.y;
-      if (!isDragSelectingRef.current && Math.hypot(dx, dy) > 5) isDragSelectingRef.current = true;
+      if (!isDragSelectingRef.current && Math.hypot(dx, dy) > 8) {
+        isDragSelectingRef.current = true;
+        // Kill native text selection as soon as the lasso threshold is crossed
+        window.getSelection()?.removeAllRanges();
+      }
       if (isDragSelectingRef.current) {
+        // Keep suppressing native selection while lasso is active
+        window.getSelection()?.removeAllRanges();
         const r = { x1: lassoStartRef.current.x, y1: lassoStartRef.current.y, x2: e.clientX, y2: e.clientY };
         lassoRectRef.current = r;
         setLassoRect({ ...r });
@@ -1004,22 +1010,65 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       const h = el as HTMLElement;
       h.removeAttribute("data-pm-selected");
       h.style.background = "";
-      h.style.outline = "";
       h.style.borderRadius = "";
+      h.style.boxShadow = "";
     });
     if (dnSelectedPoses.size === 0) return;
     dnSelectedPoses.forEach((pos) => {
       try {
         const nodeDom = editor.view.nodeDOM(pos) as HTMLElement | null;
-        if (nodeDom) {
-          nodeDom.setAttribute("data-pm-selected", "true");
-          nodeDom.style.background = "color-mix(in srgb, var(--accent) 14%, transparent)";
-          nodeDom.style.outline = "2px solid color-mix(in srgb, var(--accent) 35%, transparent)";
-          nodeDom.style.borderRadius = "6px";
-        }
+        if (!nodeDom) return;
+        // For taskItems the nodeDOM is the <li>; walk up one level if it's a text node
+        const el = nodeDom.nodeType === Node.TEXT_NODE
+          ? (nodeDom.parentElement as HTMLElement | null)
+          : nodeDom;
+        if (!el) return;
+        el.setAttribute("data-pm-selected", "true");
+        el.style.background = "rgba(59,130,246,0.12)";
+        el.style.borderRadius = "5px";
+        el.style.boxShadow = "inset 2px 0 0 rgba(59,130,246,0.6)";
       } catch { /* ignore stale pos */ }
     });
   }, [editor, dnSelectedPoses]);
+
+  // Document-level dragstart capture: inject multi-block payload when handle is dragged
+  // while blocks are selected. The handle lives on document.body (outside editor DOM)
+  // so editorProps.handleDOMEvents.dragstart never fires for handle drags.
+  useEffect(() => {
+    const onHandleDragStart = (e: DragEvent) => {
+      if (!e.dataTransfer) return;
+      const isHandle = (e.target as HTMLElement | null)?.classList.contains("pm-drag-handle");
+      if (!isHandle) return;
+      const selectedPoses = dnSelectedPosesRef.current;
+      if (selectedPoses.size < 2) return;
+      const ed = editorRef.current;
+      if (!ed) return;
+
+      type BlockPayload = { blockType: "task" | "note"; title: string; taskId: string | null };
+      const blocks: BlockPayload[] = [...selectedPoses]
+        .sort((a, b) => a - b)
+        .flatMap((pos) => {
+          try {
+            const node = ed.state.doc.nodeAt(pos);
+            if (!node) return [];
+            const title = node.textContent.trim();
+            if (!title) return [];
+            const blockType: "task" | "note" = node.type.name === "taskItem" ? "task" : "note";
+            const taskId = (node.attrs as Record<string, unknown>).taskId as string | null ?? null;
+            return [{ blockType, title, taskId }];
+          } catch { return []; }
+        });
+
+      if (blocks.length >= 2) {
+        e.dataTransfer.setData("text/multi-blocks", JSON.stringify(blocks));
+        e.dataTransfer.setData("text/plain", blocks.map((b) => b.title).join("\n"));
+      }
+    };
+
+    // Capture phase: runs before the handle element's own dragstart listener
+    document.addEventListener("dragstart", onHandleDragStart, true);
+    return () => document.removeEventListener("dragstart", onHandleDragStart, true);
+  }, []);
 
   useEffect(() => {
     if (!editor || !note) return;
@@ -1293,9 +1342,12 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         ref={editorWrapperRef}
         onKeyDown={handleEditorKeyDown}
         onMouseDown={(e) => {
-          // Only start lasso if clicking outside the editor content (on padding/empty area)
           if (e.button !== 0) return;
-          if (editor && editor.view && editor.view.dom.contains(e.target as Node)) return;
+          // Don't start lasso on checkboxes, buttons, the drag handle, or interactive elements
+          const t = e.target as HTMLElement;
+          if (t.tagName === "INPUT" || t.tagName === "BUTTON" || t.tagName === "A") return;
+          if (t.closest(".pm-drag-handle")) return;
+          if (t.closest("[data-selection-bar]")) return;
           lassoStartRef.current = { x: e.clientX, y: e.clientY };
         }}
         className="flex-1 overflow-y-auto px-8 py-8"
