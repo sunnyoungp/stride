@@ -445,7 +445,7 @@ a, button, input, select, textarea {
 
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.6em;
   padding: 0;
   margin: 0.25rem 0;
@@ -473,7 +473,7 @@ a, button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.2em;
+  margin-top: 0;
   padding-top: 0;
 }
 

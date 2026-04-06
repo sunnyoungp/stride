@@ -819,6 +819,43 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             const target = event.target as HTMLElement | null;
             if (!event.dataTransfer) return false;
 
+            // ── Multi-block drag: 2+ selected blocks ──
+            const selectedPoses = dnSelectedPosesRef.current;
+            if (selectedPoses.size >= 2) {
+              const ed = editorRef.current;
+              const isOnSelectedBlock = target?.closest("[data-pm-selected]") as HTMLElement | null;
+              if (isOnSelectedBlock && ed) {
+                type BlockPayload = { blockType: "task" | "note"; title: string; taskId: string | null };
+                const blocks: BlockPayload[] = [];
+                const sortedPoses = [...selectedPoses].sort((a, b) => a - b);
+                for (const pos of sortedPoses) {
+                  try {
+                    const node = ed.state.doc.nodeAt(pos);
+                    if (!node) continue;
+                    const title = node.textContent.trim();
+                    if (!title) continue;
+                    const blockType: "task" | "note" = node.type.name === "taskItem" ? "task" : "note";
+                    const taskId = (node.attrs as Record<string, unknown>).taskId as string | null ?? null;
+                    blocks.push({ blockType, title, taskId });
+                  } catch { /* ignore stale pos */ }
+                }
+                if (blocks.length >= 2) {
+                  event.dataTransfer.setData("text/multi-blocks", JSON.stringify(blocks));
+                  event.dataTransfer.setData("text/plain", blocks.map(b => b.title).join("\n"));
+                  event.dataTransfer.effectAllowed = "move";
+                  // Custom drag ghost showing count
+                  const ghost = document.createElement("div");
+                  ghost.textContent = `${blocks.length} blocks`;
+                  ghost.style.cssText = "position:fixed;top:-999px;left:-999px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--glass-border);border-radius:8px;font-size:13px;color:var(--fg);box-shadow:var(--shadow-md);pointer-events:none;";
+                  document.body.appendChild(ghost);
+                  event.dataTransfer.setDragImage(ghost, 0, 0);
+                  setTimeout(() => ghost.remove(), 0);
+                  return false;
+                }
+              }
+            }
+
+            // ── Single-block drag ──
             // Checklist item drag → block-type "task"
             const taskItem = target?.closest("li[data-checked]") as HTMLElement | null;
             if (taskItem) {

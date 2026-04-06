@@ -145,6 +145,23 @@ export function MiniCalendar({
   const handleDrop = useCallback(async (e: React.DragEvent, date: string) => {
     e.preventDefault();
     setDragOver(null);
+
+    // Multi-block drop (from editor block selection drag)
+    const multiBlocksRaw = e.dataTransfer.getData("text/multi-blocks");
+    if (multiBlocksRaw) {
+      try {
+        const blocks = JSON.parse(multiBlocksRaw) as Array<{ blockType: "task" | "note"; title: string; taskId: string | null }>;
+        if (blocks.length > 0 && onBlockDrop) {
+          for (const block of blocks) {
+            onBlockDrop(block.blockType, block.title, block.taskId, date);
+          }
+          setFlashDate(date);
+          setTimeout(() => setFlashDate(null), 350);
+        }
+      } catch { /* malformed payload, fall through */ }
+      return;
+    }
+
     const blockType = e.dataTransfer.getData("text/block-type");
     const taskId    = e.dataTransfer.getData("text/task-id")    || e.dataTransfer.getData("stride/taskId")    || "";
     const title     = e.dataTransfer.getData("text/task-title") || e.dataTransfer.getData("stride/taskTitle") || e.dataTransfer.getData("text/plain") || "";
