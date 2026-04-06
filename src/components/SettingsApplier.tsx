@@ -15,9 +15,10 @@ export function SettingsApplier() {
     if (tintH) document.documentElement.style.setProperty("--tint-h", tintH);
     if (tintS) document.documentElement.style.setProperty("--tint-s", tintS);
 
-    // Per-user overrides applied after the theme
+    // Per-user accent override — only applied if still stored (cleared on theme switch)
     const accent = localStorage.getItem("stride-accent");
     if (accent) document.documentElement.style.setProperty("--accent", accent);
+
 
     // Interface font size (sidebar, nav, labels) — new key, falls back to legacy
     const uiFont = localStorage.getItem("stride-font-ui") ?? localStorage.getItem("stride-font-size") ?? "14px";

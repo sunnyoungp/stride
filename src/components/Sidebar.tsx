@@ -649,24 +649,6 @@ export function Sidebar() {
         position: "relative",
       }}
     >
-      {/* ── Logo ── */}
-      <div className="px-4 pt-5 pb-5 flex-none">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 flex-none items-center justify-center rounded-xl"
-            style={{ background: "var(--accent)", boxShadow: "0 2px 8px rgba(232,96,60,0.30)" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 13 L8 3 L13 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="5" y1="9.5" x2="11" y2="9.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <span className="text-[18px] font-bold" style={{ color: "var(--fg)", }}>
-            Stride
-          </span>
-        </div>
-      </div>
-
       {/* ── Search button ── */}
       <div className="px-2 pb-2 flex-none">
         <button

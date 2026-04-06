@@ -136,7 +136,9 @@ export function MiniCalendar({
     setDragOver(date);
   }, []);
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear if the cursor actually left the cell (not moving to a child element)
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setDragOver(null);
   }, []);
 
@@ -261,6 +263,9 @@ export function MiniCalendar({
                 onClick={() => onDateChange(date)}
                 onMouseEnter={() => setHovered(date)}
                 onMouseLeave={() => setHovered(null)}
+                onDragOver={(e) => handleDragOver(e, date)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, date)}
                 style={{
                   position: "relative",
                   width: 32, height: 32, borderRadius: "50%",

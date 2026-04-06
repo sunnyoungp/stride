@@ -82,26 +82,12 @@ function createDragHandlePlugin() {
 
           e.dataTransfer.effectAllowed = "move";
 
-          // Tell ProseMirror what is being dragged
+          // Tell ProseMirror what is being dragged (prevents it from
+          // re-inserting the content when drag ends outside the editor)
           (view as unknown as Record<string, unknown>).dragging = {
             slice,
             move: true,
           };
-
-          // Also fire a dragstart on the editor DOM so ProseMirror's
-          // internal handler registers the drag. We pass the same
-          // dataTransfer by creating a new DragEvent with it.
-          // ProseMirror checks view.dragging first, so this just
-          // triggers its state machine without overriding our data.
-          const editorDom = dom ?? view.dom;
-          const syntheticDrag = new DragEvent("dragstart", {
-            bubbles: true,
-            cancelable: true,
-            dataTransfer: e.dataTransfer,
-            clientX: e.clientX,
-            clientY: e.clientY,
-          });
-          editorDom.dispatchEvent(syntheticDrag);
 
           // Attach semantic data for external drop targets
           const node = view.state.doc.nodeAt(currentTopPos);

@@ -212,7 +212,14 @@ const TINT_PRESETS = [
 
 function AppearanceCard() {
   const { currentTheme, setTheme } = useTheme();
-  const [accent,       setAccentState] = useState(() => ls("stride-accent",        "#e8603c"));
+  const [accent,       setAccentState] = useState(() => {
+    // Read from CSS variable so it reflects the current theme's accent, not a stale override
+    if (typeof document !== "undefined") {
+      const computed = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+      if (computed) return computed;
+    }
+    return ls("stride-accent", "#e8603c");
+  });
   const [font,         setFontState]   = useState(() => ls("stride-font-preference", "system"));
   const [fontSize,     setFontSize]    = useState(() => ls("stride-font-ui",       "14px"));
   const [sidebarWidth, setSidebarW]    = useState(() => ls("stride-sidebar-width", "220"));

@@ -35,8 +35,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const id = getThemeById(e.newValue);
         setCurrentTheme(id);
         applyTheme(id);
-        const accent = localStorage.getItem("stride-accent");
-        if (accent) document.documentElement.style.setProperty("--accent", accent);
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -45,10 +43,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((id: ThemeId) => {
     setCurrentTheme(id);
+    // Clear any stored accent so the theme's own accent takes effect
+    localStorage.removeItem("stride-accent");
     applyTheme(id);
-    // Re-apply accent override after theme change
-    const accent = localStorage.getItem("stride-accent");
-    if (accent) document.documentElement.style.setProperty("--accent", accent);
     void saveSettings("stride-theme", id);
   }, []);
 
