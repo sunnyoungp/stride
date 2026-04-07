@@ -59,6 +59,24 @@ export function FocusTunnel() {
   const [pillOffset, setPillOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDraggingPill, setIsDraggingPill] = useState(false);
 
+  // ── Hover-to-Reveal (Deep Focus) ───────────────────────────────────────────
+  const [controlsLocked, setControlsLocked] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handlePointerMove = () => {
+    setIsHovering(true);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => setIsHovering(false), 2000);
+  };
+
+  const handlePointerLeave = () => {
+    setIsHovering(false);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+  };
+
+  const showControls = controlsLocked || isHovering || panelOpen || showTimerSettings;
+
   // Today's date string
   const today = useMemo(() => {
     const d = new Date();
@@ -228,7 +246,16 @@ export function FocusTunnel() {
         toggleMinimized();
         return;
       }
-      if (e.key === " " && !panelOpen) togglePause();
+      if (e.key === " ") {
+        // Only trigger play/pause if not typing in input
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (!panelOpen) togglePause();
+      }
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        if (e.key === 'd' || e.key === 'D') {
+          setControlsLocked(l => !l);
+        }
+      }
     };
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
@@ -249,10 +276,18 @@ export function FocusTunnel() {
   }
 
   return (
-    <div className="relative flex flex-col h-[100dvh] w-screen transition-colors duration-1000 overflow-hidden" style={{ background: "var(--bg-app)" }}>
+    <div 
+      className="relative flex flex-col h-[100dvh] w-screen transition-colors duration-1000 overflow-hidden" 
+      style={{ background: "var(--bg-app)" }}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+    >
       {/* ESC label */}
-      <div className="absolute top-8 right-8 z-[100] pointer-events-none hidden md:block">
-        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-muted)", textTransform: "uppercase" }}>Esc to minimize</span>
+      <div 
+        className="absolute top-8 right-8 z-[100] pointer-events-none hidden md:block transition-opacity duration-500"
+        style={{ opacity: showControls ? 1 : 0 }}
+      >
+        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-muted)", textTransform: "uppercase" }}>Esc to minimize • D to lock UI</span>
       </div>
 
       {/* ── Pomodoro display ────────────────────────────────────────────────────── */}
@@ -271,12 +306,17 @@ export function FocusTunnel() {
 
             <div style={{
               borderRadius: "40px",
-              padding: "20px 24px",
+              padding: "24px 28px",
               width: "100%",
               maxWidth: "340px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              background: "var(--bg-panel)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
               transition: "background 500ms ease",
               position: "relative"
             }}>
@@ -321,7 +361,13 @@ export function FocusTunnel() {
                 </div>
               )}
               {/* Top Controls */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: "340px", marginBottom: "16px", position: "relative" }}>
+              <div style={{ 
+                display: "flex", alignItems: "center", justifyContent: "space-between", 
+                width: "100%", maxWidth: "340px", marginBottom: "16px", position: "relative",
+                transition: "opacity 0.2s ease, pointer-events 0.2s ease",
+                opacity: showControls ? 1 : 0,
+                pointerEvents: showControls ? "auto" : "none"
+              }}>
                 <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                   {timerPhase === 'break' ? 'Break Time' : `Round ${roundsCompleted + 1}`}
                 </span>
@@ -383,13 +429,16 @@ export function FocusTunnel() {
 
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
                     <span style={{
-                      fontSize: "76px",
+                      fontSize: "64px",
                       fontWeight: 500,
                       fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                       fontVariantNumeric: "tabular-nums",
-                      color: "var(--accent)",
+                      background: "linear-gradient(135deg, var(--fg) 20%, var(--accent) 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
                       lineHeight: 1,
-                      letterSpacing: "-0.05em",
+                      letterSpacing: "-0.02em",
+                      filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
                     }}>
                       {formatTime(timeRemaining)}
                     </span>
@@ -423,13 +472,15 @@ export function FocusTunnel() {
               alignItems: "center"
             }}>
               <span style={{
-                fontSize: "88px",
+                fontSize: "76px",
                 fontWeight: 400,
                 fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                 fontVariantNumeric: "tabular-nums",
-                color: "var(--accent)",
+                background: "linear-gradient(135deg, var(--fg) 20%, var(--accent) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
                 lineHeight: 1,
-                letterSpacing: "-0.05em"
+                letterSpacing: "-0.02em"
               }}>
                 {formatStopwatch(sessionElapsed)}
               </span>
@@ -470,7 +521,7 @@ export function FocusTunnel() {
                         duration: 0.5,
                         ease: [0.33, 1, 0.68, 1] // Custom easeOutQuart
                       }}
-                      className="relative w-full rounded-[32px] p-10 md:p-14 mb-4 last:mb-0 transition-all duration-700 shadow-none"
+                      className="relative w-full rounded-[36px] py-14 px-12 md:py-20 md:px-16 mb-4 last:mb-0 shadow-none"
                       style={{ background: style.bg, border: style.border }}
                     >
                       <div className="flex items-center gap-10">
@@ -483,8 +534,8 @@ export function FocusTunnel() {
                         </button>
                         <div className="flex-1 min-w-0">
                           <h2
-                            className={`font-medium transition-all duration-500 ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${isChecking ? 'line-through opacity-50' : ''}`}
-                            style={{ color: isChecking ? "var(--fg-muted)" : style.textColor, letterSpacing: "-0.03em" }}
+                            className={`font-medium transition-all duration-500 leading-tight ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${isChecking ? 'line-through opacity-50' : ''}`}
+                            style={{ color: isChecking ? "var(--fg-muted)" : style.textColor, letterSpacing: "-0.01em" }}
                           >
                             {task.title}
                           </h2>
@@ -502,11 +553,16 @@ export function FocusTunnel() {
       <div
         ref={pillRef}
         className="absolute bottom-6 md:bottom-12 left-0 right-0 z-[120] pointer-events-none flex flex-col items-center justify-center gap-4 px-4 md:flex-row md:px-6"
-        style={{ transform: `translate(${pillOffset.x}px, ${pillOffset.y}px)` }}
+        style={{ 
+          transform: `translate(${pillOffset.x}px, ${pillOffset.y}px)`,
+          transition: isDraggingPill ? "none" : "opacity 0.2s ease",
+          opacity: showControls ? 1 : 0
+        }}
       >
         <div
-          className="flex items-center gap-1 pointer-events-auto rounded-full px-2 py-2"
+          className="flex items-center gap-1 rounded-full px-2 py-2"
           style={{
+            pointerEvents: showControls ? "auto" : "none",
             background: "var(--bg-card)",
             backdropFilter: "var(--glass-blur-card)",
             WebkitBackdropFilter: "var(--glass-blur-card)",
@@ -580,8 +636,11 @@ export function FocusTunnel() {
 
         <button
           onClick={handleLeave}
-          className="pointer-events-auto backdrop-blur-3xl rounded-full transition-all"
-          style={{ padding: "16px 40px", background: "var(--accent)", border: "none", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "white", opacity: isVaultLocked ? 0.3 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer", boxShadow: "var(--shadow-float)", flexShrink: 0 }}
+          className="backdrop-blur-3xl rounded-full transition-all"
+          style={{ 
+            pointerEvents: showControls && !isVaultLocked ? "auto" : "none",
+            padding: "16px 40px", background: "var(--accent)", border: "none", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "white", opacity: isVaultLocked ? 0.3 : 1, boxShadow: "var(--shadow-float)", flexShrink: 0 
+          }}
         >
           {isVaultLocked ? "Locked" : "Finish"}
         </button>
