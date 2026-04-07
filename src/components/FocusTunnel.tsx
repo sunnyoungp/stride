@@ -293,11 +293,14 @@ export function FocusTunnel() {
       {/* ── Pomodoro display ────────────────────────────────────────────────────── */}
       {mode === 'pomodoro' && (
         <>
-          {/* Header Backdrop Gradient */}
+          {/* Header Backdrop Gradient for melting cards pass-through */}
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0,
-            height: "400px",
-            background: "linear-gradient(to bottom, var(--bg-app) 60%, transparent 100%)",
+            height: "420px",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
             zIndex: 90,
             pointerEvents: "none"
           }} />
@@ -305,19 +308,12 @@ export function FocusTunnel() {
           <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
 
             <div style={{
-              borderRadius: "40px",
               padding: "24px 28px",
               width: "100%",
               maxWidth: "340px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              background: "var(--bg-panel)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
-              transition: "background 500ms ease",
               position: "relative"
             }}>
 
@@ -405,12 +401,18 @@ export function FocusTunnel() {
                   </div>
                 </div>
               ) : (
-                <div style={{ position: "relative", width: "240px", height: "240px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ 
+                  position: "relative", width: "240px", height: "240px", 
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: "50%",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  boxShadow: "inset 0 4px 20px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)"
+                }}>
                   <svg width="240" height="240" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
                     <defs>
-                      <linearGradient id="pomodoroGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="var(--accent)" />
-                        <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
+                      <linearGradient id="pomodoroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--fg)" />
+                        <stop offset="100%" stopColor="var(--accent)" />
                       </linearGradient>
                     </defs>
                     <circle cx="120" cy="120" r="108" fill="none" stroke="var(--border-mid)" strokeWidth="12" opacity={0.3} />
@@ -453,11 +455,14 @@ export function FocusTunnel() {
       {/* ── Timer display ───────────────────────────────────────────────────── */}
       {mode === 'timer' && (
         <>
-          {/* Header Backdrop Gradient */}
+          {/* Header Backdrop Gradient for melting cards pass-through */}
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0,
-            height: "300px",
-            background: "linear-gradient(to bottom, var(--bg-app) 60%, transparent 100%)",
+            height: "420px",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
             zIndex: 90,
             pointerEvents: "none"
           }} />
@@ -521,7 +526,7 @@ export function FocusTunnel() {
                         duration: 0.5,
                         ease: [0.33, 1, 0.68, 1] // Custom easeOutQuart
                       }}
-                      className="relative w-full rounded-[36px] py-14 px-12 md:py-20 md:px-16 mb-4 last:mb-0 shadow-none"
+                      className="relative w-full rounded-[32px] p-8 md:p-10 mb-4 last:mb-0 shadow-none border"
                       style={{ background: style.bg, border: style.border }}
                     >
                       <div className="flex items-center gap-10">
