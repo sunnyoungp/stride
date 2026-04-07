@@ -162,17 +162,17 @@ export function FocusPill() {
       </span>
 
       {/* Timer countdown — Pomodoro mode */}
-      {mode === "timer" && (
+      {mode === "pomodoro" && (
         <span
-          className="text-sm font-mono flex-shrink-0"
-          style={{ color: "var(--accent)" }}
+          className="text-sm font-medium flex-shrink-0"
+          style={{ color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}
         >
           {formatTime(timeRemaining)}
         </span>
       )}
 
-      {/* Pause / Resume — Pomodoro and Stopwatch modes */}
-      {(mode === "timer" || mode === "stopwatch") && (
+      {/* Pause / Resume — Pomodoro and Timer modes */}
+      {(mode === "pomodoro" || mode === "timer") && (
         <button
           onClick={togglePause}
           className="flex-shrink-0 p-1 rounded-full transition-colors hover:bg-[var(--bg-hover)]"

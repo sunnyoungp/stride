@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Task } from '../types';
 
-export type FocusMode = 'tunnel' | 'timer' | 'vault' | 'stopwatch' | null;
+export type FocusMode = 'tunnel' | 'pomodoro' | 'vault' | 'timer' | null;
 
 export interface FocusState {
   isActive: boolean;
@@ -34,6 +34,8 @@ export interface FocusStore {
   prevTask: () => void;
   setTimeRemaining: (seconds: number) => void;
   togglePause: () => void;
+  switchMode: (newMode: FocusMode) => void;
+  setAutoFlow: (autoFlow: boolean) => void;
 }
 
 // HELPER: Improved logic to find subtasks by either parent ID or the parent's subtaskIds array
@@ -177,6 +179,23 @@ export const useFocusStore = create<FocusStore>((set) => ({
     focusState: {
       ...state.focusState,
       isPaused: !state.focusState.isPaused
+    }
+  })),
+
+  switchMode: (newMode) => set((state) => ({
+    isSetupModalOpen: false,
+    focusState: {
+      ...state.focusState,
+      mode: newMode,
+      timeRemaining: newMode === 'timer' ? 0 : state.focusState.duration || 1500,
+      isPaused: false,
+    }
+  })),
+
+  setAutoFlow: (autoFlow) => set((state) => ({
+    focusState: {
+      ...state.focusState,
+      autoFlow
     }
   }))
 }));

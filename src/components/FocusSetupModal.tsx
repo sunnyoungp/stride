@@ -7,9 +7,11 @@ import { useFocusStore, FocusMode } from "@/store/focusStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { Task } from "@/types/index";
 
-export function FocusSetupModal() {
-  const { isSetupModalOpen, setSetupModalOpen, startFocusSession, focusState } = useFocusStore();
+export function FocusSetupModal({ isSwitching = false }: { isSwitching?: boolean } = {}) {
+  const { isSetupModalOpen, setSetupModalOpen, startFocusSession, focusState, switchMode } = useFocusStore();
   const allTasks = useTaskStore((state) => state.tasks);
+
+  const effectiveIsSwitching = isSwitching || focusState.isActive;
 
   const [selectedMode, setSelectedMode] = useState<FocusMode>("tunnel");
   const [playlist, setPlaylist] = useState<Task[]>([]);
@@ -56,7 +58,7 @@ export function FocusSetupModal() {
 
   const handleStart = () => {
     if (playlist.length === 0) return;
-    const duration = selectedMode === 'stopwatch' ? 0 : 1500;
+    const duration = selectedMode === 'timer' ? 0 : 1500;
     startFocusSession(selectedMode, playlist, allTasks, duration, autoFlow);
   };
 
@@ -116,7 +118,7 @@ export function FocusSetupModal() {
               fontSize: "10px", fontWeight: 700, color: "var(--fg-muted)",
               textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "16px",
             }}>Session Mode</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <ModeCard
                 title="Flow"
                 description="Pure focus, no distractions."
@@ -128,16 +130,17 @@ export function FocusSetupModal() {
                 title="Pomodoro"
                 description="Timed work and break intervals."
                 icon={<Timer className="w-5 h-5" />}
+                isSelected={selectedMode === "pomodoro"}
+                onClick={() => setSelectedMode("pomodoro")}
+              />
+              <ModeCard
+                title="Timer"
+                description="Count up, no time limit."
+                icon={<Watch className="w-5 h-5" />}
                 isSelected={selectedMode === "timer"}
                 onClick={() => setSelectedMode("timer")}
               />
-              <ModeCard
-                title="Stopwatch"
-                description="Count up, no time limit."
-                icon={<Watch className="w-5 h-5" />}
-                isSelected={selectedMode === "stopwatch"}
-                onClick={() => setSelectedMode("stopwatch")}
-              />
+              {/* Vault — not yet developed, re-enable when ready 
               <ModeCard
                 title="Vault"
                 description="Manage your whole list."
@@ -145,10 +148,11 @@ export function FocusSetupModal() {
                 isSelected={selectedMode === "vault"}
                 onClick={() => setSelectedMode("vault")}
               />
+              */}
             </div>
 
             {/* Pomodoro-only: Auto-flow toggle */}
-            {selectedMode === "timer" && (
+            {selectedMode === "pomodoro" && (
               <div style={{
                 marginTop: "12px",
                 display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -193,12 +197,13 @@ export function FocusSetupModal() {
           </section>
 
           {/* Playlist */}
-          <section style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "350px" }}>
-            <h3 style={{
-              fontSize: "10px", fontWeight: 700, color: "var(--fg-muted)",
-              textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "16px",
-            }}>Playlist Configuration</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", flex: 1, minHeight: 0 }}>
+          {!effectiveIsSwitching && (
+            <section style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "350px" }}>
+              <h3 style={{
+                fontSize: "10px", fontWeight: 700, color: "var(--fg-muted)",
+                textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "16px",
+              }}>Playlist Configuration</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", flex: 1, minHeight: 0 }}>
 
               {/* Available tasks */}
               <div style={{
@@ -289,6 +294,7 @@ export function FocusSetupModal() {
 
             </div>
           </section>
+          )}
         </div>
 
         {/* Footer */}
@@ -299,8 +305,8 @@ export function FocusSetupModal() {
           flexShrink: 0,
         }}>
           <button
-            onClick={handleStart}
-            disabled={playlist.length === 0}
+            onClick={effectiveIsSwitching ? () => switchMode(selectedMode) : handleStart}
+            disabled={!effectiveIsSwitching && playlist.length === 0}
             className="w-full active:scale-[0.98] transition-all"
             style={{
               padding: "16px 20px",
@@ -310,12 +316,12 @@ export function FocusSetupModal() {
               color: "#fff",
               fontSize: "15px",
               fontWeight: 600,
-              cursor: playlist.length === 0 ? "not-allowed" : "pointer",
-              opacity: playlist.length === 0 ? 0.35 : 1,
+              cursor: (!effectiveIsSwitching && playlist.length === 0) ? "not-allowed" : "pointer",
+              opacity: (!effectiveIsSwitching && playlist.length === 0) ? 0.35 : 1,
               touchAction: "manipulation",
             }}
           >
-            Start Session →
+            {effectiveIsSwitching ? "Switch Mode" : "Start Session →"}
           </button>
         </div>
       </motion.div>

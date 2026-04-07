@@ -5,7 +5,7 @@ import { useFocusStore } from "@/store/focusStore";
 import { useTaskStore } from "@/store/taskStore";
 import {
   Check, ChevronRight, ChevronLeft, Pause, Play, Eye, EyeOff,
-  RotateCcw, Plus, Minimize2, Settings2, X,
+  RotateCcw, Plus, Minimize2, Settings2, X, ArrowRightLeft
 } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import type { Task } from "@/types/index";
@@ -20,13 +20,10 @@ const getCardStyle = (index: number) => {
   return styles[index % styles.length];
 };
 
-const RING_R = 100;
-const CIRCUMFERENCE = 2 * Math.PI * RING_R; // ≈ 628.3
-
 export function FocusTunnel() {
   const {
     focusState, clearSession, nextTask, prevTask,
-    setTimeRemaining, togglePause, addTasksToPlaylist, removeTaskFromPlaylist, toggleMinimized,
+    setTimeRemaining, togglePause, addTasksToPlaylist, removeTaskFromPlaylist, toggleMinimized, setSetupModalOpen, setAutoFlow
   } = useFocusStore();
   const updateTask = useTaskStore(state => state.updateTask);
   const createTask = useTaskStore(state => state.createTask);
@@ -81,29 +78,23 @@ export function FocusTunnel() {
     });
   }, [allTasks, today]);
 
-  // Ring progress (0–1)
-  const ringProgress =
-    timerPhase === 'break' ? timeRemaining / breakDuration :
-    timerPhase === 'break-prompt' ? 0 :
-    timeRemaining / workDuration;
-
-  // Scroll active card into view
+  // Session elapsed ticker
   useEffect(() => {
-    if (activeCardRef.current && !isSpotlightOn) {
-      activeCardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [currentIndex, isSpotlightOn]);
-
-  // Session elapsed ticker — pauses in stopwatch mode when session is paused
-  useEffect(() => {
-    if (mode === 'stopwatch' && isPaused) return;
+    if (mode === 'timer' && isPaused) return;
     const t = setInterval(() => setSessionElapsed(p => p + 1), 1000);
     return () => clearInterval(t);
   }, [mode, isPaused]);
 
-  // Timer countdown with phase transitions
+  // Reset local state cleanly on mode change
   useEffect(() => {
-    if (mode !== "timer") return;
+    setSessionElapsed(0);
+    setTimerPhase('work');
+    setRoundsCompleted(0);
+  }, [mode]);
+
+  // Pomodoro countdown with phase transitions
+  useEffect(() => {
+    if (mode !== "pomodoro") return;
     if (isPaused) return;
     if (timerPhase === 'break-prompt') return;
 
@@ -127,6 +118,13 @@ export function FocusTunnel() {
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, isPaused, timerPhase, timeRemaining, workDuration, breakDuration, autoFlow, setTimeRemaining]);
+
+  // Scroll active card into view
+  useEffect(() => {
+    if (activeCardRef.current && !isSpotlightOn) {
+      activeCardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [currentIndex, isSpotlightOn]);
 
   // Focus quick-add input when panel opens
   useEffect(() => {
@@ -245,126 +243,146 @@ export function FocusTunnel() {
   }
 
   return (
-    <div className="relative flex flex-col h-screen w-screen transition-colors duration-1000" style={{ background: "var(--bg-app)" }}>
+    <div className="relative flex flex-col h-[100dvh] w-screen transition-colors duration-1000 overflow-hidden" style={{ background: "var(--bg-app)" }}>
       {/* ESC label */}
-      <div className="absolute top-10 right-10 z-[100] pointer-events-none">
+      <div className="absolute top-8 right-8 z-[100] pointer-events-none hidden md:block">
         <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-muted)", textTransform: "uppercase" }}>Esc to minimize</span>
       </div>
 
-      {/* ── Timer ring ──────────────────────────────────────────────────────────── */}
-      {mode === 'timer' && (
-        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 70, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {/* Round counter + settings */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", position: "relative" }}>
-            <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em" }}>
-              {timerPhase === 'break' ? 'Break time' : `Round ${roundsCompleted + 1}`}
-            </span>
-            <button
-              onClick={() => setShowTimerSettings(s => !s)}
-              style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-faint)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
-              title="Pomodoro settings"
-            >
-              <Settings2 style={{ width: "13px", height: "13px" }} />
-            </button>
-
-            {showTimerSettings && (
-              <div
-                onClick={e => e.stopPropagation()}
-                style={{ position: "absolute", top: "26px", left: "50%", transform: "translateX(-50%)", background: "var(--bg-card)", border: "1px solid var(--border-mid)", borderRadius: "12px", padding: "14px 16px", boxShadow: "var(--shadow-lg)", zIndex: 300, minWidth: "210px", display: "flex", flexDirection: "column", gap: "12px" }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>Work</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button onClick={() => setWorkDuration(d => Math.max(300, d - 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                    <span style={{ fontSize: "13px", color: "var(--fg)", minWidth: "52px", textAlign: "center" }}>{workDuration / 60} min</span>
-                    <button onClick={() => setWorkDuration(d => Math.min(5400, d + 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>Break</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button onClick={() => setBreakDuration(d => Math.max(60, d - 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                    <span style={{ fontSize: "13px", color: "var(--fg)", minWidth: "52px", textAlign: "center" }}>{breakDuration / 60} min</span>
-                    <button onClick={() => setBreakDuration(d => Math.min(1800, d + 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                  </div>
-                </div>
+      {/* ── Pomodoro display ────────────────────────────────────────────────────── */}
+      {mode === 'pomodoro' && (
+        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
+          
+          <div style={{
+            background: timerPhase === 'break' ? "var(--bg-subtle)" : "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "40px",
+            padding: "24px 32px 36px 32px",
+            boxShadow: "var(--shadow-sm)",
+            width: "100%",
+            maxWidth: "340px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            transition: "background 500ms ease"
+          }}>
+            {/* Top Control Bar */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: "24px", position: "relative" }}>
+              <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                {timerPhase === 'break' ? 'Break Time' : `Round ${roundsCompleted + 1}`}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                  onClick={() => setAutoFlow(!autoFlow)}
+                  style={{
+                    position: "relative", width: "28px", height: "16px", borderRadius: "9999px", border: "none",
+                    background: autoFlow ? "var(--accent)" : "var(--border-strong)", cursor: "pointer", transition: "background 200ms", display: "flex", alignItems: "center",
+                  }}
+                  title="Toggle Auto-flow"
+                >
+                  <span style={{ position: "absolute", left: autoFlow ? "14px" : "2px", width: "12px", height: "12px", borderRadius: "50%", background: "white", boxShadow: "0 1px 2px rgba(0,0,0,0.2)", transition: "left 200ms", display: "block" }} />
+                </button>
+                <button
+                  onClick={() => setShowTimerSettings(s => !s)}
+                  style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-muted)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
+                  title="Pomodoro settings"
+                >
+                  <Settings2 style={{ width: "14px", height: "14px" }} />
+                </button>
               </div>
-            )}
-          </div>
 
-          {/* Ring */}
-          <div style={{ position: "relative", width: "220px", height: "220px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
-              <defs>
-                <linearGradient id="timerWorkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="var(--timer-grad-from)" />
-                  <stop offset="100%" stopColor="var(--timer-grad-to)" />
-                </linearGradient>
-                <linearGradient id="timerBreakGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="var(--timer-break-from)" />
-                  <stop offset="100%" stopColor="var(--timer-break-to)" />
-                </linearGradient>
-                <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              <circle cx="110" cy="110" r={RING_R} fill="none" stroke="var(--border-mid)" strokeWidth="6" />
-              <motion.circle
-                cx="110" cy="110" r={RING_R}
-                fill="none"
-                stroke={timerPhase === 'break' ? "url(#timerBreakGrad)" : "url(#timerWorkGrad)"}
-                strokeWidth="10"
-                strokeDasharray={CIRCUMFERENCE}
-                initial={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
-                animate={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
-                transition={{ duration: 0.5, ease: "linear" }}
-                strokeLinecap="round"
-                filter="url(#ringGlow)"
-              />
-            </svg>
-
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", zIndex: 1 }}>
-              {timerPhase === 'break-prompt' ? (
-                <>
-                  <span style={{ fontSize: "13px", color: "var(--fg-muted)", marginBottom: "4px", fontWeight: 500 }}>Round complete!</span>
-                  <button onClick={startBreak} style={{ padding: "8px 20px", background: "var(--accent)", color: "#fff", borderRadius: "9999px", border: "none", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Start Break</button>
-                  <button onClick={skipBreak} style={{ padding: "5px 14px", background: "transparent", color: "var(--fg-faint)", border: "none", fontSize: "11px", cursor: "pointer" }}>Skip Break</button>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: "50px", fontWeight: 300, fontFamily: '"SF Pro Display", -apple-system, sans-serif', color: "var(--fg)", lineHeight: 1, letterSpacing: "-0.02em" }}>
-                    {formatTime(timeRemaining)}
-                  </span>
-                  <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em" }}>
-                    {timerPhase === 'break' ? 'Break' : isPaused ? 'Paused' : 'Focus'}
-                  </span>
-                </>
+              {showTimerSettings && (
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{ position: "absolute", top: "26px", right: "0px", background: "var(--bg-card)", border: "1px solid var(--border-mid)", borderRadius: "12px", padding: "14px 16px", boxShadow: "var(--shadow-lg)", zIndex: 300, minWidth: "210px", display: "flex", flexDirection: "column", gap: "12px" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>Work</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <button onClick={() => setWorkDuration(d => Math.max(300, d - 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      <span style={{ fontSize: "13px", color: "var(--fg)", minWidth: "52px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{workDuration / 60}m</span>
+                      <button onClick={() => setWorkDuration(d => Math.min(5400, d + 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>Break</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <button onClick={() => setBreakDuration(d => Math.max(60, d - 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      <span style={{ fontSize: "13px", color: "var(--fg)", minWidth: "52px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{breakDuration / 60}m</span>
+                      <button onClick={() => setBreakDuration(d => Math.min(1800, d + 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
+
+            {/* Time Display */}
+            {timerPhase === 'break-prompt' ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", margin: "16px 0" }}>
+                <span style={{ fontSize: "15px", color: "var(--fg)", fontWeight: 600 }}>Round Complete!</span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={startBreak} style={{ padding: "10px 24px", background: "var(--accent)", color: "#fff", borderRadius: "9999px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Start Break</button>
+                  <button onClick={skipBreak} style={{ padding: "10px 20px", background: "var(--bg-hover)", color: "var(--fg)", borderRadius: "9999px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Skip</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <span style={{ 
+                  fontSize: "80px", 
+                  fontWeight: 400, 
+                  fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif', 
+                  fontVariantNumeric: "tabular-nums", 
+                  color: "var(--fg)", 
+                  lineHeight: 1, 
+                  letterSpacing: "-0.04em",
+                }}>
+                  {formatTime(timeRemaining)}
+                </span>
+                <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: "12px" }}>
+                   {timerPhase === 'break' ? 'Resting' : isPaused ? 'Paused' : 'Focus'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── Stopwatch display ───────────────────────────────────────────────────── */}
-      {mode === 'stopwatch' && (
-        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 70, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>
-            {isPaused ? 'Paused' : 'Elapsed'}
-          </span>
-          <span style={{ fontSize: "64px", fontWeight: 300, fontFamily: '"SF Pro Display", -apple-system, sans-serif', color: "var(--fg)", lineHeight: 1, letterSpacing: "-0.02em" }}>
-            {formatStopwatch(sessionElapsed)}
-          </span>
+      {/* ── Timer display ───────────────────────────────────────────────────── */}
+      {mode === 'timer' && (
+        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
+          
+          <div style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "40px",
+            padding: "48px 64px",
+            boxShadow: "var(--shadow-sm)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center"
+          }}>
+            <span style={{ 
+              fontSize: "80px", 
+              fontWeight: 400, 
+              fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif', 
+              fontVariantNumeric: "tabular-nums", 
+              color: "var(--fg)", 
+              lineHeight: 1, 
+              letterSpacing: "-0.04em"
+            }}>
+              {formatStopwatch(sessionElapsed)}
+            </span>
+            <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: "12px" }}>
+              {isPaused ? 'Paused' : 'Elapsed'}
+            </span>
+          </div>
         </div>
       )}
 
       {/* ── Main content area ────────────────────────────────────────────────────── */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-700 ${isSpotlightOn ? 'items-center justify-center overflow-hidden' : 'items-center overflow-y-auto'}`}
-        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'timer' ? '300px' : mode === 'stopwatch' ? '200px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        className={`flex-1 flex flex-col relative z-10 transition-all duration-700 ${isSpotlightOn ? 'items-center justify-center overflow-hidden' : 'items-center overflow-y-auto'}`}
+        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '300px' : mode === 'timer' ? '250px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         <style dangerouslySetInnerHTML={{ __html: `.flex-1::-webkit-scrollbar { display: none; }` }} />
 
@@ -421,7 +439,7 @@ export function FocusTunnel() {
       {/* ── Control pill ─────────────────────────────────────────────────────────── */}
       <div
         ref={pillRef}
-        className="absolute bottom-12 left-0 right-0 z-[120] pointer-events-none flex items-center justify-center gap-4 px-6"
+        className="absolute bottom-6 md:bottom-12 left-0 right-0 z-[120] pointer-events-none flex flex-col items-center justify-center gap-4 px-4 md:flex-row md:px-6"
         style={{ transform: `translate(${pillOffset.x}px, ${pillOffset.y}px)` }}
       >
         <div
@@ -469,14 +487,23 @@ export function FocusTunnel() {
             {isSpotlightOn ? <Eye className="w-6 h-6" strokeWidth={1.5} /> : <EyeOff className="w-6 h-6" strokeWidth={1.5} />}
           </button>
 
-          {(mode === 'timer' || mode === 'stopwatch') && (
-            <button onClick={togglePause} className="p-3 focus:outline-none" style={{ color: "var(--accent)" }}>
+          {(mode === 'pomodoro' || mode === 'timer') && (
+            <button onClick={togglePause} className="p-3 focus:outline-none transition-colors" style={{ color: "var(--accent)" }}>
               {isPaused ? <Play className="w-6 h-6 fill-current" /> : <Pause className="w-6 h-6 fill-current" />}
             </button>
           )}
 
           <button onClick={nextTask} disabled={currentIndex === playlist.length - 1} className="p-3 disabled:opacity-5 transition-colors focus:outline-none" style={{ color: "var(--fg-faint)" }}>
             <ChevronRight className="w-6 h-6" strokeWidth={1.2} />
+          </button>
+
+          <button
+            onClick={() => setSetupModalOpen(true)}
+            className="p-3 rounded-full transition-all focus:outline-none"
+            style={{ color: "var(--fg-faint)" }}
+            title="Switch Session Mode"
+          >
+            <ArrowRightLeft className="w-5 h-5" strokeWidth={1.5} />
           </button>
 
           <button
@@ -492,7 +519,7 @@ export function FocusTunnel() {
         <button
           onClick={handleLeave}
           className="pointer-events-auto backdrop-blur-3xl rounded-full transition-all"
-          style={{ padding: "16px 40px", background: "var(--accent)", border: "none", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "white", opacity: isVaultLocked ? 0.3 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer", boxShadow: "var(--shadow-float)" }}
+          style={{ padding: "16px 40px", background: "var(--accent)", border: "none", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "white", opacity: isVaultLocked ? 0.3 : 1, cursor: isVaultLocked ? "not-allowed" : "pointer", boxShadow: "var(--shadow-float)", flexShrink: 0 }}
         >
           {isVaultLocked ? "Locked" : "Finish"}
         </button>
