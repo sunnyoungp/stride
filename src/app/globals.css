@@ -78,6 +78,12 @@
   --content-bg:        var(--bg-panel);
   --shadow-panel:      var(--glass-shadow-panel);
 
+  /* Focus tunnel timer ring gradient — complementary hue shift + accent */
+  --timer-grad-from: hsl(calc(var(--tint-h) + 180), 75%, 56%);
+  --timer-grad-to:   var(--accent);
+  --timer-break-from: #34d399;
+  --timer-break-to:  #22d3ee;
+
   /* priorities */
   --priority-low:    #3b82f6;
   --priority-medium: #f59e0b;
@@ -147,6 +153,12 @@
   --sidebar-bg:        var(--bg-panel);
   --content-bg:        var(--bg-panel);
   --shadow-panel:      var(--glass-shadow-panel);
+
+  /* Focus tunnel timer ring gradient — brighter in dark mode */
+  --timer-grad-from: hsl(calc(var(--tint-h) + 180), 82%, 68%);
+  --timer-grad-to:   var(--accent);
+  --timer-break-from: #34d399;
+  --timer-break-to:  #22d3ee;
 
   --border:       rgba(255, 255, 255, 0.07);
   --border-mid:   rgba(255, 255, 255, 0.10);

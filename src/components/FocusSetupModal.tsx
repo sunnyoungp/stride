@@ -52,7 +52,7 @@ export function FocusSetupModal() {
   return (
     <div
       className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-12"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(0,0,0,0.68)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
       onClick={() => setSetupModalOpen(false)}
     >
       <motion.div
@@ -62,25 +62,21 @@ export function FocusSetupModal() {
         style={{
           width: "100%",
           maxWidth: "768px",
-          background: "var(--bg-card)",
-          backdropFilter: "var(--glass-blur-card)",
-          WebkitBackdropFilter: "var(--glass-blur-card)",
-          border: "1px solid var(--glass-border)",
-          borderTop: "1px solid var(--glass-border-top)",
+          background: "var(--bg)",
+          border: "1px solid var(--border-mid)",
           borderRadius: "20px",
           boxShadow: "var(--shadow-float)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
           maxHeight: "85vh",
-          animation: "gs-scale 200ms cubic-bezier(0.16,1,0.3,1) both",
         }}
       >
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "16px 24px",
-          borderBottom: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border-mid)",
           flexShrink: 0,
         }}>
           <h2 style={{
@@ -106,8 +102,8 @@ export function FocusSetupModal() {
           {/* Mode selection */}
           <section>
             <h3 style={{
-              fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)",
-              textTransform: "uppercase", marginBottom: "16px",
+              fontSize: "10px", fontWeight: 700, color: "var(--fg-muted)",
+              textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "16px",
             }}>Session Mode</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
               <ModeCard
@@ -137,8 +133,8 @@ export function FocusSetupModal() {
           {/* Playlist */}
           <section style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "350px" }}>
             <h3 style={{
-              fontSize: "10px", fontWeight: 700, color: "var(--fg-faint)",
-              textTransform: "uppercase", marginBottom: "16px",
+              fontSize: "10px", fontWeight: 700, color: "var(--fg-muted)",
+              textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "16px",
             }}>Playlist Configuration</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", flex: 1, minHeight: 0 }}>
 
@@ -146,7 +142,7 @@ export function FocusSetupModal() {
               <div style={{
                 display: "flex", flexDirection: "column",
                 background: "var(--bg-subtle)", borderRadius: "12px",
-                border: "1px solid var(--border)", overflow: "hidden",
+                border: "1px solid var(--border-mid)", overflow: "hidden",
               }}>
                 <div style={{
                   padding: "10px 16px",
@@ -178,10 +174,10 @@ export function FocusSetupModal() {
               </div>
 
               {/* Playlist */}
-              <div 
+              <div
                 className="flex flex-col rounded-xl overflow-hidden"
                 style={{
-                  border: `1.5px ${playlist.length === 0 ? "dashed" : "solid"} var(--border)`,
+                  border: `1.5px ${playlist.length === 0 ? "dashed" : "solid"} ${playlist.length === 0 ? "var(--border-mid)" : "var(--border-mid)"}`,
                   background: playlist.length === 0 ? "transparent" : "var(--bg-subtle)",
                   flex: 1, minHeight: 0,
                   opacity: playlist.length === 0 ? 0.6 : 1,
@@ -236,8 +232,8 @@ export function FocusSetupModal() {
         {/* Footer */}
         <div style={{
           padding: "20px 32px",
-          borderTop: "1px solid var(--border)",
-          background: "var(--bg-card)",
+          borderTop: "1px solid var(--border-mid)",
+          background: "var(--bg)",
           flexShrink: 0,
         }}>
           <button
@@ -276,8 +272,8 @@ function ModeCard({ title, description, icon, isSelected, onClick }: {
         padding: "20px",
         borderRadius: "14px",
         cursor: "pointer",
-        border: isSelected ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-        background: isSelected ? "var(--accent-bg)" : "var(--bg-card)",
+        border: isSelected ? "1.5px solid var(--accent)" : "1.5px solid var(--border-mid)",
+        background: isSelected ? "var(--accent-bg)" : "var(--bg-subtle)",
         transition: "all 150ms ease",
       }}
     >
@@ -296,7 +292,7 @@ function ModeCard({ title, description, icon, isSelected, onClick }: {
       }}>{title}</div>
       <div style={{
         fontSize: "11px",
-        color: "var(--fg-faint)",
+        color: "var(--fg-muted)",
         lineHeight: 1.4,
       }}>{description}</div>
       {isSelected && (

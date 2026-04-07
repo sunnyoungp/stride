@@ -10,11 +10,11 @@ import {
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import type { Task } from "@/types/index";
 
-// Theme-aware card styles — adapts to any theme via CSS variables
+// Theme-aware card styles — glass panel surfaces that match the app's panel depth
 const getCardStyle = (index: number) => {
   const styles = [
+    { bg: "var(--bg-panel)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--glass-border)" },
     { bg: "var(--bg-card)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--glass-border)" },
-    { bg: "var(--bg-subtle)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--border)" },
     { bg: "var(--accent-bg)", textColor: "var(--fg)", fill: "var(--accent)", border: "1px solid var(--border)" },
   ];
   return styles[index % styles.length];
@@ -221,7 +221,7 @@ export function FocusTunnel() {
 
   if (!currentTask) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", background: "var(--bg)" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", background: "var(--bg-app)" }}>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center" }}>
           <h1 style={{ fontSize: "13px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", marginBottom: "32px" }}>All Tasks Clear</h1>
           <button onClick={handleLeave} style={{ padding: "12px 48px", background: "var(--accent)", color: "#fff", borderRadius: "9999px", border: "none", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}>Return</button>
@@ -231,7 +231,7 @@ export function FocusTunnel() {
   }
 
   return (
-    <div className="relative flex flex-col h-screen w-screen transition-colors duration-1000" style={{ background: "var(--bg)" }}>
+    <div className="relative flex flex-col h-screen w-screen transition-colors duration-1000" style={{ background: "var(--bg-app)" }}>
       {/* ESC label */}
       <div className="absolute top-10 right-10 z-[100] pointer-events-none">
         <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-muted)", textTransform: "uppercase" }}>Esc to minimize</span>
@@ -282,22 +282,34 @@ export function FocusTunnel() {
           <div style={{ position: "relative", width: "220px", height: "220px", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
               <defs>
-                <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: "var(--accent)", stopOpacity: 0.55 }} />
-                  <stop offset="100%" style={{ stopColor: "var(--accent)", stopOpacity: 1 }} />
+                <linearGradient id="timerWorkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="var(--timer-grad-from)" />
+                  <stop offset="100%" stopColor="var(--timer-grad-to)" />
                 </linearGradient>
+                <linearGradient id="timerBreakGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="var(--timer-break-from)" />
+                  <stop offset="100%" stopColor="var(--timer-break-to)" />
+                </linearGradient>
+                <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
               <circle cx="110" cy="110" r={RING_R} fill="none" stroke="var(--border-mid)" strokeWidth="6" />
               <motion.circle
                 cx="110" cy="110" r={RING_R}
                 fill="none"
-                stroke="url(#timerGrad)"
+                stroke={timerPhase === 'break' ? "url(#timerBreakGrad)" : "url(#timerWorkGrad)"}
                 strokeWidth="10"
                 strokeDasharray={CIRCUMFERENCE}
                 initial={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
                 animate={{ strokeDashoffset: CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ringProgress))) }}
                 transition={{ duration: 0.5, ease: "linear" }}
                 strokeLinecap="round"
+                filter="url(#ringGlow)"
               />
             </svg>
 
