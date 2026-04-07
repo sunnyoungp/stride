@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import type { Task, TaskPriority } from "@/types/index";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
+import { DatePickerContent } from "@/components/ui/DatePicker";
 
 // ── Selection context ─────────────────────────────────────────────────────────
 
@@ -49,19 +50,15 @@ export function RescheduleDatePopover({
   currentDate,
 }: {
   anchor: { x: number; y: number; width: number; height: number };
-  onSelect: (date: string) => void;
+  onSelect: (date: string | undefined) => void;
   onClose: () => void;
   currentDate?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-
-  const today    = localDateString(new Date());
-  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDateString(d); })();
 
   // Compute position: prefer above the anchor, flip below if not enough space
   const pos = (() => {
-    const pw = 220, ph = 200, p = 8;
+    const pw = 220, ph = 230, p = 8;
     const vw = typeof window !== "undefined" ? window.innerWidth  : 1200;
     const vh = typeof window !== "undefined" ? window.innerHeight : 800;
     // Horizontal: center on anchor, clamp to viewport
@@ -77,7 +74,6 @@ export function RescheduleDatePopover({
     } else if (spaceBelow >= ph + 8) {
       top = anchor.y + anchor.height + 6;
     } else {
-      // Not enough space either way — put above and clamp
       top = Math.max(p, anchor.y - ph - 6);
     }
     return { left, top };
@@ -96,13 +92,6 @@ export function RescheduleDatePopover({
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
-
-  const quickDates = [
-    { label: "Today",    date: today },
-    { label: "Tomorrow", date: tomorrow },
-    { label: "Weekend",  date: nextWeekday(6) },
-    { label: "Next Mon", date: nextWeekday(1) },
-  ];
 
   return createPortal(
     <div
@@ -125,34 +114,9 @@ export function RescheduleDatePopover({
         animation: "gs-scale 120ms cubic-bezier(0.16,1,0.3,1) both",
       }}
     >
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
-        {quickDates.map(({ label, date }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => { onSelect(date); onClose(); }}
-            style={{
-              fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 8,
-              cursor: "pointer", border: "1px solid transparent",
-              ...(currentDate === date
-                ? { background: "var(--accent-bg-strong)", color: "var(--accent)" }
-                : { background: "var(--bg-hover)", color: "var(--fg-muted)" }),
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <input
-        ref={dateInputRef}
-        type="date"
-        defaultValue={currentDate ?? ""}
-        onChange={(e) => { if (e.target.value) { onSelect(e.target.value); onClose(); } }}
-        style={{
-          width: "100%", padding: "6px 10px", borderRadius: 8, fontSize: 12,
-          border: "1px solid var(--border)", background: "var(--bg-subtle)",
-          color: "var(--fg)", outline: "none", boxSizing: "border-box",
-        }}
+      <DatePickerContent
+        onSelect={(date) => { onSelect(date); onClose(); }}
+        currentDate={currentDate}
       />
     </div>,
     document.body
@@ -185,8 +149,7 @@ export function SelectionActionBar({
     onClear();
   };
 
-  const handleReschedule = async (date: string) => {
-    if (!date) return;
+  const handleReschedule = async (date: string | undefined) => {
     const ids = [...selectedIds];
     for (const id of ids) await updateTask(id, { dueDate: date });
     onClear();
@@ -203,6 +166,8 @@ export function SelectionActionBar({
 
   return createPortal(
     <>
+      {/* Outer div handles centering — must be separate from animation div to prevent
+          gs-scale's transform from overriding translateX(-50%) */}
       <div
         data-selection-bar
         style={{
@@ -211,6 +176,10 @@ export function SelectionActionBar({
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 9999,
+        }}
+      >
+      <div
+        style={{
           display: "flex",
           alignItems: "center",
           gap: 8,
@@ -220,6 +189,7 @@ export function SelectionActionBar({
           borderRadius: 14,
           boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
           animation: "gs-scale 150ms cubic-bezier(0.16,1,0.3,1) both",
+          whiteSpace: "nowrap",
         }}
       >
         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", marginRight: 4 }}>
@@ -282,6 +252,7 @@ export function SelectionActionBar({
         >
           ✕
         </button>
+      </div>
       </div>
       {reschedulePanelOpen && rescheduleAnchor && (
         <RescheduleDatePopover

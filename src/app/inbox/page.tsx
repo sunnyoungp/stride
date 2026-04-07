@@ -101,7 +101,7 @@ function InboxPageContent() {
   }, [tasks, todayOnly, today]);
 
   const noDateTasks = useMemo(
-    () => applySortBy(incompleteTasks.filter((t) => !t.dueDate), sortBy === "date" ? "date" : sortBy),
+    () => applySortBy(incompleteTasks.filter((t) => !t.dueDate && !t.sectionId), sortBy === "date" ? "date" : sortBy),
     [incompleteTasks, sortBy]
   );
 

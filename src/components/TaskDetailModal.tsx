@@ -9,6 +9,7 @@ import { useProjectStore } from "@/store/projectStore";
 import type { Task, TaskPriority } from "@/types/index";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
+import { RescheduleDatePopover } from "@/components/TaskList";
 
 type Props = {
   task: Task;
@@ -91,6 +92,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const modalRef   = useRef<HTMLDivElement>(null);
   const notesRef   = useRef<HTMLTextAreaElement>(null);
   const subtaskRef = useRef<HTMLInputElement>(null);
+  const dateBtnRef = useRef<HTMLDivElement>(null);
+  const [dateBtnAnchor, setDateBtnAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Initial position slightly off-screen or at click, will be clamped by useLayoutEffect
   const [pos, setPos]           = useState({ x: position.x, y: position.y });
@@ -116,10 +119,6 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
   const currentSection  = sections.find((s) => s.id === task.sectionId);
   const currentPriority = PRIORITY_OPTIONS.find((p) => p.value === task.priority) ?? PRIORITY_OPTIONS[0]!;
 
-  const localDate   = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const todayStr    = localDate(new Date());
-  const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDate(d); })();
-  const nextWeekStr = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return localDate(d); })();
 
   useLayoutEffect(() => {
     const el = modalRef.current;
@@ -147,7 +146,8 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
       if (e.key === "Escape") { save(); onClose(); }
     };
     const onOut = (e: PointerEvent) => {
-      // Small delay to prevent closing when clicking on things that might unmount
+      // Don't close if clicking on portal elements like the date popover
+      if ((e.target as Element).closest?.("[data-selection-bar]")) return;
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
         save(); onClose();
       }
@@ -341,28 +341,6 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
 
         {/* --- Relative panels --- */}
         <div className="relative">
-          {panel === "date" && (
-            <div className="absolute bottom-full right-0 mb-2 w-48 overflow-hidden rounded-xl border p-1 shadow-lg"
-                 style={{ background: "var(--bg-card)", borderColor: "var(--glass-border)", backdropFilter: "var(--glass-blur-card)" }}>
-              <div className="flex flex-col gap-0.5">
-                {[
-                  { label: "Today", val: todayStr, icon: "T" },
-                  { label: "Tomorrow", val: tomorrowStr, icon: "Tm" },
-                  { label: "Next Week", val: nextWeekStr, icon: "W" },
-                  { label: "No Date", val: undefined, icon: "X" },
-                ].map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={() => { void updateTask(task.id, { dueDate: opt.val as any }); togglePanel("none"); }}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--bg-hover)]"
-                  >
-                    <span className="w-5 text-center font-bold text-[var(--accent)]">{opt.icon}</span>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           {panel === "section" && (
             <div className="absolute bottom-full left-0 mb-2 w-56 overflow-hidden rounded-xl border p-1 shadow-lg"
                  style={{ background: "var(--bg-card)", borderColor: "var(--glass-border)", backdropFilter: "var(--glass-blur-card)" }}>
@@ -428,15 +406,26 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           <div style={{ width: 1, height: 16, background: "var(--border-mid)", opacity: 0.5, margin: "0 2px" }} />
 
           {/* Date picker */}
-          <ToolBtn active={panel === "date"} onClick={() => togglePanel("date")} title="Set due date">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor">
-              <rect x="3" y="3.5" width="10" height="10" rx="2" strokeWidth={1.5}/>
-              <path d="M3 7h10M5.5 2v2.5M10.5 2v2.5" strokeLinecap="round" strokeWidth={1.5}/>
-            </svg>
-            <span className="text-xs font-medium" style={{ color: task.dueDate ? "var(--accent)" : "var(--fg-faint)" }}>
-              {task.dueDate ? friendlyDate(task.dueDate) : "No date"}
-            </span>
-          </ToolBtn>
+          <div ref={dateBtnRef}>
+            <ToolBtn
+              active={dateBtnAnchor !== null}
+              onClick={() => {
+                if (dateBtnAnchor) { setDateBtnAnchor(null); return; }
+                togglePanel("none");
+                const r = dateBtnRef.current?.getBoundingClientRect();
+                if (r) setDateBtnAnchor({ x: r.left, y: r.top, width: r.width, height: r.height });
+              }}
+              title="Set due date"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+                <rect x="3" y="3.5" width="10" height="10" rx="2" strokeWidth={1.5}/>
+                <path d="M3 7h10M5.5 2v2.5M10.5 2v2.5" strokeLinecap="round" strokeWidth={1.5}/>
+              </svg>
+              <span className="text-xs font-medium" style={{ color: task.dueDate ? "var(--accent)" : "var(--fg-faint)" }}>
+                {task.dueDate ? friendlyDate(task.dueDate) : "No date"}
+              </span>
+            </ToolBtn>
+          </div>
 
           {/* Priority cycle */}
           <button
@@ -480,6 +469,14 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           </button>
         </div>
       </div>
+      {dateBtnAnchor && (
+        <RescheduleDatePopover
+          anchor={dateBtnAnchor}
+          onSelect={(date) => { void updateTask(task.id, { dueDate: date }); setDateBtnAnchor(null); }}
+          onClose={() => setDateBtnAnchor(null)}
+          currentDate={task.dueDate}
+        />
+      )}
     </>,
     document.body
   );

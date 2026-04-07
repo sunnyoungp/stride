@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import type { Task, TaskPriority } from "@/types/index";
+import { DatePickerContent } from "@/components/ui/DatePicker";
 
 type Props = {
   task: Task;
@@ -11,16 +12,6 @@ type Props = {
   selectedIds?: Set<string>;
 };
 
-function localDateString(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function nextWeekdayDate(targetDay: number) {
-  const now = new Date();
-  let diff = (targetDay - now.getDay() + 7) % 7;
-  if (diff === 0) diff = 7;
-  now.setDate(now.getDate() + diff);
-  return localDateString(now);
-}
 function clamp(n: number, min: number, max: number) { return Math.min(Math.max(n, min), max); }
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string; style: React.CSSProperties }[] = [
@@ -39,8 +30,6 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
   const [clampedPos, setClampedPos]   = useState(position);
   const [parentSearch, setParentSearch] = useState("");
 
-  const today    = useMemo(() => localDateString(new Date()), []);
-  const tomorrow = useMemo(() => { const d = new Date(); d.setDate(d.getDate()+1); return localDateString(d); }, []);
 
   useEffect(() => {
     const el = menuRef.current;
@@ -55,7 +44,7 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
     return () => window.removeEventListener("pointerdown", h);
   }, [onClose]);
 
-  const reschedule = async (dueDate: string) => {
+  const reschedule = async (dueDate: string | undefined) => {
     const ids = [...(selectedIds && selectedIds.size > 1 ? selectedIds : [task.id])];
     for (const id of ids) await updateTask(id, { dueDate });
     onClose();
@@ -137,30 +126,13 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
 
       {activePanel === "main" && (
         <>
-          {/* Quick reschedule pills */}
-          <div className="flex flex-wrap gap-1.5 px-3 py-2">
-            {[
-              { label: "Today", date: today },
-              { label: "Tomorrow", date: tomorrow },
-              { label: "Weekend", date: nextWeekdayDate(6) },
-              { label: "Next Mon", date: nextWeekdayDate(1) },
-            ].map(({ label, date }) => (
-              <button key={label} type="button" onClick={() => void reschedule(date)}
-                className="rounded-lg px-2.5 py-1 text-xs transition-all duration-150"
-                style={task.dueDate === date
-                  ? { background: "var(--accent-bg-strong)", color: "var(--accent)", border: "1px solid var(--accent-bg-strong)" }
-                  : { background: "var(--bg-hover)", color: "var(--fg-muted)", border: "1px solid transparent" }
-                }
-              >{label}</button>
-            ))}
+          {/* Date picker */}
+          <div className="px-3 pt-1 pb-2">
+            <DatePickerContent
+              onSelect={(date) => void reschedule(date)}
+              currentDate={task.dueDate}
+            />
           </div>
-
-          <input type="date"
-            className="mx-3 mb-2 w-[calc(100%-24px)] rounded-xl px-3 py-1.5 text-xs outline-none"
-            style={{ border: "1px solid var(--border)", background: "var(--bg-subtle)", color: "var(--fg)" }}
-            defaultValue={task.dueDate ?? ""}
-            onChange={(e) => { if (e.target.value) void reschedule(e.target.value); }}
-          />
 
           <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
