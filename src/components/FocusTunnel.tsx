@@ -257,7 +257,7 @@ export function FocusTunnel() {
 
       {/* ── Pomodoro display ────────────────────────────────────────────────────── */}
       {mode === 'pomodoro' && (
-        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
+        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
 
           <div style={{
             // background: timerPhase === 'break' ? "var(--bg-subtle)" : "var(--bg-card)",
@@ -298,27 +298,32 @@ export function FocusTunnel() {
               </div>
             )}
             {/* Top Controls */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", width: "100%", marginBottom: "16px", gap: "12px", position: "relative" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Auto-flow</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: "340px", marginBottom: "16px", position: "relative" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                {timerPhase === 'break' ? 'Break Time' : `Round ${roundsCompleted + 1}`}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Auto-flow</span>
+                  <button
+                    onClick={() => setAutoFlow(!autoFlow)}
+                    style={{
+                      position: "relative", width: "32px", height: "18px", borderRadius: "9999px", border: "none",
+                      background: autoFlow ? "var(--accent)" : "var(--border-strong)", cursor: "pointer", transition: "background 200ms", display: "flex", alignItems: "center",
+                    }}
+                    title={autoFlow ? "Auto-flow ON" : "Auto-flow OFF"}
+                  >
+                    <span style={{ position: "absolute", left: autoFlow ? "16px" : "2px", width: "14px", height: "14px", borderRadius: "50%", background: "white", boxShadow: "0 1px 2px rgba(0,0,0,0.2)", transition: "left 200ms", display: "block" }} />
+                  </button>
+                </div>
                 <button
-                  onClick={() => setAutoFlow(!autoFlow)}
-                  style={{
-                    position: "relative", width: "32px", height: "18px", borderRadius: "9999px", border: "none",
-                    background: autoFlow ? "var(--accent)" : "var(--border-strong)", cursor: "pointer", transition: "background 200ms", display: "flex", alignItems: "center",
-                  }}
-                  title={autoFlow ? "Auto-flow ON" : "Auto-flow OFF"}
+                  onClick={() => setShowTimerSettings(s => !s)}
+                  style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-faint)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
+                  title="Timer settings"
                 >
-                  <span style={{ position: "absolute", left: autoFlow ? "16px" : "2px", width: "14px", height: "14px", borderRadius: "50%", background: "white", boxShadow: "0 1px 2px rgba(0,0,0,0.2)", transition: "left 200ms", display: "block" }} />
+                  <Settings2 style={{ width: "16px", height: "16px" }} />
                 </button>
               </div>
-              <button
-                onClick={() => setShowTimerSettings(s => !s)}
-                style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-faint)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
-                title="Timer settings"
-              >
-                <Settings2 style={{ width: "16px", height: "16px" }} />
-              </button>
             </div>
 
             {/* Time / Ring Display */}
@@ -354,17 +359,14 @@ export function FocusTunnel() {
                 </svg>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-                  <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "8px" }}>
-                    {timerPhase === 'break' ? 'Break' : `Round ${roundsCompleted + 1}`}
-                  </span>
                   <span style={{
-                    fontSize: "64px",
+                    fontSize: "100px",
                     fontWeight: 500,
                     fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                     fontVariantNumeric: "tabular-nums",
-                    color: "var(--fg)",
+                    color: "var(--accent)",
                     lineHeight: 1,
-                    letterSpacing: "-0.1em",
+                    letterSpacing: "-0.05em",
                   }}>
                     {formatTime(timeRemaining)}
                   </span>
@@ -377,7 +379,7 @@ export function FocusTunnel() {
 
       {/* ── Timer display ───────────────────────────────────────────────────── */}
       {mode === 'timer' && (
-        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
+        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
 
           <div style={{
             // background: "var(--bg-card)",
@@ -390,18 +392,15 @@ export function FocusTunnel() {
             alignItems: "center"
           }}>
             <span style={{
-              fontSize: "80px",
+              fontSize: "120px",
               fontWeight: 400,
               fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
               fontVariantNumeric: "tabular-nums",
               color: "var(--accent)",
               lineHeight: 1,
-              letterSpacing: "-0.1em"
+              letterSpacing: "-0.05em"
             }}>
               {formatStopwatch(sessionElapsed)}
-            </span>
-            <span style={{ fontSize: "11px", color: "var(--accent)", opacity: 0.6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: "12px" }}>
-              {isPaused ? 'Paused' : 'Elapsed'}
             </span>
           </div>
         </div>
@@ -453,7 +452,7 @@ export function FocusTunnel() {
                         <div className="flex-1 min-w-0">
                           <h2
                             className={`font-medium transition-all duration-500 ${isSpotlightOn ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'} ${isChecking ? 'line-through opacity-50' : ''}`}
-                            style={{ color: isChecking ? "var(--fg-muted)" : style.textColor }}
+                            style={{ color: isChecking ? "var(--fg-muted)" : style.textColor, letterSpacing: "-0.03em" }}
                           >
                             {task.title}
                           </h2>
