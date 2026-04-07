@@ -15,6 +15,7 @@ export async function loadSettings(): Promise<void> {
     for (const row of rows) {
       if (typeof row.key === "string" && typeof row.value === "string") {
         localStorage.setItem(row.key, row.value);
+        window.dispatchEvent(new StorageEvent("storage", { key: row.key, newValue: row.value }));
       }
     }
   } catch {
