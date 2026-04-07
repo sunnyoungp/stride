@@ -78,6 +78,12 @@ export function FocusTunnel() {
     });
   }, [allTasks, today]);
 
+  // Ring progress (0–1)
+  const ringProgress =
+    timerPhase === 'break' ? timeRemaining / breakDuration :
+    timerPhase === 'break-prompt' ? 0 :
+    timeRemaining / workDuration;
+
   // Session elapsed ticker
   useEffect(() => {
     if (mode === 'timer' && isPaused) return;
@@ -257,7 +263,7 @@ export function FocusTunnel() {
             background: timerPhase === 'break' ? "var(--bg-subtle)" : "var(--bg-card)",
             border: "1px solid var(--border)",
             borderRadius: "40px",
-            padding: "24px 32px 36px 32px",
+            padding: "24px 32px",
             boxShadow: "var(--shadow-sm)",
             width: "100%",
             maxWidth: "340px",
@@ -267,7 +273,7 @@ export function FocusTunnel() {
             transition: "background 500ms ease"
           }}>
             {/* Top Control Bar */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: "24px", position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", position: "relative" }}>
               <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                 {timerPhase === 'break' ? 'Break Time' : `Round ${roundsCompleted + 1}`}
               </span>
@@ -316,9 +322,9 @@ export function FocusTunnel() {
               )}
             </div>
 
-            {/* Time Display */}
+            {/* Time / Ring Display */}
             {timerPhase === 'break-prompt' ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", margin: "16px 0" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", margin: "40px 0" }}>
                 <span style={{ fontSize: "15px", color: "var(--fg)", fontWeight: 600 }}>Round Complete!</span>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={startBreak} style={{ padding: "10px 24px", background: "var(--accent)", color: "#fff", borderRadius: "9999px", border: "none", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Start Break</button>
@@ -326,21 +332,38 @@ export function FocusTunnel() {
                 </div>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <span style={{ 
-                  fontSize: "80px", 
-                  fontWeight: 400, 
-                  fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif', 
-                  fontVariantNumeric: "tabular-nums", 
-                  color: "var(--fg)", 
-                  lineHeight: 1, 
-                  letterSpacing: "-0.04em",
-                }}>
-                  {formatTime(timeRemaining)}
-                </span>
-                <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: "12px" }}>
-                   {timerPhase === 'break' ? 'Resting' : isPaused ? 'Paused' : 'Focus'}
-                </span>
+              <div style={{ position: "relative", width: "220px", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", margin: "16px 0" }}>
+                <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
+                  <circle cx="110" cy="110" r="96" fill="none" stroke="var(--border-mid)" strokeWidth="14" />
+                  <motion.circle
+                    cx="110" cy="110" r="96"
+                    fill="none"
+                    stroke={timerPhase === 'break' ? "var(--fg-muted)" : "var(--accent)"}
+                    strokeWidth="14"
+                    strokeDasharray={2 * Math.PI * 96}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 96 * (1 - ringProgress) }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 96 * (1 - Math.max(0, Math.min(1, ringProgress))) }}
+                    transition={{ duration: 0.5, ease: "linear" }}
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", zIndex: 1 }}>
+                  <span style={{ 
+                    fontSize: "44px", 
+                    fontWeight: 500, 
+                    fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif', 
+                    fontVariantNumeric: "tabular-nums", 
+                    color: "var(--fg)", 
+                    lineHeight: 1, 
+                    letterSpacing: "-0.04em",
+                  }}>
+                    {formatTime(timeRemaining)}
+                  </span>
+                  <span style={{ fontSize: "12px", color: "var(--fg-muted)", fontWeight: 500 }}>
+                     {timerPhase === 'break' ? `${breakDuration / 60} min` : `${workDuration / 60} min`}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -382,11 +405,11 @@ export function FocusTunnel() {
       {/* ── Main content area ────────────────────────────────────────────────────── */}
       <div
         className={`flex-1 flex flex-col relative z-10 transition-all duration-700 ${isSpotlightOn ? 'items-center justify-center overflow-hidden' : 'items-center overflow-y-auto'}`}
-        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '300px' : mode === 'timer' ? '250px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        style={{ pointerEvents: 'none', paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '370px' : mode === 'timer' ? '300px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         <style dangerouslySetInnerHTML={{ __html: `.flex-1::-webkit-scrollbar { display: none; }` }} />
 
-        <div className={`w-full ${isSpotlightOn ? 'max-w-4xl' : 'max-w-2xl'} px-6 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
+        <div className={`w-full ${isSpotlightOn ? 'max-w-4xl' : 'max-w-2xl'} px-6 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]`} style={{ pointerEvents: 'auto' }}>
           <LayoutGroup>
             <AnimatePresence mode="popLayout" initial={false}>
               {playlist
