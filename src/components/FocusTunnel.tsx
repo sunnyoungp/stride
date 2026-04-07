@@ -122,7 +122,7 @@ export function FocusTunnel() {
 
     const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, isPaused, timerPhase, timeRemaining, workDuration, breakDuration, autoFlow, setTimeRemaining]);
 
   // Scroll active card into view
@@ -232,7 +232,7 @@ export function FocusTunnel() {
     };
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [togglePause, panelOpen, showTimerSettings, toggleMinimized]);
 
   const isVaultLocked = mode === "vault" && sessionElapsed < 300;
@@ -258,68 +258,67 @@ export function FocusTunnel() {
       {/* ── Pomodoro display ────────────────────────────────────────────────────── */}
       {mode === 'pomodoro' && (
         <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
-          
+
           <div style={{
-            background: timerPhase === 'break' ? "var(--bg-subtle)" : "var(--bg-card)",
-            border: "1px solid var(--border)",
+            // background: timerPhase === 'break' ? "var(--bg-subtle)" : "var(--bg-card)",
+            // border: "1px solid var(--border)",
             borderRadius: "40px",
-            padding: "24px 32px",
-            boxShadow: "var(--shadow-sm)",
+            padding: "20px 24px",
+            // boxShadow: "var(--shadow-sm)",
             width: "100%",
             maxWidth: "340px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            transition: "background 500ms ease"
+            transition: "background 500ms ease",
+            position: "relative"
           }}>
-            {/* Top Control Bar */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", position: "relative" }}>
-              <span style={{ fontSize: "11px", color: "var(--fg-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                {timerPhase === 'break' ? 'Break Time' : `Round ${roundsCompleted + 1}`}
-              </span>
+
+            {showTimerSettings && (
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{ position: "absolute", top: "42px", right: "0px", background: "var(--bg-card)", border: "1px solid var(--border-mid)", borderRadius: "12px", padding: "14px 16px", boxShadow: "var(--shadow-lg)", zIndex: 300, minWidth: "210px", display: "flex", flexDirection: "column", gap: "12px" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "12px", color: "var(--fg)", fontWeight: 500 }}>Work</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button onClick={() => setWorkDuration(d => Math.max(300, d - 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontSize: "13px", color: "var(--fg)", fontWeight: 600, minWidth: "52px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{workDuration / 60}m</span>
+                    <button onClick={() => setWorkDuration(d => Math.min(5400, d + 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "12px", color: "var(--fg)", fontWeight: 500 }}>Break</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button onClick={() => setBreakDuration(d => Math.max(60, d - 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontSize: "13px", color: "var(--fg)", fontWeight: 600, minWidth: "52px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{breakDuration / 60}m</span>
+                    <button onClick={() => setBreakDuration(d => Math.min(1800, d + 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Top Controls */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", width: "100%", marginBottom: "16px", gap: "12px", position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-faint)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Auto-flow</span>
                 <button
                   onClick={() => setAutoFlow(!autoFlow)}
                   style={{
-                    position: "relative", width: "28px", height: "16px", borderRadius: "9999px", border: "none",
+                    position: "relative", width: "32px", height: "18px", borderRadius: "9999px", border: "none",
                     background: autoFlow ? "var(--accent)" : "var(--border-strong)", cursor: "pointer", transition: "background 200ms", display: "flex", alignItems: "center",
                   }}
-                  title="Toggle Auto-flow"
+                  title={autoFlow ? "Auto-flow ON" : "Auto-flow OFF"}
                 >
-                  <span style={{ position: "absolute", left: autoFlow ? "14px" : "2px", width: "12px", height: "12px", borderRadius: "50%", background: "white", boxShadow: "0 1px 2px rgba(0,0,0,0.2)", transition: "left 200ms", display: "block" }} />
-                </button>
-                <button
-                  onClick={() => setShowTimerSettings(s => !s)}
-                  style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-muted)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
-                  title="Pomodoro settings"
-                >
-                  <Settings2 style={{ width: "14px", height: "14px" }} />
+                  <span style={{ position: "absolute", left: autoFlow ? "16px" : "2px", width: "14px", height: "14px", borderRadius: "50%", background: "white", boxShadow: "0 1px 2px rgba(0,0,0,0.2)", transition: "left 200ms", display: "block" }} />
                 </button>
               </div>
-
-              {showTimerSettings && (
-                <div
-                  onClick={e => e.stopPropagation()}
-                  style={{ position: "absolute", top: "26px", right: "0px", background: "var(--bg-card)", border: "1px solid var(--border-mid)", borderRadius: "12px", padding: "14px 16px", boxShadow: "var(--shadow-lg)", zIndex: 300, minWidth: "210px", display: "flex", flexDirection: "column", gap: "12px" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>Work</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <button onClick={() => setWorkDuration(d => Math.max(300, d - 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                      <span style={{ fontSize: "13px", color: "var(--fg)", minWidth: "52px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{workDuration / 60}m</span>
-                      <button onClick={() => setWorkDuration(d => Math.min(5400, d + 300))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px", color: "var(--fg-muted)" }}>Break</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <button onClick={() => setBreakDuration(d => Math.max(60, d - 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                      <span style={{ fontSize: "13px", color: "var(--fg)", minWidth: "52px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{breakDuration / 60}m</span>
-                      <button onClick={() => setBreakDuration(d => Math.min(1800, d + 60))} style={{ width: "26px", height: "26px", borderRadius: "6px", background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--fg)", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setShowTimerSettings(s => !s)}
+                style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-faint)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
+                title="Timer settings"
+              >
+                <Settings2 style={{ width: "16px", height: "16px" }} />
+              </button>
             </div>
 
             {/* Time / Ring Display */}
@@ -332,36 +331,42 @@ export function FocusTunnel() {
                 </div>
               </div>
             ) : (
-              <div style={{ position: "relative", width: "220px", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", margin: "16px 0" }}>
-                <svg width="220" height="220" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
-                  <circle cx="110" cy="110" r="96" fill="none" stroke="var(--border-mid)" strokeWidth="14" />
+              <div style={{ position: "relative", width: "240px", height: "240px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="240" height="240" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="pomodoroGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="var(--accent)" />
+                      <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="120" cy="120" r="108" fill="none" stroke="var(--border-mid)" strokeWidth="12" opacity={0.3} />
                   <motion.circle
-                    cx="110" cy="110" r="96"
+                    cx="120" cy="120" r="108"
                     fill="none"
-                    stroke={timerPhase === 'break' ? "var(--fg-muted)" : "var(--accent)"}
-                    strokeWidth="14"
-                    strokeDasharray={2 * Math.PI * 96}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 96 * (1 - ringProgress) }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 96 * (1 - Math.max(0, Math.min(1, ringProgress))) }}
+                    stroke="url(#pomodoroGrad)"
+                    strokeWidth="12"
+                    strokeDasharray={2 * Math.PI * 108}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 108 * (1 - ringProgress) }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 108 * (1 - Math.max(0, Math.min(1, ringProgress))) }}
                     transition={{ duration: 0.5, ease: "linear" }}
                     strokeLinecap="round"
                   />
                 </svg>
 
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", zIndex: 1 }}>
-                  <span style={{ 
-                    fontSize: "44px", 
-                    fontWeight: 500, 
-                    fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif', 
-                    fontVariantNumeric: "tabular-nums", 
-                    color: "var(--fg)", 
-                    lineHeight: 1, 
-                    letterSpacing: "-0.04em",
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
+                  <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "8px" }}>
+                    {timerPhase === 'break' ? 'Break' : `Round ${roundsCompleted + 1}`}
+                  </span>
+                  <span style={{
+                    fontSize: "64px",
+                    fontWeight: 500,
+                    fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
+                    fontVariantNumeric: "tabular-nums",
+                    color: "var(--fg)",
+                    lineHeight: 1,
+                    letterSpacing: "-0.1em",
                   }}>
                     {formatTime(timeRemaining)}
-                  </span>
-                  <span style={{ fontSize: "12px", color: "var(--fg-muted)", fontWeight: 500 }}>
-                     {timerPhase === 'break' ? `${breakDuration / 60} min` : `${workDuration / 60} min`}
                   </span>
                 </div>
               </div>
@@ -373,29 +378,29 @@ export function FocusTunnel() {
       {/* ── Timer display ───────────────────────────────────────────────────── */}
       {mode === 'timer' && (
         <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 0, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", padding: "0 16px" }}>
-          
+
           <div style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
+            // background: "var(--bg-card)",
+            // border: "1px solid var(--border)",
             borderRadius: "40px",
-            padding: "48px 64px",
-            boxShadow: "var(--shadow-sm)",
+            padding: "32px 48px",
+            // boxShadow: "var(--shadow-sm)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center"
           }}>
-            <span style={{ 
-              fontSize: "80px", 
-              fontWeight: 400, 
-              fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif', 
-              fontVariantNumeric: "tabular-nums", 
-              color: "var(--fg)", 
-              lineHeight: 1, 
-              letterSpacing: "-0.04em"
+            <span style={{
+              fontSize: "80px",
+              fontWeight: 400,
+              fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
+              fontVariantNumeric: "tabular-nums",
+              color: "var(--accent)",
+              lineHeight: 1,
+              letterSpacing: "-0.1em"
             }}>
               {formatStopwatch(sessionElapsed)}
             </span>
-            <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: "12px" }}>
+            <span style={{ fontSize: "11px", color: "var(--accent)", opacity: 0.6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: "12px" }}>
               {isPaused ? 'Paused' : 'Elapsed'}
             </span>
           </div>
@@ -405,11 +410,11 @@ export function FocusTunnel() {
       {/* ── Main content area ────────────────────────────────────────────────────── */}
       <div
         className={`flex-1 flex flex-col relative z-10 transition-all duration-700 ${isSpotlightOn ? 'items-center justify-center overflow-hidden' : 'items-center overflow-y-auto'}`}
-        style={{ pointerEvents: 'none', paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '370px' : mode === 'timer' ? '300px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '300px' : mode === 'timer' ? '250px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         <style dangerouslySetInnerHTML={{ __html: `.flex-1::-webkit-scrollbar { display: none; }` }} />
 
-        <div className={`w-full ${isSpotlightOn ? 'max-w-4xl' : 'max-w-2xl'} px-6 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]`} style={{ pointerEvents: 'auto' }}>
+        <div className={`w-full ${isSpotlightOn ? 'max-w-4xl' : 'max-w-2xl'} px-6 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
           <LayoutGroup>
             <AnimatePresence mode="popLayout" initial={false}>
               {playlist
@@ -430,8 +435,11 @@ export function FocusTunnel() {
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: isActive ? 1 : 0.4, scale: isActive ? 1 : 0.98, y: 0 }}
                       exit={{ opacity: 0, x: -60, scale: 0.9, transition: { duration: 0.5, ease: "anticipate" } }}
-                      transition={{ type: "spring", stiffness: 350, damping: 38 }}
-                      className="relative w-full rounded-[32px] p-6 md:p-12 mb-4 last:mb-0 transition-all duration-700 shadow-none"
+                      transition={{
+                        duration: 0.5,
+                        ease: [0.33, 1, 0.68, 1] // Custom easeOutQuart
+                      }}
+                      className="relative w-full rounded-[32px] p-10 md:p-14 mb-4 last:mb-0 transition-all duration-700 shadow-none"
                       style={{ background: style.bg, border: style.border }}
                     >
                       <div className="flex items-center gap-10">
