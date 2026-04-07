@@ -102,7 +102,7 @@ export function RescheduleDatePopover({
         left: pos.left,
         top: pos.top,
         width: 220,
-        zIndex: 9999,
+        zIndex: 10002,
         background: "var(--bg-card)",
         backdropFilter: "var(--glass-blur-card)",
         WebkitBackdropFilter: "var(--glass-blur-card)",
