@@ -32,7 +32,7 @@ export function FocusTunnel() {
   const createTask = useTaskStore(state => state.createTask);
   const allTasks = useTaskStore(state => state.tasks);
 
-  const { playlist, currentIndex, timeRemaining, mode, isPaused, duration } = focusState;
+  const { playlist, currentIndex, timeRemaining, mode, isPaused, duration, autoFlow } = focusState;
   const currentTask = playlist[currentIndex];
 
   // ── Timer phase state ────────────────────────────────────────────────────────
@@ -94,11 +94,12 @@ export function FocusTunnel() {
     }
   }, [currentIndex, isSpotlightOn]);
 
-  // Session elapsed ticker
+  // Session elapsed ticker — pauses in stopwatch mode when session is paused
   useEffect(() => {
+    if (mode === 'stopwatch' && isPaused) return;
     const t = setInterval(() => setSessionElapsed(p => p + 1), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [mode, isPaused]);
 
   // Timer countdown with phase transitions
   useEffect(() => {
@@ -108,7 +109,12 @@ export function FocusTunnel() {
 
     if (timeRemaining <= 0) {
       if (timerPhase === 'work') {
-        setTimerPhase('break-prompt');
+        if (autoFlow) {
+          setTimerPhase('break');
+          setTimeRemaining(breakDuration);
+        } else {
+          setTimerPhase('break-prompt');
+        }
       } else if (timerPhase === 'break') {
         setRoundsCompleted(r => r + 1);
         setTimerPhase('work');
@@ -120,7 +126,7 @@ export function FocusTunnel() {
     const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, isPaused, timerPhase, timeRemaining, workDuration, setTimeRemaining]);
+  }, [mode, isPaused, timerPhase, timeRemaining, workDuration, breakDuration, autoFlow, setTimeRemaining]);
 
   // Focus quick-add input when panel opens
   useEffect(() => {
@@ -195,6 +201,14 @@ export function FocusTunnel() {
     setIsDraggingPill(false);
   };
 
+  const formatStopwatch = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -248,7 +262,7 @@ export function FocusTunnel() {
             <button
               onClick={() => setShowTimerSettings(s => !s)}
               style={{ color: showTimerSettings ? "var(--accent)" : "var(--fg-faint)", padding: "2px", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
-              title="Timer settings"
+              title="Pomodoro settings"
             >
               <Settings2 style={{ width: "13px", height: "13px" }} />
             </button>
@@ -335,10 +349,22 @@ export function FocusTunnel() {
         </div>
       )}
 
+      {/* ── Stopwatch display ───────────────────────────────────────────────────── */}
+      {mode === 'stopwatch' && (
+        <div style={{ position: "absolute", top: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 70, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>
+            {isPaused ? 'Paused' : 'Elapsed'}
+          </span>
+          <span style={{ fontSize: "64px", fontWeight: 300, fontFamily: '"SF Pro Display", -apple-system, sans-serif', color: "var(--fg)", lineHeight: 1, letterSpacing: "-0.02em" }}>
+            {formatStopwatch(sessionElapsed)}
+          </span>
+        </div>
+      )}
+
       {/* ── Main content area ────────────────────────────────────────────────────── */}
       <div
         className={`flex-1 flex flex-col transition-all duration-700 ${isSpotlightOn ? 'items-center justify-center overflow-hidden' : 'items-center overflow-y-auto'}`}
-        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'timer' ? '300px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'timer' ? '300px' : mode === 'stopwatch' ? '200px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         <style dangerouslySetInnerHTML={{ __html: `.flex-1::-webkit-scrollbar { display: none; }` }} />
 
@@ -443,7 +469,7 @@ export function FocusTunnel() {
             {isSpotlightOn ? <Eye className="w-6 h-6" strokeWidth={1.5} /> : <EyeOff className="w-6 h-6" strokeWidth={1.5} />}
           </button>
 
-          {mode === 'timer' && (
+          {(mode === 'timer' || mode === 'stopwatch') && (
             <button onClick={togglePause} className="p-3 focus:outline-none" style={{ color: "var(--accent)" }}>
               {isPaused ? <Play className="w-6 h-6 fill-current" /> : <Pause className="w-6 h-6 fill-current" />}
             </button>

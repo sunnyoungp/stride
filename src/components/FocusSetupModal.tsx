@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { X, Zap, Timer, Lock, Plus, GripVertical, Minus, Check } from "lucide-react";
+import { X, Zap, Timer, Lock, Plus, GripVertical, Minus, Check, Watch } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useFocusStore, FocusMode } from "@/store/focusStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { Task } from "@/types/index";
 
 export function FocusSetupModal() {
-  const { isSetupModalOpen, setSetupModalOpen, startFocusSession } = useFocusStore();
+  const { isSetupModalOpen, setSetupModalOpen, startFocusSession, focusState } = useFocusStore();
   const allTasks = useTaskStore((state) => state.tasks);
 
   const [selectedMode, setSelectedMode] = useState<FocusMode>("tunnel");
   const [playlist, setPlaylist] = useState<Task[]>([]);
+  const [autoFlow, setAutoFlow] = useState(false);
 
   const eligibleTasks = useMemo(() => {
     const todayStr = new Date().toLocaleDateString('en-CA');
@@ -28,10 +29,19 @@ export function FocusSetupModal() {
     return eligibleTasks.filter(t => !playlistIds.has(t.id));
   }, [eligibleTasks, playlist]);
 
+  // When modal opens, pre-populate from active session (playlist persistence across mode switches)
   useEffect(() => {
-    if (!isSetupModalOpen) {
+    if (isSetupModalOpen) {
+      if (focusState.isActive && focusState.playlist.length > 0) {
+        setPlaylist(focusState.playlist);
+        setSelectedMode(focusState.mode ?? "tunnel");
+        setAutoFlow(focusState.autoFlow);
+      }
+    } else {
       setPlaylist([]);
+      setAutoFlow(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSetupModalOpen]);
 
   if (!isSetupModalOpen) return null;
@@ -46,7 +56,8 @@ export function FocusSetupModal() {
 
   const handleStart = () => {
     if (playlist.length === 0) return;
-    startFocusSession(selectedMode, playlist, allTasks, 1500);
+    const duration = selectedMode === 'stopwatch' ? 0 : 1500;
+    startFocusSession(selectedMode, playlist, allTasks, duration, autoFlow);
   };
 
   return (
@@ -105,20 +116,27 @@ export function FocusSetupModal() {
               fontSize: "10px", fontWeight: 700, color: "var(--fg-muted)",
               textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "16px",
             }}>Session Mode</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
               <ModeCard
-                title="Tunnel"
-                description="The pure essentials only."
+                title="Flow"
+                description="Pure focus, no distractions."
                 icon={<Zap className="w-5 h-5" />}
                 isSelected={selectedMode === "tunnel"}
                 onClick={() => setSelectedMode("tunnel")}
               />
               <ModeCard
-                title="Timer"
-                description="Timed deep work blocks."
+                title="Pomodoro"
+                description="Timed work and break intervals."
                 icon={<Timer className="w-5 h-5" />}
                 isSelected={selectedMode === "timer"}
                 onClick={() => setSelectedMode("timer")}
+              />
+              <ModeCard
+                title="Stopwatch"
+                description="Count up, no time limit."
+                icon={<Watch className="w-5 h-5" />}
+                isSelected={selectedMode === "stopwatch"}
+                onClick={() => setSelectedMode("stopwatch")}
               />
               <ModeCard
                 title="Vault"
@@ -128,6 +146,50 @@ export function FocusSetupModal() {
                 onClick={() => setSelectedMode("vault")}
               />
             </div>
+
+            {/* Pomodoro-only: Auto-flow toggle */}
+            {selectedMode === "timer" && (
+              <div style={{
+                marginTop: "12px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 16px", borderRadius: "10px",
+                background: "var(--bg-subtle)", border: "1px solid var(--border)",
+              }}>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg)" }}>Auto-flow</div>
+                  <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px" }}>
+                    Cycle through work and breaks automatically without prompts
+                  </div>
+                </div>
+                <button
+                  onClick={() => setAutoFlow(v => !v)}
+                  style={{
+                    position: "relative",
+                    width: "40px", height: "22px",
+                    borderRadius: "9999px",
+                    border: "none",
+                    background: autoFlow ? "var(--accent)" : "var(--border-strong)",
+                    cursor: "pointer",
+                    transition: "background 200ms",
+                    flexShrink: 0,
+                    marginLeft: "16px",
+                  }}
+                  aria-label="Toggle auto-flow"
+                >
+                  <span style={{
+                    position: "absolute",
+                    top: "2px",
+                    left: autoFlow ? "20px" : "2px",
+                    width: "18px", height: "18px",
+                    borderRadius: "50%",
+                    background: "white",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    transition: "left 200ms",
+                    display: "block",
+                  }} />
+                </button>
+              </div>
+            )}
           </section>
 
           {/* Playlist */}

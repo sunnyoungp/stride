@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Task } from '../types';
 
-export type FocusMode = 'tunnel' | 'timer' | 'vault' | null;
+export type FocusMode = 'tunnel' | 'timer' | 'vault' | 'stopwatch' | null;
 
 export interface FocusState {
   isActive: boolean;
@@ -11,6 +11,7 @@ export interface FocusState {
   timeRemaining: number;
   duration: number;
   isPaused: boolean;
+  autoFlow: boolean;
 }
 
 export interface FocusStore {
@@ -25,7 +26,7 @@ export interface FocusStore {
   removeTaskFromPlaylist: (taskId: string) => void;
   // Note: selectedTasks are the parents you picked in the CMD+J modal
   // allTasks are all tasks from useTaskStore.getState().tasks
-  startFocusSession: (mode: FocusMode, selectedTasks: Task[], allTasks: Task[], durationInSeconds: number) => void;
+  startFocusSession: (mode: FocusMode, selectedTasks: Task[], allTasks: Task[], durationInSeconds: number, autoFlow?: boolean) => void;
   /** Atomically wipes all session state — call on ESC and Leave. Never call on minimize. */
   clearSession: () => void;
   endFocusSession: () => void;
@@ -65,6 +66,7 @@ const initialFocusState: FocusState = {
   timeRemaining: 0,
   duration: 0,
   isPaused: false,
+  autoFlow: false,
 };
 
 export const useFocusStore = create<FocusStore>((set) => ({
@@ -109,7 +111,7 @@ export const useFocusStore = create<FocusStore>((set) => ({
     };
   }),
 
-  startFocusSession: (mode, selectedTasks, allTasks, durationInSeconds) => {
+  startFocusSession: (mode, selectedTasks, allTasks, durationInSeconds, autoFlow = false) => {
     // Process the list to include the subtask objects
     const flatPlaylist = flattenTasksWithSubtasks(selectedTasks, allTasks);
 
@@ -125,6 +127,7 @@ export const useFocusStore = create<FocusStore>((set) => ({
         timeRemaining: durationInSeconds,
         duration: durationInSeconds,
         isPaused: false,
+        autoFlow,
       }
     });
   },

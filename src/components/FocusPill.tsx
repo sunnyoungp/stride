@@ -161,7 +161,7 @@ export function FocusPill() {
         {currentTask?.title ?? "Focus session"}
       </span>
 
-      {/* Timer countdown */}
+      {/* Timer countdown — Pomodoro mode */}
       {mode === "timer" && (
         <span
           className="text-sm font-mono flex-shrink-0"
@@ -171,8 +171,8 @@ export function FocusPill() {
         </span>
       )}
 
-      {/* Pause / Resume — timer mode only */}
-      {mode === "timer" && (
+      {/* Pause / Resume — Pomodoro and Stopwatch modes */}
+      {(mode === "timer" || mode === "stopwatch") && (
         <button
           onClick={togglePause}
           className="flex-shrink-0 p-1 rounded-full transition-colors hover:bg-[var(--bg-hover)]"
