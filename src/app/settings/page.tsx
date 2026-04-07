@@ -301,6 +301,22 @@ function AppearanceCard() {
     setCSSVar("--tint-s", `${s}%`);
   };
 
+  const resetAccent = () => {
+    localStorage.removeItem("stride-accent");
+    void saveSettings("stride-accent", ""); 
+    window.dispatchEvent(new StorageEvent("storage", { key: "stride-accent", newValue: null }));
+    
+    // We update local state to null/empty so UI un-selects presets
+    setAccentState("");
+    
+    // Re-apply theme's base accent to DOM immediately
+    if (typeof document !== "undefined") {
+      const themeSetting = localStorage.getItem("stride-theme") ?? "neutral-dark";
+      const themeObj = THEMES.find(t => t.id === themeSetting) || THEMES[0];
+      setCSSVar("--accent", themeObj["--accent"]);
+    }
+  };
+
   return (
     <SettingCard id="appearance" title="Appearance">
       <div style={{ paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
@@ -400,10 +416,24 @@ function AppearanceCard() {
           <input
             ref={colorInputRef}
             type="color"
-            value={accent}
+            value={accent || "#e8603c"}
             onChange={(e) => applyAccent(e.target.value)}
             style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
           />
+          {accent && (
+            <button
+              type="button"
+              onClick={resetAccent}
+              style={{
+                marginLeft: 12,
+                fontSize: 12, color: "var(--fg-faint)",
+                background: "none", border: "1px solid var(--border)",
+                borderRadius: 8, padding: "4px 10px", cursor: "pointer",
+              }}
+            >
+              Reset
+            </button>
+          )}
         </div>
       </SettingRow>
 

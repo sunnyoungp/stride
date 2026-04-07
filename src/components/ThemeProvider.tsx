@@ -43,9 +43,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((id: ThemeId) => {
     setCurrentTheme(id);
-    // Clear any stored accent so the theme's own accent takes effect
-    localStorage.removeItem("stride-accent");
     applyTheme(id);
+    // Re-apply custom accent if it exists so theme doesn't overwrite it
+    const customAccent = localStorage.getItem("stride-accent");
+    if (customAccent) {
+      document.documentElement.style.setProperty("--accent", customAccent);
+    }
     void saveSettings("stride-theme", id);
   }, []);
 
