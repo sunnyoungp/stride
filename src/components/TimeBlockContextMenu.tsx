@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { appConfirm } from "@/lib/confirm";
 import type { TimeBlock } from "@/types/index";
 
 type Props = {
@@ -65,7 +66,7 @@ export function TimeBlockContextMenu({ timeBlock, position, onClose, onEdit, onD
 
       <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
-      <button type="button" onClick={() => { if (confirm(`Delete "${timeBlock.title}"?`)) onDelete(); onClose(); }}
+      <button type="button" onClick={() => { void appConfirm(`Delete "${timeBlock.title}"?`).then((ok) => { if (ok) { onDelete(); onClose(); } }); }}
         className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
         style={{ color: "#ef4444" }}
       >Delete Block</button>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDocumentStore } from "@/store/documentStore";
+import { appConfirm } from "@/lib/confirm";
 import type { StrideDocument } from "@/types/index";
 
 const PINNED_DOCS_KEY = "stride-pinned-docs";
@@ -67,7 +68,7 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
   };
 
   const onDelete = async () => {
-    if (confirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {
+    if (await appConfirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {
       try {
         await deleteDocument(doc.id);
         onClose();

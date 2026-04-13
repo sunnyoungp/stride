@@ -10,6 +10,7 @@ import type { Task, TaskPriority } from "@/types/index";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { RescheduleDatePopover } from "@/components/TaskList";
+import { appConfirm } from "@/lib/confirm";
 
 type Props = {
   task: Task;
@@ -456,7 +457,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           <div className="flex-1" />
 
           <button
-            onClick={async () => { if (confirm("Delete this task?")) { await deleteTask(task.id); onClose(); } }}
+            onClick={async () => { if (await appConfirm("Delete this task?")) { await deleteTask(task.id); onClose(); } }}
             title="Delete task"
             className="flex items-center justify-center rounded-lg p-2 transition-all duration-150 ease-out hover:bg-red-500/10 hover:text-red-400"
             style={{ color: "var(--fg-faint)" }}

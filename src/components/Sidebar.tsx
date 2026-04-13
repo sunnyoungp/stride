@@ -12,6 +12,7 @@ import { useTaskStore } from "@/store/taskStore";
 import { useDragStore } from "@/store/dragStore";
 import { useUIStore } from "@/store/uiStore";
 import { SectionContextMenu } from "@/components/SectionContextMenu";
+import { appConfirm } from "@/lib/confirm";
 import { ProjectContextMenu } from "@/components/ProjectContextMenu";
 import { useDocumentStore } from "@/store/documentStore";
 import type { TaskSection, Project } from "@/types/index";
@@ -1040,9 +1041,9 @@ export function Sidebar() {
             // Capture before onClose() runs (MenuItem calls onClose after this returns)
             const id    = sectionMenu.section.id;
             const title = sectionMenu.section.title;
-            if (window.confirm(`Delete "${title}"? Tasks in this section will become unsorted.`)) {
-              void deleteSection(id);
-            }
+            void appConfirm(`Delete "${title}"? Tasks in this section will become unsorted.`).then((ok) => {
+              if (ok) void deleteSection(id);
+            });
           }}
         />
       )}

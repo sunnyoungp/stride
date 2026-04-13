@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import type { Task, TaskPriority } from "@/types/index";
 import { DatePickerContent } from "@/components/ui/DatePicker";
+import { appConfirm } from "@/lib/confirm";
 
 type Props = {
   task: Task;
@@ -53,7 +54,7 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
   const onDelete = async (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm("Delete this task?")) {
+    if (await appConfirm("Delete this task?")) {
       await deleteTask(task.id);
       onClose();
     }

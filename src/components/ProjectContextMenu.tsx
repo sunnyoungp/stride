@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/store/projectStore";
+import { appConfirm } from "@/lib/confirm";
 import type { Project } from "@/types/index";
 
 type Props = {
@@ -39,7 +40,7 @@ export function ProjectContextMenu({ project, position, onClose }: Props) {
   };
 
   const onDelete = async () => {
-    if (window.confirm(`Delete "${project.title}"?`)) await deleteProject(project.id);
+    if (await appConfirm(`Delete "${project.title}"?`)) await deleteProject(project.id);
     onClose();
   };
 

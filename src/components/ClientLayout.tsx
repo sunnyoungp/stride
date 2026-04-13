@@ -19,6 +19,7 @@ import { FocusTunnel } from "@/components/FocusTunnel";
 import { FocusPill } from "@/components/FocusPill";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MobileFABs } from "@/components/MobileFABs";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const PANEL_RADIUS = 14;
 
@@ -122,6 +123,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <SettingsApplier />
                 <GlobalShortcuts />
                 <FocusSetupModal />
+                <ConfirmDialog />
             </ThemeProvider>
         );
     }
@@ -165,6 +167,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <SettingsApplier />
                 <GlobalShortcuts />
                 <FocusSetupModal />
+                <ConfirmDialog />
             </div>
         </ThemeProvider>
     );

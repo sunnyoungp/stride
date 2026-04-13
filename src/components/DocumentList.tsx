@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDocumentStore } from "@/store/documentStore";
 import { DocumentContextMenu } from "@/components/DocumentContextMenu";
+import { appConfirm } from "@/lib/confirm";
 import type { StrideDocument } from "@/types/index";
 
 function formatUpdatedAt(value: string): string {
@@ -88,7 +89,7 @@ export function DocumentList() {
                 style={{ color: "#ef4444" }}
                 onClick={async (e) => {
                   e.stopPropagation();
-                  if (confirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {
+                  if (await appConfirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {
                     try {
                       await deleteDocument(doc.id);
                     } catch {

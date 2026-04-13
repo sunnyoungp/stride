@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
+import { appConfirm } from "@/lib/confirm";
 import type { RoutineTemplate, TimeBlock } from "@/types/index";
 
 const supabase = createClient();
@@ -214,7 +215,7 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
   };
 
   const deleteTemplate: RoutineTemplateStore["deleteTemplate"] = async (id) => {
-    if (!window.confirm("Delete this routine template?")) return;
+    if (!await appConfirm("Delete this routine template?")) return;
     const { error } = await supabase.from("routine_templates").delete().eq("id", id);
     if (error) console.error("Failed to delete template:", error);
     set({ templates: get().templates.filter((t) => t.id !== id) });

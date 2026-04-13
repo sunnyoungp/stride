@@ -18,6 +18,7 @@ import type { Task, TaskPriority, TaskSection } from "@/types/index";
 import { useSectionStore } from "@/store/sectionStore";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
+import { appConfirm } from "@/lib/confirm";
 import { useDragStore } from "@/store/dragStore";
 import { AddTaskRow, friendlyDate, getNotesPreview, isOverdue, PriorityFlag, SelectionActionBar } from "@/components/TaskList";
 import type { SortBy } from "@/components/SortFilterPopover";
@@ -1116,9 +1117,9 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
             className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
             style={{ color: "#ef4444" }}
             onClick={() => {
-              if (confirm(`Delete subsection "${subContextMenu.title}"? Tasks inside will be moved to the main section.`)) {
-                void deleteSubsection(subContextMenu.id);
-              }
+              void appConfirm(`Delete subsection "${subContextMenu.title}"? Tasks inside will be moved to the main section.`).then((ok) => {
+                if (ok) void deleteSubsection(subContextMenu.id);
+              });
               setSubContextMenu(null);
             }}
           >
