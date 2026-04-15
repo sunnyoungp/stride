@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
+import { isDemoMode } from '@/lib/demo/storage'
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -13,9 +14,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!initialized) return
     const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth')
-    if (!user && !isAuthRoute) {
+    // Demo mode counts as authenticated — let visitors through without a real session
+    if (!user && !isDemoMode() && !isAuthRoute) {
       router.replace('/login')
-    } else if (user && isAuthRoute) {
+    } else if ((user || isDemoMode()) && isAuthRoute) {
       router.replace('/')
     }
   }, [user, initialized, pathname, router])

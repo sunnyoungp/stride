@@ -15,7 +15,7 @@ export function getThemeById(id: string): ThemeId {
   // Legacy value migration
   if (id === 'dark') return 'warm-dark';
   if (id === 'light') return 'neutral-light';
-  if (id === 'system') return 'neutral-dark';
+  if (id === 'system') return 'neutral-light';
   const found = THEMES.find(t => t.id === id);
-  return found ? (id as ThemeId) : 'neutral-dark';
+  return found ? (id as ThemeId) : 'neutral-light';
 }

@@ -69,13 +69,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         supabase.auth.getSession().then(({ data }: any) => {
             const user = data.session?.user ?? null;
             setUser(user);
-            setInitialized(true);
             if (user) {
                 void loadSettings();
                 void useTaskStore.getState().loadTasks();
                 void useProjectStore.getState().loadProjects();
             } else {
                 // No session → enter demo mode and inject data directly into stores
+                // Must call setDemoMode BEFORE setInitialized so AuthGuard sees it
                 setDemoMode(true);
                 const demo = initDemoData();
 
@@ -97,6 +97,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     isLoading: false,
                 });
             }
+            // Set initialized AFTER demo mode flag is written so AuthGuard sees isDemoMode() === true
+            setInitialized(true);
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
             setUser(session?.user ?? null);

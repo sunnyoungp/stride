@@ -352,4 +352,4 @@ export const THEMES = [
 ] as const;
 
 export type ThemeId = typeof THEMES[number]['id'];
-export const DEFAULT_THEME: ThemeId = 'neutral-dark';
+export const DEFAULT_THEME: ThemeId = 'neutral-light';
