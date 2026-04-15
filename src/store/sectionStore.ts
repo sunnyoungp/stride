@@ -3,6 +3,7 @@
 import { create } from "zustand";
 
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/storage";
 import type { DeletedSection } from "@/db/index";
 import { useTaskStore } from "@/store/taskStore";
 import type { TaskSection, TaskSubsection } from "@/types/index";
@@ -109,6 +110,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
     if (get()?.sectionsLoaded) return;
     try {
       const { data: rows, error } = await supabase.from("sections").select("*");
+      if (isDemoMode()) return; // bail if demo mode activated while HTTP request was in-flight
       if (error) throw error;
 
       if (rows && rows.length > 0) {
@@ -144,6 +146,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
   const loadDeletedSections = async () => {
     try {
       const { data: rows } = await supabase.from("deleted_sections").select("*");
+      if (isDemoMode()) return;
       if (rows) {
         const deleted = (rows.map(deletedSectionFromRow) as DeletedSection[])
           .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
@@ -221,6 +224,7 @@ export const useSectionStore = create<SectionStore>((set, get) => {
     if (get()?.subsectionsLoaded) return;
     try {
       const { data: rows, error } = await supabase.from("task_subsections").select("*");
+      if (isDemoMode()) return;
       if (error) throw error;
       const subsections = ((rows ?? []).map(subsectionFromRow) as TaskSubsection[])
         .sort((a, b) => a.order - b.order);

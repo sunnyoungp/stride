@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/storage";
 import type { StrideDocument } from "@/types/index";
 
 const supabase = createClient();
@@ -53,6 +54,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
   const loadDocuments: DocumentStore["loadDocuments"] = async () => {
     try {
       const { data: rows, error } = await supabase.from("documents").select("*");
+      if (isDemoMode()) return;
       if (error) throw error;
       set({ documents: (rows ?? []).map(documentFromRow) });
       void get().cleanOrphanedTaskRefs();

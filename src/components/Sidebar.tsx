@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode, setDemoMode } from "@/lib/demo/storage";
 
 import { useSectionStore } from "@/store/sectionStore";
 import { useProjectStore } from "@/store/projectStore";
@@ -432,7 +433,14 @@ export function Sidebar() {
 
   const router = useRouter();
 
+  const [isDemo, setIsDemo] = useState(() => typeof window !== "undefined" && isDemoMode());
+
   const handleSignOut = async () => {
+    if (isDemo) {
+      setDemoMode(false);
+      router.push("/login");
+      return;
+    }
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -597,19 +605,26 @@ export function Sidebar() {
 
         <div className="flex-1" />
 
-        {/* Sign out */}
+        {/* Demo / Sign out */}
         <button
           type="button"
           onClick={handleSignOut}
-          title="Sign out"
+          title={isDemo ? "Sign in" : "Sign out"}
           className="flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-          style={{ color: "var(--fg-muted)" }}
+          style={{ color: isDemo ? "var(--accent)" : "var(--fg-muted)" }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-            <path d="M9.5 10L13 7l-3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-            <line x1="13" y1="7" x2="5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-          </svg>
+          {isDemo ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="4.5" r="2" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M2 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M9.5 10L13 7l-3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="13" y1="7" x2="5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          )}
         </button>
 
         {/* Theme toggle */}
@@ -961,6 +976,31 @@ export function Sidebar() {
       {/* ── Spacer ── */}
       <div className="flex-1" />
 
+      {/* ── Demo mode banner ── */}
+      {isDemo && (
+        <div className="flex-none px-3 pb-2">
+          <div
+            className="rounded-xl px-3 py-2.5 text-center"
+            style={{ background: "var(--accent-bg)", border: "1px solid var(--glass-border)" }}
+          >
+            <p className="text-[11px] font-medium" style={{ color: "var(--accent)" }}>
+              Demo mode
+            </p>
+            <p className="mt-0.5 text-[10px]" style={{ color: "var(--fg-muted)" }}>
+              Data is stored locally
+            </p>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="mt-2 w-full rounded-lg py-1 text-[11px] font-medium transition-all duration-150"
+              style={{ background: "var(--accent)", color: "white" }}
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Bottom bar ── */}
       <div className="flex-none px-3 pb-5 pt-3">
         <div className="h-px mb-3" style={{ background: "var(--border)" }} />
@@ -1005,19 +1045,21 @@ export function Sidebar() {
               </svg>
             )}
           </button>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            title="Sign out"
-            className="flex h-8 w-8 flex-none items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
-            style={{ color: "var(--fg-muted)" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-              <path d="M9.5 10L13 7l-3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="13" y1="7" x2="5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-            </svg>
-          </button>
+          {!isDemo && (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              title="Sign out"
+              className="flex h-8 w-8 flex-none items-center justify-center rounded-xl transition-all duration-150 ease-out hover:bg-[var(--bg-hover)]"
+              style={{ color: "var(--fg-muted)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M9.5 10L13 7l-3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="13" y1="7" x2="5" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/storage";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import { appConfirm } from "@/lib/confirm";
 import type { RoutineTemplate, TimeBlock } from "@/types/index";
@@ -82,6 +83,7 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
 
     try {
       const { data: rows, error } = await supabase.from("routine_templates").select("*");
+      if (isDemoMode()) return;
       if (error) throw error;
 
       let templates: RoutineTemplate[] = (rows ?? []).map(templateFromRow);

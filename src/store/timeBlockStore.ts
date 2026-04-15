@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/storage";
 import type { TimeBlock } from "@/types/index";
 
 const supabase = createClient();
@@ -74,6 +75,7 @@ export const useTimeBlockStore = create<TimeBlockStore>((set, get) => {
         supabase.from("time_blocks").select("*"),
         supabase.from("tasks").select("id"),
       ]);
+      if (isDemoMode()) return;
 
       const taskIdSet = new Set((taskRows ?? []).map((t: Record<string, unknown>) => t.id as string));
       const blocks = (blockRows ?? []).map(timeBlockFromRow);

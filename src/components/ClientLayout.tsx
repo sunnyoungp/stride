@@ -7,6 +7,12 @@ import { useAuthStore } from "@/store/authStore";
 import { createClient } from "@/lib/supabase/client";
 import { useTaskStore } from "@/store/taskStore";
 import { useProjectStore } from "@/store/projectStore";
+import { useSectionStore } from "@/store/sectionStore";
+import { useDocumentStore } from "@/store/documentStore";
+import { useTimeBlockStore } from "@/store/timeBlockStore";
+import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
+import { setDemoMode } from "@/lib/demo/storage";
+import { initDemoData } from "@/lib/demo/data";
 import { loadSettings } from "@/lib/settings";
 import { Sidebar } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -61,12 +67,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     useEffect(() => {
         const supabase = createClient();
         supabase.auth.getSession().then(({ data }: any) => {
-            setUser(data.session?.user ?? null);
+            const user = data.session?.user ?? null;
+            setUser(user);
             setInitialized(true);
-            if (data.session?.user) {
+            if (user) {
                 void loadSettings();
                 void useTaskStore.getState().loadTasks();
                 void useProjectStore.getState().loadProjects();
+            } else {
+                // No session → enter demo mode and inject data directly into stores
+                setDemoMode(true);
+                const demo = initDemoData();
+
+                useSectionStore.setState({
+                    sections: demo.sections,
+                    subsections: [],
+                    deletedSections: [],
+                    sectionsLoaded: true,
+                    subsectionsLoaded: true,
+                    isLoading: false,
+                });
+                useTaskStore.setState({ tasks: demo.tasks, isLoading: false });
+                useDocumentStore.setState({ documents: demo.documents });
+                useProjectStore.setState({ projects: demo.projects });
+                useTimeBlockStore.setState({ timeBlocks: demo.timeBlocks });
+                useRoutineTemplateStore.setState({
+                    templates: demo.templates,
+                    isLoaded: true,
+                    isLoading: false,
+                });
             }
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
