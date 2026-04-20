@@ -483,7 +483,7 @@ function KanbanColumnView({
     setColSortRef(node);
   };
 
-  const color = column.color ?? "#94a3b8";
+  const color = column.color ?? "var(--neutral)";
   const [addingAt, setAddingAt] = useState<"top" | "bottom" | null>(null);
 
   // Separate top-level cards (parents + orphan subtasks) from same-column subtasks
@@ -799,7 +799,7 @@ export function KanbanBoard({ columns, allTasks, onTaskMove, onTaskClick, onTask
             <div style={{ transform: "scale(0.95)", boxShadow: "var(--shadow-float)" }}>
               <KanbanCardVisual
                 task={activeTask}
-                accentColor={activeColumn.color ?? "#94a3b8"}
+                accentColor={activeColumn.color ?? "var(--neutral)"}
                 allTasks={allTasks}
                 isSelected={selectedIds.has(activeTask.id)}
               />

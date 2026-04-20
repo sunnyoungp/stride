@@ -98,6 +98,8 @@ export function SortFilterPopover({
   return (
     <div
       ref={ref}
+      role="menu"
+      aria-label="Sort and filter options"
       style={{
         position: "fixed",
         left: pos.left,

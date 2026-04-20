@@ -361,7 +361,7 @@ export default function Next7Page() {
       cols.push({
         id: date,
         title: dayLabel(date, today),
-        color: date === today ? "var(--accent)" : "#94a3b8",
+        color: date === today ? "var(--accent)" : "var(--neutral)",
         tasks: tasksByDate.get(date) ?? [],
       });
     }

@@ -157,7 +157,7 @@ function InboxPageContent() {
 
   const kanbanColumns = useMemo(
     () => [
-      { id: "no-date", title: "No Due Date", color: "#94a3b8", tasks: noDateTasks },
+      { id: "no-date", title: "No Due Date", color: "var(--neutral)", tasks: noDateTasks },
       { id: "no-section", title: "No Section", color: "#f59e0b", tasks: noSectionTasks },
     ],
     [noDateTasks, noSectionTasks]

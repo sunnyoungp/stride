@@ -117,11 +117,11 @@ function TasksPageInner({
         .filter((s) => s.sectionId === sectionIdFilter)
         .sort((a, b) => a.order - b.order);
       const cols: KanbanColumn[] = subs.map((sub) => ({
-        id: sub.id, title: sub.title, color: sub.color ?? "#94a3b8",
+        id: sub.id, title: sub.title, color: sub.color ?? "var(--neutral)",
         tasks: interleaveSubtasks(sectionTasks.filter((t) => t.subsectionId === sub.id)),
       }));
       cols.push({
-        id: "__general__", title: "General", color: "#94a3b8",
+        id: "__general__", title: "General", color: "var(--neutral)",
         tasks: interleaveSubtasks(sectionTasks.filter((t) => !t.subsectionId)),
       });
       return cols;
@@ -140,8 +140,8 @@ function TasksPageInner({
       if (overdue.length) cols.push({ id: "__overdue__", title: "Overdue", color: "var(--error)", tasks: interleaveSubtasks(overdue) });
       cols.push({ id: "__today__", title: "Today", color: "var(--accent)", tasks: interleaveSubtasks(todayT) });
       cols.push({ id: "__tomorrow__", title: "Tomorrow", color: "#8b5cf6", tasks: interleaveSubtasks(tomorrowT) });
-      if (laterT.length) cols.push({ id: "__later__", title: "Later", color: "#94a3b8", tasks: interleaveSubtasks(laterT) });
-      cols.push({ id: "__nodate__", title: "No Date", color: "#94a3b8", tasks: interleaveSubtasks(noDate) });
+      if (laterT.length) cols.push({ id: "__later__", title: "Later", color: "var(--neutral)", tasks: interleaveSubtasks(laterT) });
+      cols.push({ id: "__nodate__", title: "No Date", color: "var(--neutral)", tasks: interleaveSubtasks(noDate) });
       return cols;
     }
 
@@ -152,7 +152,7 @@ function TasksPageInner({
         { id: "__high__",   title: "High",        color: "var(--priority-high, #ef4444)",   tasks: rootIncomplete.filter((t) => t.priority === "high") },
         { id: "__medium__", title: "Medium",       color: "var(--priority-medium, #f59e0b)", tasks: rootIncomplete.filter((t) => t.priority === "medium") },
         { id: "__low__",    title: "Low",          color: "var(--priority-low, #3b82f6)",    tasks: rootIncomplete.filter((t) => t.priority === "low") },
-        { id: "__nopri__",  title: "No Priority",  color: "#94a3b8",                          tasks: rootIncomplete.filter((t) => !t.priority || t.priority === "none") },
+        { id: "__nopri__",  title: "No Priority",  color: "var(--neutral)",                          tasks: rootIncomplete.filter((t) => !t.priority || t.priority === "none") },
       ];
     }
 
@@ -160,10 +160,10 @@ function TasksPageInner({
     if (groupBy === "tag") {
       const allTags = [...new Set(rootIncomplete.flatMap((t) => t.tags ?? []))].sort();
       const cols: KanbanColumn[] = allTags.map((tag) => ({
-        id: `__tag__${tag}`, title: tag, color: "#94a3b8",
+        id: `__tag__${tag}`, title: tag, color: "var(--neutral)",
         tasks: rootIncomplete.filter((t) => (t.tags ?? []).includes(tag)),
       }));
-      cols.push({ id: "__notag__", title: "No Tag", color: "#94a3b8", tasks: rootIncomplete.filter((t) => !t.tags || t.tags.length === 0) });
+      cols.push({ id: "__notag__", title: "No Tag", color: "var(--neutral)", tasks: rootIncomplete.filter((t) => !t.tags || t.tags.length === 0) });
       return cols;
     }
 
@@ -175,7 +175,7 @@ function TasksPageInner({
         tasks: interleaveSubtasks(incompleteTasks.filter((t) => t.sectionId === s.id)),
       }));
     cols.push({
-      id: "__unsorted__", title: "Inbox", color: "#94a3b8",
+      id: "__unsorted__", title: "Inbox", color: "var(--neutral)",
       tasks: interleaveSubtasks(incompleteTasks.filter((t) => !t.sectionId)),
     });
     return cols;

@@ -352,7 +352,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
                     onClick={() => { void updateTask(task.id, { sectionId: s.id }); togglePanel("none"); }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--bg-hover)]"
                   >
-                    <div className="h-2 w-2 rounded-full" style={{ background: s.color || "#94a3b8" }} />
+                    <div className="h-2 w-2 rounded-full" style={{ background: s.color || "var(--neutral)" }} />
                     {s.title}
                   </button>
                 ))}
@@ -400,7 +400,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           
           {/* Section picker */}
           <ToolBtn active={panel === "section"} onClick={() => togglePanel("section")} title="Move to section">
-            <div className="h-2 w-2 rounded-full" style={{ background: currentSection?.color || "#94a3b8" }} />
+            <div className="h-2 w-2 rounded-full" style={{ background: currentSection?.color || "var(--neutral)" }} />
             <span className="max-w-[80px] truncate text-xs font-medium">{currentSection?.title || "Inbox"}</span>
           </ToolBtn>
 

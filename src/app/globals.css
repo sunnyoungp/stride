@@ -87,6 +87,7 @@
   /* semantic colors */
   --error:    #ef4444;
   --error-bg: rgba(239, 68, 68, 0.10);
+  --neutral:  #94a3b8;
 
   /* priorities */
   --priority-low:    #3b82f6;
@@ -155,6 +156,7 @@
   /* semantic colors */
   --error:    #f87171;
   --error-bg: rgba(248, 113, 113, 0.14);
+  --neutral:  #94a3b8;
 
   /* legacy panel depth aliases → new tokens */
   --color-app-root-bg: var(--bg-app);
