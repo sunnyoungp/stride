@@ -46,6 +46,9 @@ export function ConfirmDialog() {
       onPointerDown={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
     >
       <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={state.message}
         className="relative mx-4 w-full max-w-sm overflow-hidden rounded-2xl p-6"
         style={{
           background: "var(--bg-card)",

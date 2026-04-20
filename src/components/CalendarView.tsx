@@ -633,9 +633,11 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 <button
                   type="button"
                   title="Toggle Routines"
+                  aria-label="Toggle Routines"
+                  aria-pressed={showRoutinesSidebar}
                   onClick={() => setShowRoutinesSidebar(v => !v)}
                   style={{
-                    width: 28, height: 28, borderRadius: 8, border: "none", cursor: "pointer",
+                    width: isMobile ? 44 : 28, height: isMobile ? 44 : 28, borderRadius: 8, border: "none", cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: showRoutinesSidebar ? "var(--accent-bg)" : "var(--bg-subtle)",
                     color: showRoutinesSidebar ? "var(--accent)" : "var(--fg-faint)",
@@ -643,7 +645,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                   }}
                 >
                   {/* Loop/routine icon */}
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                     <path d="M2 7a5 5 0 0 1 5-5h2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                     <path d="M12 7a5 5 0 0 1-5 5H4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                     <path d="M9.5 2l1.5 1.5L9.5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -653,9 +655,11 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 <button
                   type="button"
                   title="Toggle Unscheduled Tasks"
+                  aria-label="Toggle Unscheduled Tasks"
+                  aria-pressed={showTasksSidebar}
                   onClick={() => setShowTasksSidebar(v => !v)}
                   style={{
-                    width: 28, height: 28, borderRadius: 8, border: "none", cursor: "pointer",
+                    width: isMobile ? 44 : 28, height: isMobile ? 44 : 28, borderRadius: 8, border: "none", cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: showTasksSidebar ? "var(--accent-bg)" : "var(--bg-subtle)",
                     color: showTasksSidebar ? "var(--accent)" : "var(--fg-faint)",
@@ -748,6 +752,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
               {/* Prev */}
               <button
                 type="button"
+                aria-label="Previous"
                 onClick={() => {
                   if (isAgenda) { setAgendaStart(s => s - 7); return; }
                   const api = calendarRef.current?.getApi();
@@ -761,7 +766,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 26, height: 26, borderRadius: 8,
+                  width: isMobile ? 44 : 26, height: isMobile ? 44 : 26, borderRadius: 8,
                   border: "1px solid var(--border-strong)",
                   background: "var(--bg-card)",
                   color: "var(--fg)", cursor: "pointer", flexShrink: 0,
@@ -786,15 +791,16 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                     api.next();
                   }
                 }}
+                aria-label="Next"
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 26, height: 26, borderRadius: 8,
+                  width: isMobile ? 44 : 26, height: isMobile ? 44 : 26, borderRadius: 8,
                   border: "1px solid var(--border-strong)",
                   background: "var(--bg-card)",
                   color: "var(--fg)", cursor: "pointer", flexShrink: 0,
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M4.5 2L8 6l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
