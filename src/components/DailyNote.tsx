@@ -556,6 +556,37 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   // taskIds currently being moved — suppress auto-delete in onUpdate
   const pendingMoveRef = useRef<Set<string>>(new Set());
 
+  // Long-press → contextmenu on mobile (simulates right-click for task items)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const el = editorWrapperRef.current;
+    if (!el) return;
+    const onTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      const target = touch.target as HTMLElement | null;
+      if (!target?.closest('li[data-checked]')) return;
+      longPressTimerRef.current = setTimeout(() => {
+        const cm = new MouseEvent("contextmenu", {
+          bubbles: true, clientX: touch.clientX, clientY: touch.clientY,
+        });
+        target.dispatchEvent(cm);
+      }, 500);
+    };
+    const cancel = () => { if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; } };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", cancel, { passive: true });
+    el.addEventListener("touchend", cancel, { passive: true });
+    el.addEventListener("touchcancel", cancel, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", cancel);
+      el.removeEventListener("touchend", cancel);
+      el.removeEventListener("touchcancel", cancel);
+      cancel();
+    };
+  }, []);
+
   // Stable refs so editor callbacks always read latest values
   const tasksRef        = useRef(tasks);
   const createTaskRef   = useRef(createTask);
