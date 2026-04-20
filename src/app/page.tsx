@@ -17,6 +17,13 @@ import { useTaskStore } from "@/store/taskStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
+function getAccentColor(): string {
+  if (typeof document !== "undefined") {
+    return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8603c";
+  }
+  return "#e8603c";
+}
+
 function shiftDate(date: string, days: number): string {
   const d = new Date(date + "T00:00:00");
   d.setDate(d.getDate() + days);
@@ -197,10 +204,10 @@ export default function Page() {
                     const endTime   = new Date(date.getTime() + 30 * 60_000).toISOString();
                     void (async () => {
                       if (taskId) {
-                        await createTimeBlock({ type: "task", taskId, title, startTime, endTime, color: "#f4714a" });
+                        await createTimeBlock({ type: "task", taskId, title, startTime, endTime, color: getAccentColor() });
                         await updateTask(taskId, { scheduledStart: startTime, scheduledEnd: endTime, dueDate: selectedDate });
                       } else if (title) {
-                        await createTimeBlock({ type: "event", title, startTime, endTime, color: "#f4714a" });
+                        await createTimeBlock({ type: "event", title, startTime, endTime, color: getAccentColor() });
                         if (blockType === "note") await createTask({ title, status: "todo", dueDate: selectedDate });
                       }
                     })();
@@ -416,10 +423,10 @@ export default function Page() {
                   const endTime   = new Date(date.getTime() + 30 * 60_000).toISOString();
                   void (async () => {
                     if (taskId) {
-                      await createTimeBlock({ type: "task", taskId, title, startTime, endTime, color: "#f4714a" });
+                      await createTimeBlock({ type: "task", taskId, title, startTime, endTime, color: getAccentColor() });
                       await updateTask(taskId, { scheduledStart: startTime, scheduledEnd: endTime, dueDate: selectedDate });
                     } else if (title) {
-                      await createTimeBlock({ type: "event", title, startTime, endTime, color: "#f4714a" });
+                      await createTimeBlock({ type: "event", title, startTime, endTime, color: getAccentColor() });
                       if (blockType === "note") await createTask({ title, status: "todo", dueDate: selectedDate });
                     }
                   })();

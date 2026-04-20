@@ -64,8 +64,13 @@ function defaultStart(v: ViewKey): Date {
   return (v === "week" || v === "month") ? startOfWeek(today) : today;
 }
 
-/** Default color for new time blocks — warm coral accent */
-const DEFAULT_BLOCK_COLOR = "#f4714a";
+/** Default color for new time blocks — reads current accent from CSS */
+function getDefaultBlockColor(): string {
+  if (typeof document !== "undefined") {
+    return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8603c";
+  }
+  return "#e8603c";
+}
 
 type PendingBlock = { startTime: string; endTime: string; x: number; y: number };
 
@@ -214,11 +219,11 @@ function AgendaDayCard({
           <div key={block.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{
               width: 3, height: 16, borderRadius: 2,
-              background: block.color ?? DEFAULT_BLOCK_COLOR,
+              background: block.color ?? getDefaultBlockColor(),
               flexShrink: 0,
             }} />
             <span style={{ fontSize: 12.5, color: "var(--fg-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              <span style={{ color: block.color ?? DEFAULT_BLOCK_COLOR, fontWeight: 500 }}>
+              <span style={{ color: block.color ?? getDefaultBlockColor(), fontWeight: 500 }}>
                 {fmtTime12(block.startTime)}
               </span>
               {" · "}{block.title}
@@ -489,7 +494,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
 
   const events = useMemo(() => {
     const base = timeBlocks.map((b) => {
-      const color = b.color ?? DEFAULT_BLOCK_COLOR;
+      const color = b.color ?? getDefaultBlockColor();
       return {
         id: b.id, title: b.title, start: b.startTime, end: b.endTime,
         allDay: b.allDay ?? false,
@@ -506,9 +511,9 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
         start: pendingBlock.startTime,
         end: pendingBlock.endTime,
         allDay: false,
-        backgroundColor: hexToRgba(DEFAULT_BLOCK_COLOR, 0.08),
-        borderColor: hexToRgba(DEFAULT_BLOCK_COLOR, 0.35),
-        textColor: DEFAULT_BLOCK_COLOR,
+        backgroundColor: hexToRgba(getDefaultBlockColor(), 0.08),
+        borderColor: hexToRgba(getDefaultBlockColor(), 0.35),
+        textColor: getDefaultBlockColor(),
         extendedProps: { isPending: true } as any,
       });
     }
@@ -963,9 +968,9 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                   if (!start || !end) return;
                   void (async () => {
                     if (type === "routine" && routineTemplateId) {
-                      await createTimeBlock({ type: "routine", routineTemplateId, title, startTime: start, endTime: end, color: color || DEFAULT_BLOCK_COLOR });
+                      await createTimeBlock({ type: "routine", routineTemplateId, title, startTime: start, endTime: end, color: color || getDefaultBlockColor() });
                     } else if (taskId) {
-                      await createTimeBlock({ type: "task", taskId, title, startTime: start, endTime: end, color: DEFAULT_BLOCK_COLOR });
+                      await createTimeBlock({ type: "task", taskId, title, startTime: start, endTime: end, color: getDefaultBlockColor() });
                       await updateTask(taskId, { scheduledStart: start, scheduledEnd: end });
                     }
                   })();
@@ -1119,7 +1124,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
             const s = new Date(activeBlock.startTime);
             const dur = Math.max(1, Math.round((new Date(activeBlock.endTime).getTime() - s.getTime()) / 60_000));
             const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-            setTemplatePrefill({ title: activeBlock.title, durationMinutes: dur, defaultStartTime: hhmm(s), color: activeBlock.color ?? DEFAULT_BLOCK_COLOR, icon: "⏱️", daysOfWeek: [], isBuiltIn: false, order: 0 });
+            setTemplatePrefill({ title: activeBlock.title, durationMinutes: dur, defaultStartTime: hhmm(s), color: activeBlock.color ?? getDefaultBlockColor(), icon: "⏱️", daysOfWeek: [], isBuiltIn: false, order: 0 });
             setRoutineOpen(true);
           }}
         />

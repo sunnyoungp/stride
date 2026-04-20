@@ -157,7 +157,7 @@ function initForm(props: EventPanelProps): FormState {
       repeat: "none",
       location: "",
       description: "",
-      color: "#f4714a",
+      color: getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8603c",
     };
   }
   const tb = props.timeBlock;
@@ -170,7 +170,7 @@ function initForm(props: EventPanelProps): FormState {
     repeat: "none",
     location: "",
     description: "",
-    color: tb.color ?? "#f4714a",
+    color: tb.color ?? (getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8603c"),
   };
 }
 
