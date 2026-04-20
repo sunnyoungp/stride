@@ -190,7 +190,7 @@ export default function Page() {
                 </h2>
                 {selectedDateTaskCount > 0 && <span style={{ fontSize: "11px", color: "var(--fg-faint, #999)" }}>{selectedDateTaskCount}</span>}
               </div>
-              <Suspense fallback={<div style={{ padding: "16px", fontSize: "12px", color: "#999" }}>Loading…</div>}>
+              <Suspense fallback={<div style={{ padding: "16px", fontSize: "12px", color: "var(--fg-faint)" }}>Loading…</div>}>
                 <TaskListView filterDate={selectedDate} onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }} />
               </Suspense>
             </div>
@@ -293,7 +293,7 @@ export default function Page() {
           defaultSize="55%"
           minSize="35%"
           maxSize="70%"
-          style={{ display: "flex", flexDirection: "column", height: "100%", borderRight: "1px solid var(--border, rgba(0,0,0,0.08))" }}
+          style={{ display: "flex", flexDirection: "column", height: "100%", borderRight: "1px solid var(--border)" }}
         >
           {/* Inner vertical split */}
           <ResizablePanelGroup
@@ -325,8 +325,8 @@ export default function Page() {
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                borderTop: "1px solid var(--border, rgba(0,0,0,0.08))",
-                borderBottom: "1px solid var(--border, rgba(0,0,0,0.08))",
+                borderTop: "1px solid var(--border)",
+                borderBottom: "1px solid var(--border)",
               }}
             >
               <div style={{
@@ -361,7 +361,7 @@ export default function Page() {
                 onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) e.currentTarget.removeAttribute("data-drag-over"); }}
                 onDrop={(e) => { e.currentTarget.removeAttribute("data-drag-over"); handleTaskPanelDrop(e); }}
               >
-                <Suspense fallback={<div style={{ padding: "16px 24px", fontSize: "12px", color: "#999" }}>Loading…</div>}>
+                <Suspense fallback={<div style={{ padding: "16px 24px", fontSize: "12px", color: "var(--fg-faint)" }}>Loading…</div>}>
                   <TaskListView
                     filterDate={selectedDate}
                     onTaskClick={(task, pos) => { setSelectedTaskId(task.id); setClickPos(pos); }}
@@ -384,8 +384,8 @@ export default function Page() {
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            borderLeft: "1px solid var(--border, rgba(0,0,0,0.08))",
-            borderRight: "1px solid var(--border, rgba(0,0,0,0.08))",
+            borderLeft: "1px solid var(--border)",
+            borderRight: "1px solid var(--border)",
           }}
         >
           <div style={{
@@ -411,7 +411,7 @@ export default function Page() {
               borderRadius: "16px",
               overflow: "hidden",
               background: "var(--bg-card, #fff)",
-              border: "1px solid var(--border, rgba(0,0,0,0.08))",
+              border: "1px solid var(--border)",
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
               <CalendarView
@@ -442,7 +442,7 @@ export default function Page() {
               borderRadius: "16px",
               overflow: "hidden",
               background: "var(--bg-card, #fff)",
-              border: "1px solid var(--border, rgba(0,0,0,0.08))",
+              border: "1px solid var(--border)",
               boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}>
               <RoutineTemplateStrip onManageTemplates={() => setRoutinePanelOpen(true)} />

@@ -595,7 +595,7 @@ export function Sidebar() {
                 background: active ? "var(--bg-active)" : "transparent",
                 color: active ? "var(--accent)" : "var(--fg-faint)",
               }}
-              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "var(--bg-hover)"; }}
               onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
             >
               {item.icon}
@@ -671,7 +671,7 @@ export function Sidebar() {
           type="button"
           onClick={openSearch}
           className="flex w-full h-8 items-center gap-2.5 rounded-md px-3 text-[13px] transition-all duration-150 ease-out"
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
           style={{ color: "var(--fg-faint)" }}
         >
@@ -702,7 +702,7 @@ export function Sidebar() {
                 background: active ? "var(--bg-active)" : "transparent",
                 color: active ? "var(--accent)" : "var(--fg-muted)",
               }}
-              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "var(--bg-hover)"; }}
               onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? "var(--bg-active)" : "transparent"; }}
             >
               <span className="flex-none" style={{ fontSize: 16, color: active ? "var(--accent)" : "var(--fg-faint)" }}>

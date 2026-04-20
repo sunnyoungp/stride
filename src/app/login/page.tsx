@@ -35,15 +35,15 @@ export default function LoginPage() {
         {/* Card */}
         <div
           style={{
-            background: "var(--bg-card, #ffffff)",
-            border: "1px solid var(--border-mid, rgba(30,20,10,0.11))",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-mid)",
             borderRadius: 20,
             padding: "40px 48px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 24,
-            boxShadow: "0 12px 40px rgba(30,20,10,0.08)",
+            boxShadow: "var(--shadow-lg)",
             minWidth: 320,
           }}
         >
@@ -52,7 +52,7 @@ export default function LoginPage() {
               style={{
                 fontSize: 20,
                 fontWeight: 600,
-                color: "var(--fg, #1a1310)",
+                color: "var(--fg)",
                 margin: 0,
               }}
             >
@@ -61,7 +61,7 @@ export default function LoginPage() {
             <p
               style={{
                 fontSize: 14,
-                color: "var(--fg-muted, #6b5f57)",
+                color: "var(--fg-muted)",
                 margin: "8px 0 0",
               }}
             >
@@ -79,9 +79,9 @@ export default function LoginPage() {
               width: "100%",
               padding: "12px 20px",
               borderRadius: 12,
-              border: "1px solid var(--border-mid, rgba(30,20,10,0.11))",
-              background: "var(--bg-card, #ffffff)",
-              color: "var(--fg, #1a1310)",
+              border: "1px solid var(--border-mid)",
+              background: "var(--bg-card)",
+              color: "var(--fg)",
               fontSize: 15,
               fontWeight: 500,
               cursor: "pointer",
@@ -90,10 +90,10 @@ export default function LoginPage() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background =
-                "var(--bg-hover, rgba(30,20,10,0.04))";
+                "var(--bg-hover)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--bg-card, #ffffff)";
+              e.currentTarget.style.background = "var(--bg-card)";
             }}
           >
             {/* Google icon */}
