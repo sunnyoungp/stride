@@ -137,7 +137,7 @@ function TasksPageInner({
       const laterT = incompleteTasks.filter((t) => t.dueDate && t.dueDate.slice(0, 10) > tomorrowStr);
       const noDate = incompleteTasks.filter((t) => !t.dueDate);
       const cols: KanbanColumn[] = [];
-      if (overdue.length) cols.push({ id: "__overdue__", title: "Overdue", color: "#ef4444", tasks: interleaveSubtasks(overdue) });
+      if (overdue.length) cols.push({ id: "__overdue__", title: "Overdue", color: "var(--error)", tasks: interleaveSubtasks(overdue) });
       cols.push({ id: "__today__", title: "Today", color: "var(--accent)", tasks: interleaveSubtasks(todayT) });
       cols.push({ id: "__tomorrow__", title: "Tomorrow", color: "#8b5cf6", tasks: interleaveSubtasks(tomorrowT) });
       if (laterT.length) cols.push({ id: "__later__", title: "Later", color: "#94a3b8", tasks: interleaveSubtasks(laterT) });

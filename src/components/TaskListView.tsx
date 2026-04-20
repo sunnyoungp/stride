@@ -1114,8 +1114,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
         >
           <button
             type="button"
-            className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
-            style={{ color: "#ef4444" }}
+            className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--error-bg)]"
+            style={{ color: "var(--error)" }}
             onClick={() => {
               void appConfirm(`Delete subsection "${subContextMenu.title}"? Tasks inside will be moved to the main section.`).then((ok) => {
                 if (ok) void deleteSubsection(subContextMenu.id);

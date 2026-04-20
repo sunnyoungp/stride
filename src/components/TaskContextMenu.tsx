@@ -173,8 +173,8 @@ export function TaskContextMenu({ task, position, onClose, selectedIds }: Props)
           <div className="my-1 h-px" style={{ background: "var(--border)" }} />
 
           <button type="button" onClick={onDelete}
-            className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
-            style={{ color: "#ef4444" }}
+            className="w-full rounded-xl px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--error-bg)]"
+            style={{ color: "var(--error)" }}
           >Delete</button>
         </>
       )}

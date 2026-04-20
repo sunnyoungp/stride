@@ -106,8 +106,8 @@ export function DocumentContextMenu({ document: doc, position, onClose }: Props)
       <button
         type="button"
         onClick={() => void onDelete()}
-        className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-red-500/10"
-        style={{ color: "#ef4444" }}
+        className="w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 hover:bg-[var(--error-bg)]"
+        style={{ color: "var(--error)" }}
       >
         Delete Document
       </button>

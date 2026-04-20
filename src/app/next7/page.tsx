@@ -355,7 +355,7 @@ export default function Next7Page() {
   const kanbanColumns: KanbanColumn[] = useMemo(() => {
     const cols: KanbanColumn[] = [];
     if (overdueTasks.length > 0) {
-      cols.push({ id: "__overdue__", title: "Overdue", color: "#ef4444", tasks: overdueTasks });
+      cols.push({ id: "__overdue__", title: "Overdue", color: "var(--error)", tasks: overdueTasks });
     }
     for (const date of next7) {
       cols.push({

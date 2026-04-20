@@ -339,7 +339,7 @@ function SortableRow({
             onClick={onDelete}
             title="Delete"
             style={{ background: "none", border: "none", padding: 3, cursor: "pointer", color: "rgba(0,0,0,0.3)", fontSize: 18, lineHeight: 1, display: "flex", alignItems: "center" }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--error)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(0,0,0,0.3)"; }}
           >×</button>
         </div>

@@ -105,8 +105,8 @@ function MenuItem({ children, onClick, danger }: {
       type="button"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={onClick}
-      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 ${danger ? "hover:bg-red-500/10" : "hover:bg-[var(--bg-hover)]"}`}
-      style={{ color: danger ? "#ef4444" : "var(--fg)" }}
+      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-all duration-150 ${danger ? "hover:bg-[var(--error-bg)]" : "hover:bg-[var(--bg-hover)]"}`}
+      style={{ color: danger ? "var(--error)" : "var(--fg)" }}
     >
       {children}
     </button>

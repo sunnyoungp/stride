@@ -85,8 +85,8 @@ export function DocumentList() {
               {/* Delete button — visible on hover */}
               <button
                 type="button"
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-md transition-all duration-150 hover:bg-red-500/10"
-                style={{ color: "#ef4444" }}
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-md transition-all duration-150 hover:bg-[var(--error-bg)]"
+                style={{ color: "var(--error)" }}
                 onClick={async (e) => {
                   e.stopPropagation();
                   if (await appConfirm(`Delete "${doc.title || "Untitled"}"? This will also delete all tasks linked from this document.`)) {

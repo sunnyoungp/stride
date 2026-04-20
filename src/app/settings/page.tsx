@@ -639,9 +639,9 @@ function ShortcutsCard() {
               onClick={() => setRecording(s.action)}
               style={{
                 fontSize: 11.5, padding: "4px 10px", borderRadius: 8,
-                border: `1px solid ${recording === s.action ? "var(--accent)" : isConflict ? "#ef4444" : "var(--border)"}`,
+                border: `1px solid ${recording === s.action ? "var(--accent)" : isConflict ? "var(--error)" : "var(--border)"}`,
                 background: recording === s.action ? "var(--accent-bg)" : "var(--bg-subtle)",
-                color: recording === s.action ? "var(--accent)" : isConflict ? "#ef4444" : s.customBinding ? "var(--fg)" : "var(--fg-faint)",
+                color: recording === s.action ? "var(--accent)" : isConflict ? "var(--error)" : s.customBinding ? "var(--fg)" : "var(--fg-faint)",
                 cursor: "pointer", textAlign: "left",
                 fontFamily: s.customBinding || recording === s.action ? "monospace" : "inherit",
               }}
@@ -666,7 +666,7 @@ function ShortcutsCard() {
         );
       })}
       {conflicts.size > 0 && (
-        <p style={{ fontSize: 12, color: "#ef4444", marginTop: 8 }}>
+        <p style={{ fontSize: 12, color: "var(--error)", marginTop: 8 }}>
           ⚠ Conflicting shortcuts detected — only the first match will fire.
         </p>
       )}
@@ -954,12 +954,12 @@ function GeneralCard() {
             />
           </label>
           {importStatus === "ok"  && <span style={{ fontSize: 12, color: "var(--accent)" }}>✓ Imported</span>}
-          {importStatus === "err" && <span style={{ fontSize: 12, color: "#ef4444" }}>✗ Invalid file</span>}
+          {importStatus === "err" && <span style={{ fontSize: 12, color: "var(--error)" }}>✗ Invalid file</span>}
         </div>
       </SettingRow>
 
       <div style={{ padding: "16px 0", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13.5, fontWeight: 500, color: "#ef4444", marginBottom: 8 }}>Danger zone</div>
+        <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--error)", marginBottom: 8 }}>Danger zone</div>
         <p style={{ fontSize: 12.5, color: "var(--fg-faint)", marginBottom: 10 }}>
           Type <kbd style={{ fontFamily: "monospace", fontSize: 11, padding: "1px 5px", borderRadius: 4, background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>delete my data</kbd> then click Clear.
         </p>
@@ -980,8 +980,8 @@ function GeneralCard() {
             disabled={confirmText.trim() !== "delete my data"}
             style={{
               fontSize: 12.5, padding: "5px 14px", borderRadius: 8,
-              border: "1px solid #ef4444",
-              background: confirmText.trim() === "delete my data" ? "#ef4444" : "var(--bg-subtle)",
+              border: "1px solid var(--error)",
+              background: confirmText.trim() === "delete my data" ? "var(--error)" : "var(--bg-subtle)",
               color: confirmText.trim() === "delete my data" ? "#fff" : "#fca5a5",
               cursor: confirmText.trim() === "delete my data" ? "pointer" : "not-allowed",
               transition: "all 200ms ease",

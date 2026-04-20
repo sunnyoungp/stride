@@ -465,8 +465,8 @@ export function EventPanel(props: EventPanelProps) {
           <button
             type="button"
             onClick={handleDelete}
-            className="rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-150 hover:bg-red-500/10"
-            style={{ color: "#ef4444" }}
+            className="rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-150 hover:bg-[var(--error-bg)]"
+            style={{ color: "var(--error)" }}
           >Delete</button>
         ) : (
           <div />

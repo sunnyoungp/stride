@@ -72,7 +72,7 @@ export function ConfirmDialog() {
             onClick={handleConfirm}
             className="rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150 hover:opacity-90"
             style={{
-              background: isDanger ? "#ef4444" : "var(--accent)",
+              background: isDanger ? "var(--error)" : "var(--accent)",
               color: "white",
             }}
           >

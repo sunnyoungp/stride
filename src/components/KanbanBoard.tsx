@@ -118,7 +118,7 @@ function KanbanCardVisual({
         let color: string;
         if (isOverdue(v)) {
           bg = "rgba(239,68,68,0.12)";
-          color = "#ef4444";
+          color = "var(--error)";
         } else if (isToday(v)) {
           bg = "rgba(var(--accent-rgb, 232,96,60),0.12)";
           color = "var(--accent)";

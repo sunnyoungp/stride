@@ -163,8 +163,8 @@ export function TimeBlockPopover({ timeBlock, position, onClose }: Props) {
       <div className="mt-4 flex items-center justify-between">
         <div className="text-xs capitalize" style={{ color: "var(--fg-faint)" }}>{timeBlock.type}</div>
         <button onClick={() => void (async () => { await deleteTimeBlock(timeBlock.id); onClose(); })()}
-          className="rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-150 hover:bg-red-500/10"
-          style={{ color: "#ef4444" }}
+          className="rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-150 hover:bg-[var(--error-bg)]"
+          style={{ color: "var(--error)" }}
         >Delete</button>
       </div>
     </div>

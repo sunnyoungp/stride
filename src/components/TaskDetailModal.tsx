@@ -317,7 +317,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
                       onClick={() => void deleteTask(st.id)}
                       className="opacity-0 transition-opacity group-hover:opacity-100"
                     >
-                      <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5 text-[var(--error)]" fill="none" viewBox="0 0 16 16" stroke="currentColor">
                         <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" strokeWidth={1.5}/>
                       </svg>
                     </button>
@@ -369,7 +369,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
                     {task.tags.map(t => (
                       <span key={t} className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]" style={{ background: "var(--bg-subtle)", color: "var(--fg-muted)" }}>
                         #{t}
-                        <button onClick={() => void updateTask(task.id, { tags: task.tags.filter(x=>x!==t) })} className="hover:text-red-400">×</button>
+                        <button onClick={() => void updateTask(task.id, { tags: task.tags.filter(x=>x!==t) })} className="hover:text-[var(--error)]">×</button>
                       </span>
                     ))}
                     <TagAdder task={task} updateTask={updateTask} />
@@ -459,7 +459,7 @@ export function TaskDetailModal({ task, position, onClose }: Props) {
           <button
             onClick={async () => { if (await appConfirm("Delete this task?")) { await deleteTask(task.id); onClose(); } }}
             title="Delete task"
-            className="flex items-center justify-center rounded-lg p-2 transition-all duration-150 ease-out hover:bg-red-500/10 hover:text-red-400"
+            className="flex items-center justify-center rounded-lg p-2 transition-all duration-150 ease-out hover:bg-[var(--error-bg)] hover:text-[var(--error)]"
             style={{ color: "var(--fg-faint)" }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>

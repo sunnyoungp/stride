@@ -384,7 +384,7 @@ function NoteItemContextMenu({
       style={{
         width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "6px 12px", borderRadius: 8,
-        fontSize: "0.8125rem", color: danger ? "#ef4444" : "var(--fg)",
+        fontSize: "0.8125rem", color: danger ? "var(--error)" : "var(--fg)",
         background: "transparent", border: "none", cursor: "pointer", textAlign: "left",
       }}
       onMouseEnter={e => (e.currentTarget.style.background = danger ? "rgba(239,68,68,0.08)" : "var(--bg-hover)")}
