@@ -1,8 +1,8 @@
 "use client";
-"use client";
 import { Editor } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 import { List, ListOrdered, CheckSquare, Quote, Code as CodeIcon, Minus } from "lucide-react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 type FormatPanelProps = {
   editor: Editor;
@@ -18,6 +18,7 @@ const COLORS = [
 export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [docFont, setDocFont] = useState("system");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -83,22 +84,30 @@ export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanel
   if (!isOpen) return null;
 
   return (
+    <>
+    {/* Backdrop on mobile */}
+    {isMobile && (
+      <div
+        className="fixed inset-0 z-50"
+        style={{ background: "rgba(0,0,0,0.3)" }}
+        onClick={onClose}
+      />
+    )}
     <div
       ref={panelRef}
       style={{
         position: "fixed",
-        top: 16,
-        right: 16,
-        bottom: 16,
-        width: 260,
+        ...(isMobile
+          ? { left: 0, right: 0, bottom: 0, width: "100%", maxHeight: "70vh", borderRadius: "16px 16px 0 0", paddingBottom: "env(safe-area-inset-bottom)" }
+          : { top: 16, right: 16, bottom: 16, width: 260, borderRadius: 16 }
+        ),
         background: "var(--bg-card)",
         backdropFilter: "var(--glass-blur-card)",
         WebkitBackdropFilter: "var(--glass-blur-card)",
         border: "1px solid var(--glass-border)",
         borderTop: "1px solid var(--glass-border-top)",
-        borderRadius: 16,
         boxShadow: "var(--shadow-float)",
-        zIndex: 100,
+        zIndex: isMobile ? 50 : 100,
         padding: "20px 16px",
         overflowY: "auto",
         display: "flex",
@@ -107,6 +116,11 @@ export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanel
         animation: "drawer-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both"
       }}
     >
+      {isMobile && (
+        <div className="flex justify-center" style={{ margin: "-12px 0 -8px" }}>
+          <div className="w-9 h-1 rounded-full" style={{ background: "var(--border-strong)" }} />
+        </div>
+      )}
       <Section label="TITLES">
         <div className="flex flex-col gap-1">
           <TypeButton label="Title" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })} style={{ fontSize: 20, fontWeight: 700 }} />
@@ -173,6 +187,7 @@ export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanel
         </div>
       </Section>
     </div>
+    </>
   );
 }
 
