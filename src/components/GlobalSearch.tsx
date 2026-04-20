@@ -425,7 +425,7 @@ export function GlobalSearch() {
     >
       <div
         style={{
-          width: 600,
+          width: "min(600px, 90vw)",
           maxHeight: "70vh",
           background: "var(--bg-card)",
           backdropFilter: "var(--glass-blur-card)",
