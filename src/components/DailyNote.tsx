@@ -411,12 +411,12 @@ function NoteItemContextMenu({
   return (
     <div ref={menuRef} style={{
       position: "fixed", left: clPos.x, top: clPos.y, zIndex: 9999, width: 220,
-      background: "var(--bg-subtle)",
+      background: "var(--bg-card)",
       backdropFilter: "var(--glass-blur-card)",
       WebkitBackdropFilter: "var(--glass-blur-card)",
       border: "1px solid var(--glass-border)",
       borderTop: "1px solid var(--glass-border-top)",
-      borderRadius: 12, boxShadow: "var(--shadow-lg)", padding: 4,
+      borderRadius: 12, boxShadow: "var(--shadow-float)", padding: 4,
     }}>
       {/* Title */}
       <div style={{ padding: "6px 12px 4px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
@@ -1024,9 +1024,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           : nodeDom;
         if (!el) return;
         el.setAttribute("data-pm-selected", "true");
-        el.style.background = "rgba(59,130,246,0.12)";
+        el.style.background = "var(--accent-bg)";
         el.style.borderRadius = "5px";
-        el.style.boxShadow = "inset 2px 0 0 rgba(59,130,246,0.6)";
+        el.style.boxShadow = "inset 2px 0 0 var(--accent)";
       } catch { /* ignore stale pos */ }
     });
   }, [editor, dnSelectedPoses]);
