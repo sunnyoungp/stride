@@ -569,6 +569,8 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
               return (
                 <div
                   key={st.id}
+                  role="button"
+                  tabIndex={0}
                   data-task-id={st.id}
                   data-task-title={st.title}
                   style={{
@@ -584,6 +586,7 @@ export function TaskListView({ onTaskClick, filterDate, filterDates, sortBy }: P
                     gap: 10,
                   }}
                   onClick={handleSubtaskClick}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSubtaskClick(e as unknown as React.MouseEvent); } }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onContextMenu={(e) => { e.preventDefault(); setContextMenu({ task: st, x: e.clientX, y: e.clientY }); }}
                   onMouseEnter={(e) => { if (!stSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
