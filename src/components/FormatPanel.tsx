@@ -3,6 +3,7 @@ import { Editor } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 import { List, ListOrdered, CheckSquare, Quote, Code as CodeIcon, Minus } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { EDITOR_COLORS } from "@/lib/colorPalette";
 
 type FormatPanelProps = {
   editor: Editor;
@@ -10,10 +11,6 @@ type FormatPanelProps = {
   onClose: () => void;
   documentId: string;
 };
-
-const COLORS = [
-  "var(--fg)", "var(--accent)", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#f43f5e"
-];
 
 export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -161,7 +158,7 @@ export function FormatPanel({ editor, isOpen, onClose, documentId }: FormatPanel
 
       <Section label="COLOR">
         <div className="grid grid-cols-4 gap-2 px-1">
-          {COLORS.map(c => (
+          {EDITOR_COLORS.map(c => (
             <button
               key={c}
               onClick={() => editor.chain().focus().setColor(c).run()}

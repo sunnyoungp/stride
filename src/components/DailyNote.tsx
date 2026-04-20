@@ -297,8 +297,7 @@ function DnSelectionBar({
             background: "none", border: "none", cursor: "pointer",
             padding: "4px 8px", borderRadius: 6, position: "relative",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          className="hover:bg-[var(--bg-hover)]"
         >
           Reschedule
           <input
@@ -403,8 +402,7 @@ function NoteItemContextMenu({
         fontSize: "0.8125rem", color: "var(--fg-muted)",
         background: "transparent", border: "none", cursor: "pointer",
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+      className="hover:bg-[var(--bg-hover)]"
     >‹ Back</button>
   );
 
@@ -442,8 +440,7 @@ function NoteItemContextMenu({
         {row("Next Week", () => { onSchedule(addDays(today, 7)); onClose(); })}
         <button type="button" onClick={() => dateRef.current?.showPicker?.()}
           style={{ width: "100%", display: "block", textAlign: "left", padding: "6px 12px", borderRadius: 8, fontSize: "0.8125rem", color: "var(--fg)", background: "transparent", border: "none", cursor: "pointer" }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+          className="hover:bg-[var(--bg-hover)]"
         >📅 Pick Date…</button>
         <input ref={dateRef} type="date" style={{ display: "none" }}
           onChange={e => { if (e.target.value) { onSchedule(e.target.value); onClose(); } }} />
@@ -454,8 +451,7 @@ function NoteItemContextMenu({
         {moveDates.map(({ label, date }) => row(label, () => { onMove(date); onClose(); }))}
         <button type="button" onClick={() => moveDateRef.current?.showPicker?.()}
           style={{ width: "100%", display: "block", textAlign: "left", padding: "6px 12px", borderRadius: 8, fontSize: "0.8125rem", color: "var(--fg)", background: "transparent", border: "none", cursor: "pointer" }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+          className="hover:bg-[var(--bg-hover)]"
         >📅 Pick Date…</button>
         <input ref={moveDateRef} type="date" style={{ display: "none" }}
           onChange={e => { if (e.target.value) { onMove(e.target.value); onClose(); } }} />

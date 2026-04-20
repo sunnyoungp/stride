@@ -407,8 +407,8 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       updatedAt,
     }));
 
-    for (const task of updated) {
-      await supabase
+    await Promise.all(updated.map((task) =>
+      supabase
         .from("tasks")
         .update({
           due_date: task.dueDate,
@@ -416,8 +416,8 @@ export const useTaskStore = create<TaskStore>((set, get) => {
           rolled_over_from: task.rolledOverFrom,
           updated_at: updatedAt,
         })
-        .eq("id", task.id);
-    }
+        .eq("id", task.id)
+    ));
 
     const byId = new Map(updated.map((t) => [t.id, t] as const));
     set((state) => ({ tasks: state.tasks.map((t) => byId.get(t.id) ?? t) }));

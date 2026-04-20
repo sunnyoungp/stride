@@ -204,8 +204,7 @@ export function SelectionActionBar({
             background: "none", border: "none", cursor: "pointer",
             padding: "4px 8px", borderRadius: 6, transition: "background 100ms ease",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          className="hover:bg-[var(--bg-hover)]"
         >
           Complete all
         </button>
@@ -247,8 +246,7 @@ export function SelectionActionBar({
             background: "none", border: "none", cursor: "pointer",
             padding: "4px 6px", borderRadius: 6, transition: "background 100ms ease",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          className="hover:bg-[var(--bg-hover)]"
         >
           ✕
         </button>
@@ -684,8 +682,7 @@ export function AddTaskRow({ sectionId, subsectionId, dueDate }: AddTaskRowProps
           textAlign: "left",
           transition: "background 120ms ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        className="hover:bg-[var(--bg-hover)]"
       >
         <span
           style={{

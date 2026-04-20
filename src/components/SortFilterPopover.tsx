@@ -147,8 +147,7 @@ export function SortFilterPopover({
                 fontWeight: groupBy === opt.key ? 500 : 400,
               }}
               onClick={() => { onGroupByChange(opt.key); setExpandGroup(false); }}
-              onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              className="hover:bg-[var(--bg-hover)]"
             >
               {opt.label}
               {groupBy === opt.key && (
@@ -196,8 +195,7 @@ export function SortFilterPopover({
                 fontWeight: sortBy === opt.key ? 500 : 400,
               }}
               onClick={() => { onSortByChange(opt.key); setExpandSort(false); }}
-              onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              className="hover:bg-[var(--bg-hover)]"
             >
               {opt.label}
               {sortBy === opt.key && (

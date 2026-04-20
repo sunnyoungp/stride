@@ -3,10 +3,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import type { Editor } from "@tiptap/core";
 import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Palette, Calendar } from "lucide-react";
 import { useState } from "react";
-
-const COLORS = [
-  "var(--fg)", "var(--accent)", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#f43f5e"
-];
+import { EDITOR_COLORS } from "@/lib/colorPalette";
 
 export function EditorBubbleMenu({ editor }: { editor: Editor }) {
   const [showColor, setShowColor] = useState(false);
@@ -72,7 +69,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <div className="flex items-center gap-1 relative">
         {showColor ? (
           <div className="flex items-center gap-1.5 px-1">
-            {COLORS.map(c => (
+            {EDITOR_COLORS.map(c => (
               <button
                 key={c}
                 type="button"
