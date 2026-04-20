@@ -238,7 +238,7 @@ export const THEMES = [
   {
     id: 'peach', name: 'Peach', description: 'Warm cream, tangerine accent', type: 'light' as const,
     '--tint-h': '22', '--tint-s': '18%',
-    '--bg': 'hsl(330, 8%, 95%)', '--bg-subtle': 'hsl(330, 8%, 94%)',
+    '--bg': 'hsl(22, 18%, 95%)', '--bg-subtle': 'hsl(22, 18%, 94%)',
     '--bg-hover': 'rgba(234,108,32,0.04)', '--bg-active': 'rgba(234,108,32,0.08)',
     '--fg': '#2a1206', '--fg-muted': '#8a5035', '--fg-faint': '#a87a60', '--fg-placeholder': '#d4a888',
     '--accent': '#ea6c20', '--accent-hover': '#d45a10', '--accent-fg': '#ffffff',

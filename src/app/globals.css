@@ -506,11 +506,6 @@ a, button, input, select, textarea {
   flex-shrink: 0;
 }
 
-.ProseMirror ul[data-type="taskList"] li > div {
-  flex: 1;
-  min-width: 0;
-}
-
 /* ── Completed checklist items ── */
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p,
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"] .task-text {
