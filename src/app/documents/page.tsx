@@ -26,7 +26,7 @@ function DocumentsContent() {
 
 export default function Page() {
   return (
-    <Suspense>
+    <Suspense fallback={<div style={{ padding: 32, fontSize: 13, color: "var(--fg-muted)" }}>Loading…</div>}>
       <DocumentsContent />
     </Suspense>
   );

@@ -110,13 +110,16 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
 
   const deleteDocument: DocumentStore["deleteDocument"] = async (id) => {
     const doc = get().documents.find((d) => d.id === id);
+
+    // Clear sourceDocumentId on linked tasks instead of deleting them
     if (doc?.linkedTaskIds && doc.linkedTaskIds.length > 0) {
       const { error } = await supabase
         .from("tasks")
-        .delete()
+        .update({ source_document_id: null, source_document_title: null, updated_at: new Date().toISOString() })
         .in("id", doc.linkedTaskIds);
-      if (error) console.error("Failed to delete linked tasks:", error);
+      if (error) console.error("Failed to unlink tasks from document:", error);
     }
+
     const { error } = await supabase.from("documents").delete().eq("id", id);
     if (error) {
       console.error("Failed to delete document:", error);
@@ -124,6 +127,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     }
     set({ documents: get().documents.filter((d) => d.id !== id) });
 
+    // Refresh tasks to reflect cleared sourceDocumentId
     const { useTaskStore } = await import("./taskStore");
     await useTaskStore.getState().loadTasks();
   };

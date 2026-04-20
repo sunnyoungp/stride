@@ -174,7 +174,10 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     };
 
     const { error } = await supabase.from("tasks").insert(taskToRow(task, userId));
-    if (error) console.error("Failed to create task:", error);
+    if (error) {
+      console.error("Failed to create task:", error);
+      throw new Error(`Failed to create task: ${error.message}`);
+    }
     set({ tasks: [...currentTasks, task] });
     return task;
   };
@@ -196,6 +199,11 @@ export const useTaskStore = create<TaskStore>((set, get) => {
 
     const updatedAt = new Date().toISOString();
 
+    // Capture parent reference BEFORE set() to avoid stale lookup after state mutation
+    const parentBeforeUpdate = originalTask.parentTaskId
+      ? currentState.tasks.find((t) => t.id === originalTask.parentTaskId)
+      : undefined;
+
     const row = { ...taskChangesToRow(effectiveChanges), updated_at: updatedAt };
     const { error } = await supabase.from("tasks").update(row).eq("id", id);
     if (error) console.error("Failed to update task:", error);
@@ -210,21 +218,19 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     if (
       "parentTaskId" in effectiveChanges &&
       !effectiveChanges.parentTaskId &&
-      originalTask.parentTaskId
+      originalTask.parentTaskId &&
+      parentBeforeUpdate
     ) {
-      const parent = get().tasks.find((t) => t.id === originalTask.parentTaskId);
-      if (parent) {
-        const newSubtaskIds = parent.subtaskIds.filter((sid) => sid !== id);
-        await supabase
-          .from("tasks")
-          .update({ subtask_ids: newSubtaskIds, updated_at: updatedAt })
-          .eq("id", originalTask.parentTaskId);
-        set({
-          tasks: get().tasks.map((t) =>
-            t.id === originalTask.parentTaskId ? { ...t, subtaskIds: newSubtaskIds, updatedAt } : t
-          ),
-        });
-      }
+      const newSubtaskIds = parentBeforeUpdate.subtaskIds.filter((sid) => sid !== id);
+      await supabase
+        .from("tasks")
+        .update({ subtask_ids: newSubtaskIds, updated_at: updatedAt })
+        .eq("id", originalTask.parentTaskId);
+      set({
+        tasks: get().tasks.map((t) =>
+          t.id === originalTask.parentTaskId ? { ...t, subtaskIds: newSubtaskIds, updatedAt } : t
+        ),
+      });
     }
 
     // Complete all incomplete subtasks when parent is marked done
@@ -241,7 +247,8 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     }
 
     if (effectiveChanges.status === "done" && originalTask.recurrence) {
-      const nextInstance = generateNextRecurringInstance(originalTask);
+      const updatedTask = { ...originalTask, ...effectiveChanges, updatedAt };
+      const nextInstance = generateNextRecurringInstance(updatedTask);
       if (nextInstance.dueDate) {
         await get().createTask(nextInstance);
       }
@@ -249,8 +256,9 @@ export const useTaskStore = create<TaskStore>((set, get) => {
   };
 
   const deleteTask: TaskStore["deleteTask"] = async (id) => {
-    // 1. Remove from parent's subtaskIds to prevent ghost refs causing duplication
     const taskToDelete = get().tasks.find((t) => t.id === id);
+
+    // 1. Remove from parent's subtaskIds to prevent ghost refs causing duplication
     if (taskToDelete?.parentTaskId) {
       const parent = get().tasks.find((t) => t.id === taskToDelete.parentTaskId);
       if (parent) {
@@ -278,7 +286,19 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       await docStore.updateDocument(doc.id, { linkedTaskIds: nextLinked });
     }
 
-    // 3. Delete the task itself
+    // 3. Clean up project taskIds
+    if (taskToDelete?.projectId) {
+      const { useProjectStore } = await import("./projectStore");
+      const projStore = useProjectStore.getState();
+      const project = projStore.projects.find((p) => p.id === taskToDelete.projectId);
+      if (project && project.taskIds.includes(id)) {
+        await projStore.updateProject(project.id, {
+          taskIds: project.taskIds.filter((tid) => tid !== id),
+        });
+      }
+    }
+
+    // 4. Delete the task itself
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) console.error("Failed to delete task:", error);
     set({ tasks: get().tasks.filter((t) => t.id !== id) });
@@ -400,7 +420,7 @@ export const useTaskStore = create<TaskStore>((set, get) => {
     }
 
     const byId = new Map(updated.map((t) => [t.id, t] as const));
-    set({ tasks: get().tasks.map((t) => byId.get(t.id) ?? t) });
+    set((state) => ({ tasks: state.tasks.map((t) => byId.get(t.id) ?? t) }));
   };
 
   return {

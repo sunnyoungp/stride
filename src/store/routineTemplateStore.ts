@@ -79,11 +79,13 @@ function combineDateTime(date: string, timeHHmm: string): Date {
 export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) => {
   const loadTemplates: RoutineTemplateStore["loadTemplates"] = async () => {
     if (get()?.isLoaded) return;
-    set({ isLoaded: true });
 
     try {
       const { data: rows, error } = await supabase.from("routine_templates").select("*");
-      if (isDemoMode()) return;
+      if (isDemoMode()) {
+        set({ isLoading: false, isLoaded: true });
+        return;
+      }
       if (error) throw error;
 
       let templates: RoutineTemplate[] = (rows ?? []).map(templateFromRow);
