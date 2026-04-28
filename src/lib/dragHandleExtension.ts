@@ -108,6 +108,9 @@ function createDragHandlePlugin() {
               e.dataTransfer.setData("text/task-title", title);
               e.dataTransfer.setData("stride/taskTitle", title);
               e.dataTransfer.setData("text/plain", title);
+              // Include full node JSON to preserve checked state, formatting, etc.
+              const jsonNode = (contentNode ?? node).toJSON();
+              e.dataTransfer.setData("text/block-json", JSON.stringify(jsonNode));
               if (taskId) {
                 e.dataTransfer.setData("text/task-id", taskId);
                 e.dataTransfer.setData("stride/taskId", taskId);

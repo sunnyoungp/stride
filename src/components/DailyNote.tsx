@@ -140,6 +140,27 @@ function removeNodeFromEditor(editor: Editor, title: string): boolean {
   return found;
 }
 
+/** Remove multiple nodes from the editor in one transaction by position (descending order to avoid offset shift). */
+function removeNodesFromEditorByPositions(editor: Editor, positions: number[]): void {
+  const doc = editor.state.doc;
+  const tr = editor.state.tr;
+  // Sort descending so deletions don't shift earlier positions
+  const sorted = [...positions].sort((a, b) => b - a);
+  for (const pos of sorted) {
+    try {
+      const node = doc.nodeAt(pos);
+      if (!node) continue;
+      const $pos = doc.resolve(pos);
+      if (node.type.name === "taskItem" && $pos.parent.type.name === "taskList" && $pos.parent.childCount === 1) {
+        tr.delete($pos.before($pos.depth), $pos.after($pos.depth));
+      } else {
+        tr.delete(pos, pos + node.nodeSize);
+      }
+    } catch { /* stale pos */ }
+  }
+  if (tr.docChanged && editor.view) editor.view.dispatch(tr);
+}
+
 async function ensureDailyNote(date: string): Promise<DailyNote> {
   const existing = await db.dailyNotes.where("date").equals(date).first();
   if (existing) return existing;
@@ -488,7 +509,10 @@ function UnlinkIcon() {
 
 // ─── DailyNote component ──────────────────────────────────────────────────────
 
-export function DailyNote({ selectedDate, onDateChange, hideHeader = false, moveItemRef }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean; moveItemRef?: React.MutableRefObject<((title: string, taskId: string | null, targetDate: string) => Promise<void>) | null> }) {
+export type MoveItemFn = (title: string, taskId: string | null, targetDate: string, nodeJson?: JSONContent | null) => Promise<void>;
+export type MoveItemsFn = (blocks: Array<{ title: string; taskId: string | null; json?: JSONContent | null; pos?: number }>, targetDate: string) => Promise<void>;
+
+export function DailyNote({ selectedDate, onDateChange, hideHeader = false, moveItemRef, moveItemsRef }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean; moveItemRef?: React.MutableRefObject<MoveItemFn | null>; moveItemsRef?: React.MutableRefObject<MoveItemsFn | null> }) {
   const dailyNotes        = useDailyNoteStore((s) => s.dailyNotes);
   const loadDailyNotes    = useDailyNoteStore((s) => s.loadDailyNotes);
   const getTodayNote      = useDailyNoteStore((s) => s.getTodayNote);
@@ -891,9 +915,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             const selectedPoses = dnSelectedPosesRef.current;
             if (selectedPoses.size >= 2) {
               const ed = editorRef.current;
-              const isOnSelectedBlock = target?.closest("[data-pm-selected]") as HTMLElement | null;
+              const isOnSelectedBlock = target?.closest(".dn-block-selected") as HTMLElement | null;
               if (isOnSelectedBlock && ed) {
-                type BlockPayload = { blockType: "task" | "note"; title: string; taskId: string | null };
+                type BlockPayload = { blockType: "task" | "note"; title: string; taskId: string | null; json: JSONContent; pos: number };
                 const blocks: BlockPayload[] = [];
                 const sortedPoses = [...selectedPoses].sort((a, b) => a - b);
                 for (const pos of sortedPoses) {
@@ -904,7 +928,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
                     if (!title) continue;
                     const blockType: "task" | "note" = node.type.name === "taskItem" ? "task" : "note";
                     const taskId = (node.attrs as Record<string, unknown>).taskId as string | null ?? null;
-                    blocks.push({ blockType, title, taskId });
+                    const json = node.toJSON() as JSONContent;
+                    blocks.push({ blockType, title, taskId, json, pos });
                   } catch { /* ignore stale pos */ }
                 }
                 if (blocks.length >= 2) {
@@ -1084,7 +1109,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       const ed = editorRef.current;
       if (!ed) return;
 
-      type BlockPayload = { blockType: "task" | "note"; title: string; taskId: string | null };
+      type BlockPayload = { blockType: "task" | "note"; title: string; taskId: string | null; json: JSONContent; pos: number };
       const blocks: BlockPayload[] = [...selectedPoses]
         .sort((a, b) => a - b)
         .flatMap((pos) => {
@@ -1095,7 +1120,8 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             if (!title) return [];
             const blockType: "task" | "note" = node.type.name === "taskItem" ? "task" : "note";
             const taskId = (node.attrs as Record<string, unknown>).taskId as string | null ?? null;
-            return [{ blockType, title, taskId }];
+            const json = node.toJSON() as JSONContent;
+            return [{ blockType, title, taskId, json, pos }];
           } catch { return []; }
         });
 
@@ -1144,78 +1170,160 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
    * the linked task's dueDate. The pendingMoveRef prevents onUpdate from deleting
    * the task when it detects the node disappearing.
    */
-  const handleMoveItem = useCallback(async (title: string, taskId: string | null, targetDate: string) => {
+  const handleMoveItem = useCallback(async (title: string, taskId: string | null, targetDate: string, nodeJson?: JSONContent | null) => {
     const ed   = editorRef.current;
     const note = noteRef.current;
     if (!ed || !note) return;
 
     if (taskId) pendingMoveRef.current.add(taskId);
 
-    // Detect node type before removing — only match taskItem/paragraph/heading directly,
-    // skip wrapper nodes (taskList, bulletList, doc) whose textContent also matches
-    const wrappers = new Set(["doc", "taskList", "bulletList", "orderedList", "blockquote"]);
-    let nodeType = "paragraph";
-    ed.state.doc.nodesBetween(0, ed.state.doc.nodeSize - 2, (node) => {
-      if (wrappers.has(node.type.name)) return true; // descend into wrappers
-      if (node.textContent.trim() === title) {
-        nodeType = node.type.name; // e.g. "taskItem", "paragraph", "heading"
-        return false; // stop traversal
-      }
-    });
+    // Use provided JSON (preserves checked state, formatting) or fall back to title match
+    let blockJson: JSONContent | null = nodeJson ?? null;
+    if (!blockJson) {
+      const wrappers = new Set(["doc", "taskList", "bulletList", "orderedList", "blockquote"]);
+      ed.state.doc.nodesBetween(0, ed.state.doc.nodeSize - 2, (node) => {
+        if (blockJson) return false;
+        if (wrappers.has(node.type.name)) return true;
+        if (node.textContent.trim() === title) {
+          blockJson = node.toJSON() as JSONContent;
+          return false;
+        }
+      });
+    }
 
+    // Remove from source editor
     removeNodeFromEditor(ed, title);
 
-    // Flush save immediately so the removal is persisted before writing to the target
+    // Flush save immediately
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    await updateNoteContent(note.id, JSON.stringify(ed.getJSON()));
+    const saveSource = updateNoteContent(note.id, JSON.stringify(ed.getJSON()));
 
-    // Get or create target note — use upsertNote which handles Supabase creation
+    // Get target note content
     const storeState = useDailyNoteStore.getState();
     const existingTarget = storeState.dailyNotes.find(n => n.date === targetDate);
-    const targetContent = existingTarget?.content ?? JSON.stringify({ type: "doc", content: [] });
-
-    // If not in store, fetch from Supabase directly so we get the real content
-    let resolvedContent = targetContent;
+    let resolvedContent = existingTarget?.content ?? JSON.stringify({ type: "doc", content: [] });
     if (!existingTarget) {
       const { data: row } = await (await import("@/lib/supabase/client")).createClient()
         .from("daily_notes").select("content").eq("date", targetDate).maybeSingle();
       if (row?.content) resolvedContent = row.content;
     }
 
-    const targetDoc  = safeParseJson(resolvedContent) ?? { type: "doc", content: [] };
+    const targetDoc = safeParseJson(resolvedContent) ?? { type: "doc", content: [] };
     const contentArr: JSONContent[] = Array.isArray((targetDoc as any).content) ? (targetDoc as any).content : [];
 
-    if (nodeType === "taskItem") {
-      // Append as a taskItem inside a taskList
-      const newItem: JSONContent = {
-        type: "taskItem",
-        attrs: { checked: false, taskId },
-        content: [{ type: "paragraph", content: [{ type: "text", text: title }] }],
-      };
+    // Append block — use full JSON to preserve checked state, formatting, etc.
+    if (blockJson && blockJson.type === "taskItem") {
       const last = contentArr[contentArr.length - 1];
       if (last?.type === "taskList") {
-        last.content = [...(last.content ?? []), newItem];
+        last.content = [...(last.content ?? []), blockJson];
       } else {
-        contentArr.push({ type: "taskList", content: [newItem] });
+        contentArr.push({ type: "taskList", content: [blockJson] });
       }
+    } else if (blockJson) {
+      contentArr.push(blockJson);
     } else {
-      // Append plain text blocks (paragraphs, headings, bullets) as a paragraph
       contentArr.push({ type: "paragraph", content: [{ type: "text", text: title }] });
     }
 
-    // upsertNote creates the Supabase row if it doesn't exist, then writes content
-    await upsertNote(targetDate, JSON.stringify({ ...targetDoc, content: contentArr }));
+    // Save target + source in parallel, update task dueDate
+    await Promise.all([
+      saveSource,
+      upsertNote(targetDate, JSON.stringify({ ...targetDoc, content: contentArr })),
+      taskId ? updateTaskRef.current(taskId, { dueDate: targetDate }) : Promise.resolve(),
+    ]);
+  }, [updateNoteContent, upsertNote]);
 
-    // Update the task dueDate so it appears on the correct day in all filtered views
-    if (taskId) {
-      await updateTaskRef.current(taskId, { dueDate: targetDate });
+  /** Batch move multiple blocks to a target date in one operation (no race conditions). */
+  const handleMoveItems = useCallback(async (
+    blocks: Array<{ title: string; taskId: string | null; json?: JSONContent | null; pos?: number }>,
+    targetDate: string
+  ) => {
+    const ed   = editorRef.current;
+    const note = noteRef.current;
+    if (!ed || !note || blocks.length === 0) return;
+
+    // Mark all tasks as pending
+    for (const b of blocks) { if (b.taskId) pendingMoveRef.current.add(b.taskId); }
+
+    // Collect full JSON for each block before removal (use provided json or find by title)
+    const blockJsons: JSONContent[] = [];
+    const positionsToRemove: number[] = [];
+
+    for (const b of blocks) {
+      if (b.json) {
+        blockJsons.push(b.json);
+      } else {
+        // Fallback: find by title
+        const wrappers = new Set(["doc", "taskList", "bulletList", "orderedList", "blockquote"]);
+        let found: JSONContent | null = null;
+        ed.state.doc.nodesBetween(0, ed.state.doc.nodeSize - 2, (node) => {
+          if (found) return false;
+          if (wrappers.has(node.type.name)) return true;
+          if (node.textContent.trim() === b.title) { found = node.toJSON() as JSONContent; return false; }
+        });
+        blockJsons.push(found ?? { type: "paragraph", content: [{ type: "text", text: b.title }] });
+      }
+      if (b.pos != null) {
+        positionsToRemove.push(b.pos);
+      }
     }
+
+    // Remove all blocks in one transaction
+    if (positionsToRemove.length > 0) {
+      removeNodesFromEditorByPositions(ed, positionsToRemove);
+    } else {
+      // Fallback: remove by title one by one (less ideal but works)
+      for (const b of blocks) removeNodeFromEditor(ed, b.title);
+    }
+
+    // Flush source save
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    const saveSource = updateNoteContent(note.id, JSON.stringify(ed.getJSON()));
+
+    // Get target note content
+    const storeState = useDailyNoteStore.getState();
+    const existingTarget = storeState.dailyNotes.find(n => n.date === targetDate);
+    let resolvedContent = existingTarget?.content ?? JSON.stringify({ type: "doc", content: [] });
+    if (!existingTarget) {
+      const { data: row } = await (await import("@/lib/supabase/client")).createClient()
+        .from("daily_notes").select("content").eq("date", targetDate).maybeSingle();
+      if (row?.content) resolvedContent = row.content;
+    }
+
+    const targetDoc = safeParseJson(resolvedContent) ?? { type: "doc", content: [] };
+    const contentArr: JSONContent[] = Array.isArray((targetDoc as any).content) ? (targetDoc as any).content : [];
+
+    // Append all blocks
+    for (const json of blockJsons) {
+      if (json.type === "taskItem") {
+        const last = contentArr[contentArr.length - 1];
+        if (last?.type === "taskList") {
+          last.content = [...(last.content ?? []), json];
+        } else {
+          contentArr.push({ type: "taskList", content: [json] });
+        }
+      } else {
+        contentArr.push(json);
+      }
+    }
+
+    // Save target + source in parallel, update all task dueDates
+    const taskUpdates = blocks
+      .filter(b => b.taskId)
+      .map(b => updateTaskRef.current(b.taskId!, { dueDate: targetDate }));
+
+    await Promise.all([
+      saveSource,
+      upsertNote(targetDate, JSON.stringify({ ...targetDoc, content: contentArr })),
+      ...taskUpdates,
+    ]);
   }, [updateNoteContent, upsertNote]);
 
   // Expose handleMoveItem to parent via ref so external drop targets can trigger it
   useEffect(() => {
     if (moveItemRef) moveItemRef.current = handleMoveItem;
-  }, [handleMoveItem, moveItemRef]);
+    if (moveItemsRef) moveItemsRef.current = handleMoveItems;
+  }, [handleMoveItem, handleMoveItems, moveItemRef, moveItemsRef]);
 
   // Handle block move from EditorBubbleMenu
   useEffect(() => {

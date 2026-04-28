@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DailyNote } from "@/components/DailyNote";
+import { DailyNote, type MoveItemFn, type MoveItemsFn } from "@/components/DailyNote";
+import type { JSONContent } from "@tiptap/core";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -104,7 +105,8 @@ export default function NotesPage() {
   const tasks      = useTaskStore(s => s.tasks);
 
   // Ref to DailyNote's internal handleMoveItem so MiniCalendar drops can trigger it
-  const dailyNoteMoveRef = useRef<((title: string, taskId: string | null, targetDate: string) => Promise<void>) | null>(null);
+  const dailyNoteMoveRef = useRef<MoveItemFn | null>(null);
+  const dailyNoteMoveItemsRef = useRef<MoveItemsFn | null>(null);
 
   const handleTaskDrop = (taskId: string, taskTitle: string, date: string) => {
     if (taskId) {
@@ -120,10 +122,17 @@ export default function NotesPage() {
     }
   };
 
-  const handleBlockDrop = (blockType: "task" | "note", title: string, taskId: string | null, date: string) => {
+  const handleBlockDrop = (blockType: "task" | "note", title: string, taskId: string | null, date: string, json?: unknown) => {
     if (!title) return;
-    // handleMoveItem handles both the note content move AND dueDate update internally
-    void dailyNoteMoveRef.current?.(title, taskId, date);
+    void dailyNoteMoveRef.current?.(title, taskId, date, (json as JSONContent) ?? null);
+  };
+
+  const handleMultiBlockDrop = (blocks: Array<{ title: string; taskId: string | null; json?: unknown; pos?: number }>, date: string) => {
+    if (blocks.length === 0) return;
+    void dailyNoteMoveItemsRef.current?.(
+      blocks.map(b => ({ title: b.title, taskId: b.taskId, json: (b.json as JSONContent) ?? null, pos: b.pos })),
+      date
+    );
   };
 
   useEffect(() => { setMounted(true); }, []);
@@ -191,7 +200,7 @@ export default function NotesPage() {
             flex: 1, overflow: "auto",
             paddingBottom: calendarOpen ? 0 : "calc(var(--tab-bar-h) + env(safe-area-inset-bottom))",
           }}>
-            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} />
+            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} moveItemsRef={dailyNoteMoveItemsRef} />
           </div>
         </div>
 
@@ -218,6 +227,7 @@ export default function NotesPage() {
               dailyNotes={dailyNotes}
               onTaskDrop={handleTaskDrop}
               onBlockDrop={handleBlockDrop}
+              onMultiBlockDrop={handleMultiBlockDrop}
             />
           </div>
         )}
@@ -239,7 +249,7 @@ export default function NotesPage() {
       }}>
         {dateNav}
         <div style={{ flex: 1, overflow: "auto" }}>
-          <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} />
+          <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} moveItemsRef={dailyNoteMoveItemsRef} />
         </div>
       </div>
 
@@ -270,6 +280,7 @@ export default function NotesPage() {
             dailyNotes={dailyNotes}
             onTaskDrop={handleTaskDrop}
             onBlockDrop={handleBlockDrop}
+            onMultiBlockDrop={handleMultiBlockDrop}
           />
         </div>
       </div>

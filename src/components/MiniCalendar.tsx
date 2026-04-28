@@ -66,12 +66,14 @@ export function MiniCalendar({
   dailyNotes,
   onTaskDrop,
   onBlockDrop,
+  onMultiBlockDrop,
 }: {
   selectedDate: string;
   onDateChange: (date: string) => void;
   dailyNotes: DailyNote[];
   onTaskDrop?: (taskId: string, taskTitle: string, date: string) => void;
-  onBlockDrop?: (blockType: "task" | "note", title: string, taskId: string | null, date: string) => void;
+  onBlockDrop?: (blockType: "task" | "note", title: string, taskId: string | null, date: string, json?: unknown) => void;
+  onMultiBlockDrop?: (blocks: Array<{ title: string; taskId: string | null; json?: unknown; pos?: number }>, date: string) => void;
 }) {
   const updateTask = useTaskStore((s) => s.updateTask);
   const createTask = useTaskStore((s) => s.createTask);
@@ -150,10 +152,15 @@ export function MiniCalendar({
     const multiBlocksRaw = e.dataTransfer.getData("text/multi-blocks");
     if (multiBlocksRaw) {
       try {
-        const blocks = JSON.parse(multiBlocksRaw) as Array<{ blockType: "task" | "note"; title: string; taskId: string | null }>;
-        if (blocks.length > 0 && onBlockDrop) {
-          for (const block of blocks) {
-            onBlockDrop(block.blockType, block.title, block.taskId, date);
+        const blocks = JSON.parse(multiBlocksRaw) as Array<{ blockType: "task" | "note"; title: string; taskId: string | null; json?: unknown; pos?: number }>;
+        if (blocks.length > 0) {
+          if (onMultiBlockDrop) {
+            onMultiBlockDrop(blocks, date);
+          } else if (onBlockDrop) {
+            // Fallback: call one by one (legacy)
+            for (const block of blocks) {
+              onBlockDrop(block.blockType, block.title, block.taskId, date);
+            }
           }
           setFlashDate(date);
           setTimeout(() => setFlashDate(null), 350);
@@ -165,11 +172,14 @@ export function MiniCalendar({
     const blockType = e.dataTransfer.getData("text/block-type");
     const taskId    = e.dataTransfer.getData("text/task-id")    || e.dataTransfer.getData("stride/taskId")    || "";
     const title     = e.dataTransfer.getData("text/task-title") || e.dataTransfer.getData("stride/taskTitle") || e.dataTransfer.getData("text/plain") || "";
+    const blockJsonRaw = e.dataTransfer.getData("text/block-json");
+    let blockJson: unknown = undefined;
+    if (blockJsonRaw) { try { blockJson = JSON.parse(blockJsonRaw); } catch { /* ignore */ } }
 
     if (blockType === "task") {
       // Checklist item drag — move block to target note + reschedule task
       if (onBlockDrop) {
-        onBlockDrop("task", title, taskId || null, date);
+        onBlockDrop("task", title, taskId || null, date, blockJson);
       } else if (taskId) {
         // Fallback: just reschedule the task
         await updateTask(taskId, { dueDate: date });
@@ -179,7 +189,7 @@ export function MiniCalendar({
     } else if (blockType === "note") {
       // Plain text block drag — move block to target note
       if (onBlockDrop) {
-        onBlockDrop("note", title, null, date);
+        onBlockDrop("note", title, null, date, blockJson);
       } else {
         // Fallback: navigate to that day's note
         onDateChange(date);
@@ -193,7 +203,7 @@ export function MiniCalendar({
       setFlashDate(date);
       setTimeout(() => setFlashDate(null), 350);
     }
-  }, [onTaskDrop, onBlockDrop, onDateChange, updateTask, createTask]);
+  }, [onTaskDrop, onBlockDrop, onMultiBlockDrop, onDateChange, updateTask, createTask]);
 
   const goToToday = () => {
     const d = new Date();
