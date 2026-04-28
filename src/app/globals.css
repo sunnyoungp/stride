@@ -544,6 +544,13 @@ a, button, input, select, textarea {
   user-select: none;
 }
 
+/* ── Daily note block selection highlight ── */
+.ProseMirror [data-pm-selected="true"] {
+  background: var(--accent-bg) !important;
+  border-radius: 5px;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
 /* ── Daily note drag feedback ── */
 
 /* Drag cursor on blocks draggable via the handle */

@@ -1034,11 +1034,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     try { dom = editor.view.dom as HTMLElement; } catch { return; }
 
     dom.querySelectorAll("[data-pm-selected]").forEach((el) => {
-      const h = el as HTMLElement;
-      h.removeAttribute("data-pm-selected");
-      h.style.background = "";
-      h.style.borderRadius = "";
-      h.style.boxShadow = "";
+      el.removeAttribute("data-pm-selected");
     });
     if (dnSelectedPoses.size === 0) return;
     dnSelectedPoses.forEach((pos) => {
@@ -1051,9 +1047,6 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           : nodeDom;
         if (!el) return;
         el.setAttribute("data-pm-selected", "true");
-        el.style.background = "var(--accent-bg)";
-        el.style.borderRadius = "5px";
-        el.style.boxShadow = "inset 2px 0 0 var(--accent)";
       } catch { /* ignore stale pos */ }
     });
   }, [editor, dnSelectedPoses]);
