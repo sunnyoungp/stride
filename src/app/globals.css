@@ -546,9 +546,8 @@ a, button, input, select, textarea {
 
 /* ── Daily note block selection highlight ── */
 .ProseMirror .dn-block-selected {
-  background: var(--accent-bg) !important;
+  background: rgba(99, 130, 191, 0.13) !important;
   border-radius: 5px;
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 /* ── Daily note drag feedback ── */
