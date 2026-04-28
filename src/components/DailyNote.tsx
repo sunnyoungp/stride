@@ -1,8 +1,11 @@
 "use client";
 
 import { EditorContent, useEditor } from "@tiptap/react";
+import { Extension } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "prosemirror-model";
+import { Plugin, PluginKey } from "prosemirror-state";
+import { Decoration, DecorationSet } from "prosemirror-view";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import StarterKit from "@tiptap/starter-kit";
 import TaskItem from "@tiptap/extension-task-item";
@@ -766,6 +769,37 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const slashCommandExtension = useMemo(() => createSlashCommandExtension(slashPropsRef, slashMenuRef, setSlashMenu), []);
 
+  // TipTap extension that renders node decorations for selected blocks.
+  // Reads from dnSelectedPosesRef so it always has the latest selection.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const selectionHighlightExt = useMemo(() => Extension.create({
+    name: "dnSelectionHighlight",
+    addProseMirrorPlugins() {
+      const posesRef = dnSelectedPosesRef;
+      return [new Plugin({
+        key: new PluginKey("dnSelectionHighlight"),
+        props: {
+          decorations: (state) => {
+            const poses = posesRef.current;
+            if (poses.size === 0) return DecorationSet.empty;
+            const decos: Decoration[] = [];
+            poses.forEach((pos) => {
+              try {
+                const node = state.doc.nodeAt(pos);
+                if (node) {
+                  decos.push(Decoration.node(pos, pos + node.nodeSize, {
+                    class: "dn-block-selected",
+                  }));
+                }
+              } catch { /* stale pos */ }
+            });
+            return DecorationSet.create(state.doc, decos);
+          },
+        },
+      })];
+    },
+  }), []);
+
   const editor = useEditor(
     {
       extensions: [
@@ -782,6 +816,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         Link.configure({ openOnClick: false }),
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
+        selectionHighlightExt,
       ],
       immediatelyRender: false,
       editable: true, // Always editable
@@ -1027,28 +1062,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }, [editor]);
 
 
-  // Apply/clear selection highlights directly on the ProseMirror DOM
+  // Force decoration plugin to re-evaluate when selection changes
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
-    let dom: HTMLElement;
-    try { dom = editor.view.dom as HTMLElement; } catch { return; }
-
-    dom.querySelectorAll("[data-pm-selected]").forEach((el) => {
-      el.removeAttribute("data-pm-selected");
-    });
-    if (dnSelectedPoses.size === 0) return;
-    dnSelectedPoses.forEach((pos) => {
-      try {
-        const nodeDom = editor.view.nodeDOM(pos) as HTMLElement | null;
-        if (!nodeDom) return;
-        // For taskItems the nodeDOM is the <li>; walk up one level if it's a text node
-        const el = nodeDom.nodeType === Node.TEXT_NODE
-          ? (nodeDom.parentElement as HTMLElement | null)
-          : nodeDom;
-        if (!el) return;
-        el.setAttribute("data-pm-selected", "true");
-      } catch { /* ignore stale pos */ }
-    });
+    // Dispatch a no-op transaction so the decorations plugin re-runs
+    try {
+      editor.view.dispatch(editor.state.tr.setMeta("dnSelectionUpdate", true));
+    } catch { /* editor may be destroyed */ }
   }, [editor, dnSelectedPoses]);
 
   // Document-level dragstart capture: inject multi-block payload when handle is dragged
