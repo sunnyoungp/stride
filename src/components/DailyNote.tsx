@@ -1035,11 +1035,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       onUpdate: ({ editor }) => {
         if (!noteRef.current) return;
         const content = JSON.stringify(editor.getJSON());
+        const noteId = noteRef.current.id;
 
-        // Debounced save
+        // Debounced save — capture noteId now to prevent saving to wrong note after navigation
         if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
         saveTimerRef.current = window.setTimeout(() => {
-          void updateNoteContent(noteRef.current!.id, content);
+          if (noteRef.current?.id !== noteId) return; // note changed, skip stale save
+          void updateNoteContent(noteId, content);
         }, 500);
 
         const currentItems  = scanTaskItems(editor);
@@ -1136,6 +1138,26 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     return () => document.removeEventListener("dragstart", onHandleDragStart, true);
   }, []);
 
+  // Flush any pending debounced save before switching notes — prevents old content
+  // from being written to the wrong note ID after navigation.
+  const prevNoteIdRef = useRef<string | null>(note?.id ?? null);
+  useEffect(() => {
+    const prevId = prevNoteIdRef.current;
+    const currId = note?.id ?? null;
+    if (prevId && prevId !== currId && saveTimerRef.current) {
+      // The timer's closure captured the correct content at onUpdate time,
+      // but noteRef may have already moved to the new note. Save with the OLD id explicitly.
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      const ed = editorRef.current;
+      if (ed && !ed.isDestroyed) {
+        // Editor may already show old content (before setContent runs) — save it to the PREVIOUS note
+        void updateNoteContent(prevId, JSON.stringify(ed.getJSON()));
+      }
+    }
+    prevNoteIdRef.current = currId;
+  }, [note?.id, updateNoteContent]);
+
   useEffect(() => {
     if (!editor || !note) return;
     const nextJson = note.content ? safeParseJson(note.content) : null;
@@ -1146,6 +1168,21 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       prevTaskIdsRef.current = new Set(items.flatMap(i => (i.taskId ? [i.taskId] : [])));
     }
   }, [editor, note?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save on tab/window close to prevent losing unsaved edits
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      if (saveTimerRef.current && noteRef.current && editorRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+        // Use sendBeacon or sync XHR isn't possible with Supabase client,
+        // but we can at least fire-and-forget the save
+        void updateNoteContent(noteRef.current.id, JSON.stringify(editorRef.current.getJSON()));
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [updateNoteContent]);
 
   useEffect(() => {
     return () => { if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current); };
