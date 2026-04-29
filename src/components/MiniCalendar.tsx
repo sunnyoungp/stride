@@ -23,12 +23,14 @@ function parseLocalDate(s: string): Date {
 
 function hasRealContent(contentJson: string): boolean {
   try {
-    const doc = JSON.parse(contentJson) as { content?: { content?: { text?: string }[] }[] };
-    const text = (doc?.content ?? [])
-      .map(n => (n?.content ?? []).map(c => c?.text ?? "").join(""))
-      .join("")
-      .trim();
-    return text.length > 0;
+    const doc = JSON.parse(contentJson);
+    // Recursively extract all text from the doc tree (handles taskItem → paragraph → text, etc.)
+    const extractText = (node: Record<string, unknown>): string => {
+      if (typeof node.text === "string") return node.text;
+      if (Array.isArray(node.content)) return (node.content as Record<string, unknown>[]).map(extractText).join("");
+      return "";
+    };
+    return extractText(doc).trim().length > 0;
   } catch {
     return false;
   }
