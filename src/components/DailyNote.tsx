@@ -30,6 +30,8 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { DailyNote, Task } from "@/types/index";
+import { OverdueTasksSection, type OverdueItem } from "@/components/OverdueTasksSection";
+import { UndoToast } from "@/components/UndoToast";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -582,6 +584,200 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   const prevTaskIdsRef = useRef<Set<string>>(new Set());
   // taskIds currently being moved — suppress auto-delete in onUpdate
   const pendingMoveRef = useRef<Set<string>>(new Set());
+
+  // ── Overdue tasks from past daily notes ──────────────────────────────────────
+  const today = useMemo(() => dateOnlyString(new Date()), []);
+  const isViewingToday = selectedDate === today;
+
+  const overdueItems = useMemo(() => {
+    if (!isViewingToday) return [];
+    return collectOverdueItems(dailyNotes, tasks, today);
+  }, [isViewingToday, dailyNotes, tasks, today]);
+
+  const [isMovingAll, setIsMovingAll] = useState(false);
+  const [undoState, setUndoState] = useState<{
+    message: string;
+    snapshots: Map<string, string>; // noteId → pre-move content JSON
+    appendedCount: number;
+  } | null>(null);
+  const undoStateRef = useRef(undoState);
+  useEffect(() => { undoStateRef.current = undoState; }, [undoState]);
+
+  /** Check off (mark done) a single overdue item from its source note. */
+  const handleOverdueCheck = useCallback(async (item: OverdueItem) => {
+    // 1. Update the task store if linked
+    if (item.taskId) {
+      await updateTask(item.taskId, { status: "done" });
+    }
+
+    // 2. Patch the source note's JSON to set checked: true
+    const sourceNote = dailyNotes.find((n) => n.id === item.noteId);
+    if (!sourceNote) return;
+    const doc = safeParseJson(sourceNote.content);
+    if (!doc || !Array.isArray((doc as any).content)) return;
+
+    let patched = false;
+    const patchNode = (nodes: JSONContent[]) => {
+      for (const node of nodes) {
+        if (patched) return;
+        if (
+          node.type === "taskItem" &&
+          !node.attrs?.checked &&
+          extractText(node).trim() === item.title &&
+          ((node.attrs?.taskId ?? null) === item.taskId)
+        ) {
+          node.attrs = { ...node.attrs, checked: true };
+          patched = true;
+          return;
+        }
+        if (node.content) patchNode(node.content);
+      }
+    };
+    patchNode((doc as any).content);
+
+    if (patched) {
+      await updateNoteContent(sourceNote.id, JSON.stringify(doc));
+    }
+  }, [dailyNotes, updateTask, updateNoteContent]);
+
+  /** Move all overdue items to today's note. */
+  const handleMoveAllToToday = useCallback(async () => {
+    const ed = editorRef.current;
+    const currentNote = noteRef.current;
+    if (!ed || !currentNote || overdueItems.length === 0) return;
+
+    setIsMovingAll(true);
+
+    try {
+      // Snapshot source notes for undo
+      const sourceNoteIds = new Set(overdueItems.map((i) => i.noteId));
+      const snapshots = new Map<string, string>();
+      for (const nid of sourceNoteIds) {
+        const sn = dailyNotes.find((n) => n.id === nid);
+        if (sn) snapshots.set(nid, sn.content);
+      }
+      // Snapshot today's editor content for undo
+      const todaySnapshotJson = JSON.stringify(ed.getJSON());
+      snapshots.set(currentNote.id, todaySnapshotJson);
+
+      // Group items by source note
+      const byNote = new Map<string, OverdueItem[]>();
+      for (const item of overdueItems) {
+        const arr = byNote.get(item.noteId) ?? [];
+        arr.push(item);
+        byNote.set(item.noteId, arr);
+      }
+
+      // Remove items from each source note's JSON
+      const sourceUpdates: Promise<void>[] = [];
+      for (const [noteId, items] of byNote) {
+        const sn = dailyNotes.find((n) => n.id === noteId);
+        if (!sn) continue;
+        const doc = safeParseJson(sn.content);
+        if (!doc || !Array.isArray((doc as any).content)) continue;
+
+        const titlesToRemove = new Set(items.map((i) => i.title));
+        const taskIdsToRemove = new Set(items.filter((i) => i.taskId).map((i) => i.taskId));
+
+        const removeUnchecked = (nodes: JSONContent[]): JSONContent[] => {
+          return nodes.reduce<JSONContent[]>((acc, node) => {
+            if (
+              node.type === "taskItem" &&
+              !node.attrs?.checked &&
+              titlesToRemove.has(extractText(node).trim())
+            ) {
+              // Match by taskId if available, otherwise by title
+              const nTaskId = (node.attrs?.taskId as string) ?? null;
+              if (nTaskId ? taskIdsToRemove.has(nTaskId) : true) {
+                return acc; // skip (remove)
+              }
+            }
+            if (node.content) {
+              const filtered = removeUnchecked(node.content);
+              // If a taskList/bulletList becomes empty after filtering, remove it too
+              if (
+                (node.type === "taskList" || node.type === "bulletList" || node.type === "orderedList") &&
+                filtered.length === 0
+              ) {
+                return acc;
+              }
+              acc.push({ ...node, content: filtered });
+            } else {
+              acc.push(node);
+            }
+            return acc;
+          }, []);
+        };
+
+        (doc as any).content = removeUnchecked((doc as any).content);
+        sourceUpdates.push(updateNoteContent(noteId, JSON.stringify(doc)));
+      }
+
+      // Append items to today's editor via ProseMirror transaction (preserves cursor)
+      const moveId = `overdue-move-${Date.now()}`;
+      const taskItemJsons: JSONContent[] = overdueItems.map((item) => ({
+        ...(item.nodeJson as JSONContent),
+        attrs: {
+          ...((item.nodeJson as JSONContent).attrs ?? {}),
+          overdueMoveId: moveId,
+        },
+      }));
+
+      // Insert at end of editor as a taskList
+      const endPos = ed.state.doc.content.size;
+      ed.chain()
+        .insertContentAt(endPos, { type: "taskList", content: taskItemJsons })
+        .run();
+
+      // Update task dueDates
+      const taskUpdates = overdueItems
+        .filter((i) => i.taskId)
+        .map((i) => updateTask(i.taskId!, { dueDate: today }));
+
+      // Save source notes + today's editor content in parallel
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+      const saveTodayContent = updateNoteContent(currentNote.id, JSON.stringify(ed.getJSON()));
+
+      await Promise.all([...sourceUpdates, saveTodayContent, ...taskUpdates]);
+
+      // Show undo toast
+      setUndoState({
+        message: `Moved ${overdueItems.length} task${overdueItems.length > 1 ? "s" : ""} to today`,
+        snapshots,
+        appendedCount: overdueItems.length,
+      });
+    } finally {
+      setIsMovingAll(false);
+    }
+  }, [overdueItems, dailyNotes, today, updateNoteContent, updateTask]);
+
+  /** Undo the move-all operation by restoring snapshots. */
+  const handleUndoMoveAll = useCallback(async () => {
+    const state = undoStateRef.current;
+    if (!state) return;
+
+    const ed = editorRef.current;
+    const currentNote = noteRef.current;
+
+    // Restore all source notes + today's note from snapshots
+    const restoreOps: Promise<void>[] = [];
+    for (const [noteId, contentJson] of state.snapshots) {
+      if (noteId === currentNote?.id && ed) {
+        // Restore today's editor content
+        const parsed = safeParseJson(contentJson);
+        if (parsed) ed.commands.setContent(parsed, { emitUpdate: false });
+      }
+      restoreOps.push(updateNoteContent(noteId, contentJson));
+    }
+
+    // Restore task dueDates — move them back to their original notes
+    const taskRestores = overdueItems
+      .filter((i) => i.taskId)
+      .map((i) => updateTask(i.taskId!, { dueDate: i.noteDate }));
+
+    await Promise.all([...restoreOps, ...taskRestores]);
+    setUndoState(null);
+  }, [overdueItems, updateNoteContent, updateTask]);
 
   // Long-press → contextmenu on mobile (simulates right-click for task items)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1538,6 +1734,16 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         className="flex-1 overflow-y-auto px-8 py-8"
         style={{ position: "relative" }}
       >
+        {/* Overdue tasks from past daily notes — only on today's note */}
+        {isViewingToday && overdueItems.length > 0 && (
+          <OverdueTasksSection
+            items={overdueItems}
+            onCheck={handleOverdueCheck}
+            onMoveAll={handleMoveAllToToday}
+            isMoving={isMovingAll}
+          />
+        )}
+
         {editor ? (
           <>
             <div
@@ -1556,6 +1762,15 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             <FormatPanel editor={editor} isOpen={formatPanelOpen} onClose={() => setFormatPanelOpen(false)} documentId={note.id} />
           </>
         ) : null}
+
+        {/* Undo toast after Move All */}
+        {undoState && (
+          <UndoToast
+            message={undoState.message}
+            onUndo={handleUndoMoveAll}
+            onDismiss={() => setUndoState(null)}
+          />
+        )}
       </div>
 
 
@@ -1628,4 +1843,87 @@ function safeParseJson(value: string): JSONContent | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Scan all past daily notes for unchecked taskItems.
+ * For linked tasks (taskId exists), skip if task.dueDate >= today (rescheduled forward).
+ * For linked tasks with null/undefined dueDate, fall back to note.date < today.
+ * For unlinked tasks (no taskId), use note.date < today.
+ */
+function collectOverdueItems(
+  dailyNotes: DailyNote[],
+  tasks: Task[],
+  today: string,
+): OverdueItem[] {
+  const taskMap = new Map(tasks.map((t) => [t.id, t]));
+  const result: OverdueItem[] = [];
+
+  for (const note of dailyNotes) {
+    if (note.date >= today) continue;
+    const doc = safeParseJson(note.content);
+    if (!doc || !Array.isArray((doc as any).content)) continue;
+
+    // Walk the TipTap JSON tree looking for unchecked taskItems
+    const walk = (nodes: JSONContent[], posOffset: number) => {
+      let pos = posOffset;
+      for (const node of nodes) {
+        if (node.type === "taskItem") {
+          const checked = Boolean(node.attrs?.checked);
+          const taskId: string | null = (node.attrs?.taskId as string) ?? null;
+          const title = extractText(node).trim();
+
+          if (!checked && title) {
+            // Filter: should this item appear?
+            let include = true;
+            if (taskId) {
+              const task = taskMap.get(taskId);
+              if (task) {
+                // Linked task with a dueDate — only include if overdue
+                if (task.dueDate) {
+                  include = task.dueDate < today;
+                }
+                // Linked task with null dueDate — fall back to note.date (already < today)
+                // Linked task that's completed in store — skip
+                if (task.status === "done" || task.status === "cancelled") {
+                  include = false;
+                }
+              }
+              // taskId exists but task not in store (deleted) — skip
+              if (!task) include = false;
+            }
+
+            if (include) {
+              result.push({
+                noteId: note.id,
+                noteDate: note.date,
+                taskId,
+                title,
+                nodeJson: node as Record<string, unknown>,
+                posInSourceDoc: pos,
+              });
+            }
+          }
+        }
+        // Recurse into wrapper nodes (taskList, bulletList, etc.)
+        if (node.content && Array.isArray(node.content)) {
+          walk(node.content, pos + 1);
+        }
+        // Advance pos estimate (not exact ProseMirror positions — used as stable keys only)
+        pos += 1;
+      }
+    };
+    walk((doc as any).content, 0);
+  }
+
+  // Sort by date ascending (oldest first)
+  result.sort((a, b) => a.noteDate.localeCompare(b.noteDate));
+  return result;
+}
+
+/** Extract plain text from a TipTap JSON node recursively. */
+function extractText(node: JSONContent): string {
+  if (node.type === "text" && typeof node.text === "string") return node.text;
+  if (!node.content) return "";
+  return node.content.map(extractText).join("");
 }
