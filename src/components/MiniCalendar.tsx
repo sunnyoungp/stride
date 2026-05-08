@@ -282,6 +282,7 @@ export function MiniCalendar({
           return (
             <div
               key={date}
+              data-calendar-date={date}
               style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
               onDragOver={(e) => handleDragOver(e, date)}
               onDragLeave={handleDragLeave}
@@ -289,6 +290,7 @@ export function MiniCalendar({
             >
               <button
                 type="button"
+                data-calendar-date={date}
                 onClick={() => onDateChange(date)}
                 onMouseEnter={() => setHovered(date)}
                 onMouseLeave={() => setHovered(null)}

@@ -640,6 +640,75 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     }
   }, [dailyNotes, updateTask, updateNoteContent]);
 
+  /** Drop a single overdue item onto a calendar date (pointer-event drag). */
+  const handleOverdueDropOnDate = useCallback(async (item: OverdueItem, targetDate: string) => {
+    // 1. Remove from source note JSON
+    const sourceNote = dailyNotes.find((n) => n.id === item.noteId);
+    if (sourceNote) {
+      const doc = safeParseJson(sourceNote.content);
+      if (doc && Array.isArray((doc as any).content)) {
+        let removed = false;
+        const removeFirst = (nodes: JSONContent[]): JSONContent[] =>
+          nodes.reduce<JSONContent[]>((acc, node) => {
+            if (!removed && node.type === "taskItem" && !node.attrs?.checked
+              && extractText(node).trim() === item.title
+              && ((node.attrs?.taskId ?? null) === item.taskId)) {
+              removed = true;
+              return acc;
+            }
+            if (node.content) {
+              const filtered = removeFirst(node.content);
+              if ((node.type === "taskList" || node.type === "bulletList" || node.type === "orderedList") && filtered.length === 0) return acc;
+              acc.push({ ...node, content: filtered });
+            } else {
+              acc.push(node);
+            }
+            return acc;
+          }, []);
+        (doc as any).content = removeFirst((doc as any).content);
+        await updateNoteContent(sourceNote.id, JSON.stringify(doc));
+      }
+    }
+
+    // 2. Append to target date's note
+    const targetNote = dailyNotes.find((n) => n.date === targetDate);
+    let resolvedContent = targetNote?.content ?? JSON.stringify({ type: "doc", content: [] });
+    if (!targetNote) {
+      const { createClient: makeClient } = await import("@/lib/supabase/client");
+      const { data: row } = await makeClient()
+        .from("daily_notes").select("content").eq("date", targetDate).maybeSingle();
+      if (row?.content) resolvedContent = row.content;
+    }
+    const targetDoc = safeParseJson(resolvedContent) ?? { type: "doc", content: [] };
+    const contentArr: JSONContent[] = Array.isArray((targetDoc as any).content) ? (targetDoc as any).content : [];
+    const blockJson = item.nodeJson as JSONContent;
+    if (blockJson.type === "taskItem") {
+      const last = contentArr[contentArr.length - 1];
+      if (last?.type === "taskList") {
+        last.content = [...(last.content ?? []), blockJson];
+      } else {
+        contentArr.push({ type: "taskList", content: [blockJson] });
+      }
+    } else {
+      contentArr.push(blockJson);
+    }
+    await upsertNote(targetDate, JSON.stringify({ ...targetDoc, content: contentArr }));
+
+    // 3. Update task dueDate if linked
+    if (item.taskId) {
+      await updateTask(item.taskId, { dueDate: targetDate });
+    }
+
+    // 4. If target is today and editor is open, refresh it
+    if (targetDate === today && editorRef.current && noteRef.current) {
+      const freshNote = useDailyNoteStore.getState().dailyNotes.find((n) => n.date === today);
+      if (freshNote) {
+        const parsed = safeParseJson(freshNote.content);
+        if (parsed) editorRef.current.commands.setContent(parsed, { emitUpdate: false });
+      }
+    }
+  }, [dailyNotes, today, updateNoteContent, upsertNote, updateTask]);
+
   /** Move all overdue items to today's note. */
   const handleMoveAllToToday = useCallback(async () => {
     const ed = editorRef.current;
@@ -1794,6 +1863,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             items={overdueItems}
             onCheck={handleOverdueCheck}
             onMoveAll={handleMoveAllToToday}
+            onDropOnDate={handleOverdueDropOnDate}
             isMoving={isMovingAll}
           />
         )}
