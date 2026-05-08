@@ -28,6 +28,7 @@ export const ALL_SLASH_CMDS: SlashCmd[] = [
   { id: "h1",      label: "Heading 1",     desc: "Large section header",          icon: "H1", run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
   { id: "h2",      label: "Heading 2",     desc: "Medium section header",         icon: "H2", run: (e) => e.chain().focus().toggleHeading({ level: 2 }).run() },
   { id: "h3",      label: "Heading 3",     desc: "Small section header",          icon: "H3", run: (e) => e.chain().focus().toggleHeading({ level: 3 }).run() },
+  { id: "toggle", label: "Toggle",         desc: "Collapsible section",           icon: "▸",  run: (e) => e.chain().focus().setToggle().run() },
   { id: "quote",   label: "Blockquote",    desc: "Highlighted quote block",       icon: "❝",  run: (e) => e.chain().focus().toggleBlockquote().run() },
   { id: "code",    label: "Code Block",    desc: "Code with syntax highlighting", icon: "<>", run: (e) => e.chain().focus().toggleCodeBlock().run() },
   { id: "divider", label: "Divider",       desc: "Horizontal rule",               icon: "—",  run: (e) => e.chain().focus().setHorizontalRule().run() },

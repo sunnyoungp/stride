@@ -557,6 +557,38 @@ a, button, input, select, textarea {
   user-select: none;
 }
 
+/* ── Toggle (collapsible) blocks ── */
+.ProseMirror details.stride-toggle {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+  margin: 0.4rem 0;
+}
+.ProseMirror details.stride-toggle > summary.stride-toggle-summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-weight: 500;
+  color: var(--fg);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ProseMirror details.stride-toggle > summary.stride-toggle-summary::before {
+  content: "▸";
+  display: inline-block;
+  font-size: 12px;
+  color: var(--fg-muted);
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+.ProseMirror details.stride-toggle[open] > summary.stride-toggle-summary::before {
+  transform: rotate(90deg);
+}
+.ProseMirror details.stride-toggle > .stride-toggle-content {
+  padding: 4px 12px 8px 28px;
+}
+
 /* ── Daily note block selection highlight ── */
 .ProseMirror .dn-block-selected {
   background: rgba(99, 130, 191, 0.13) !important;

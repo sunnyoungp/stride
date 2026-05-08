@@ -27,6 +27,7 @@ import { FormatPanel } from "@/components/FormatPanel";
 import Color from "@tiptap/extension-color";
 import Link from "@tiptap/extension-link";
 import { TextStyle } from "@tiptap/extension-text-style";
+import { ToggleNode, ToggleSummary, ToggleContent } from "@/lib/toggleExtension";
 import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { DailyNote, Task } from "@/types/index";
@@ -1201,6 +1202,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         TaskItemWithId,
         XChecklistExtension,
         // DragHandleExtension, // disabled — drag handles are buggy in Tauri, will revisit
+        ToggleNode,
+        ToggleSummary,
+        ToggleContent,
         Placeholder.configure({ placeholder: "Start writing…" }),
         slashCommandExtension,
         backspaceUnwrapExt,
