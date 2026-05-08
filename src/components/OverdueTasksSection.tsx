@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 export interface OverdueItem {
@@ -35,6 +35,48 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, isMoving }: Props
   useEffect(() => {
     localStorage.setItem("stride-overdue-collapsed", String(collapsed));
   }, [collapsed]);
+
+  const handleDragStart = useCallback((e: React.DragEvent, item: OverdueItem) => {
+    // Set data in the same format the existing MiniCalendar drop handler expects
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/block-type", "task");
+    e.dataTransfer.setData("text/task-title", item.title);
+    e.dataTransfer.setData("stride/taskTitle", item.title);
+    e.dataTransfer.setData("text/plain", item.title);
+    if (item.taskId) {
+      e.dataTransfer.setData("text/task-id", item.taskId);
+      e.dataTransfer.setData("stride/taskId", item.taskId);
+    }
+    e.dataTransfer.setData("text/block-json", JSON.stringify(item.nodeJson));
+    // Overdue-specific: source note info so the drop handler can remove from source
+    e.dataTransfer.setData("text/overdue-source-note-id", item.noteId);
+    e.dataTransfer.setData("text/overdue-source-note-date", item.noteDate);
+
+    // Custom drag preview: date badge + title
+    const preview = document.createElement("div");
+    preview.style.cssText = `
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 10px;
+      background: var(--bg-card); border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-float); font-size: 13px; color: var(--fg);
+      font-family: inherit; white-space: nowrap; opacity: 0.92;
+      pointer-events: none; position: fixed; top: -200px; left: -200px;
+    `;
+    const badge = document.createElement("span");
+    badge.style.cssText = `
+      font-size: 11px; font-weight: 600; color: var(--fg-muted);
+      background: var(--bg-hover); padding: 2px 6px; border-radius: 5px;
+    `;
+    badge.textContent = formatBadgeDate(item.noteDate);
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = item.title.length > 40 ? item.title.slice(0, 40) + "…" : item.title;
+    preview.appendChild(badge);
+    preview.appendChild(titleSpan);
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, 20, 20);
+    // Clean up the preview element after a frame
+    requestAnimationFrame(() => document.body.removeChild(preview));
+  }, []);
 
   if (items.length === 0) return null;
 
@@ -111,12 +153,16 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, isMoving }: Props
           {items.map((item, i) => (
             <div
               key={`${item.noteId}-${item.posInSourceDoc}-${i}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, item)}
               className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-100 hover:bg-[var(--bg-hover)]"
+              style={{ cursor: "grab" }}
             >
               {/* Checkbox */}
               <button
                 type="button"
                 onClick={() => onCheck(item)}
+                onPointerDown={(e) => e.stopPropagation()}
                 className="flex items-center justify-center flex-shrink-0"
                 style={{
                   width: 17,
