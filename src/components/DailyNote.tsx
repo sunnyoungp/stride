@@ -1438,7 +1438,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }, [note?.id, updateNoteContent]);
 
   useEffect(() => {
-    if (!editor || !note) return;
+    if (!editor || editor.isDestroyed || !note) return;
     const nextJson = note.content ? safeParseJson(note.content) : null;
     if (nextJson) {
       editor.commands.setContent(nextJson, { emitUpdate: false });
@@ -1475,8 +1475,16 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     setNote(createdOrFound);
   };
 
-  // Sync note content whenever the parent changes selectedDate
+  // Sync note content whenever the parent changes selectedDate.
+  // Flush any pending save for the CURRENT note before switching to avoid
+  // the debounced save overwriting the newly-loaded note.
   useEffect(() => {
+    // Flush pending save for the outgoing note
+    if (saveTimerRef.current && noteRef.current && editorRef.current && !editorRef.current.isDestroyed) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      void updateNoteContent(noteRef.current.id, JSON.stringify(editorRef.current.getJSON()));
+    }
     void goToDate(selectedDate);
   }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
