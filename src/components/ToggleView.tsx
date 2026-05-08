@@ -12,8 +12,7 @@ export function ToggleView({ node, updateAttributes }: NodeViewProps) {
       data-open={String(isOpen)}
       style={{ margin: "0.15rem 0" }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-        {/* Toggle arrow */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
         <button
           type="button"
           contentEditable={false}
@@ -22,21 +21,19 @@ export function ToggleView({ node, updateAttributes }: NodeViewProps) {
             background: "none",
             border: "none",
             cursor: "pointer",
-            padding: "1px 2px",
-            marginTop: "0.2em",
-            fontSize: "0.65em",
+            padding: "1px 4px",
+            marginTop: "0.15em",
+            fontSize: "0.85em",
             lineHeight: 1,
             color: "var(--fg-muted)",
-            transition: "transform 150ms ease",
-            transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
             flexShrink: 0,
             userSelect: "none",
+            transition: "color 150ms ease",
           }}
         >
-          ▶
+          {isOpen ? "▾" : "▸"}
         </button>
 
-        {/* Content — first block is the "summary", rest collapse when closed */}
         <NodeViewContent
           className="stride-toggle-content"
           style={{ flex: 1, minWidth: 0 }}

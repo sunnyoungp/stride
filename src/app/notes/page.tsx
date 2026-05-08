@@ -20,18 +20,33 @@ function shiftDate(date: string, days: number): string {
   return localDateString(d);
 }
 
-function formatNoteDate(date: string, today: string): string {
-  const d = new Date(date + "T00:00:00");
-  const dayStr = new Intl.DateTimeFormat("en-US", {
-    weekday: "short", month: "short", day: "numeric",
-  }).format(d);
+function getDateTitle(date: string, today: string): { label: string; accent: boolean } {
   const diff = Math.round(
     (new Date(date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86400000,
   );
-  if (diff === 0)  return `Today, ${dayStr}`;
-  if (diff === -1) return `Yesterday, ${dayStr}`;
-  if (diff === 1)  return `Tomorrow, ${dayStr}`;
-  return dayStr;
+  if (diff === 0)  return { label: "Today", accent: true };
+  if (diff === -1) return { label: "Yesterday", accent: true };
+  if (diff === 1)  return { label: "Tomorrow", accent: true };
+  const d = new Date(date + "T00:00:00");
+  return {
+    label: new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric" }).format(d),
+    accent: false,
+  };
+}
+
+function getDateTitleSuffix(date: string, today: string): string {
+  const diff = Math.round(
+    (new Date(date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86400000,
+  );
+  if (diff < -1 || diff > 1) return "";
+  const d = new Date(date + "T00:00:00");
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(d);
+}
+
+function getDateSubtitle(date: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(
+    new Date(date + "T00:00:00")
+  );
 }
 
 // ─── Chevron button ───────────────────────────────────────────────────────────
@@ -164,23 +179,38 @@ export default function NotesPage() {
     </button>
   );
 
+  const titleInfo = getDateTitle(selectedDate, today);
+  const titleSuffix = getDateTitleSuffix(selectedDate, today);
+
   const dateNav = (
-    <div style={{ flexShrink: 0, padding: "16px 20px 0" }}>
-      <div style={{ display: "flex", alignItems: "center", paddingBottom: 14 }}>
-        <ChevronBtn dir="prev" label="Previous day" onClick={() => setSelectedDate(prev => shiftDate(prev, -1))} />
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 500, textAlign: "center", color: isOffToday ? "var(--fg-muted)" : "var(--fg)", userSelect: "none" }}>
-            {formatNoteDate(selectedDate, today)}
+    <div style={{ flexShrink: 0, padding: "24px 20px 16px" }}>
+      {/* Line 1: Large title */}
+      <div style={{ textAlign: "center", marginBottom: 6, userSelect: "none" }}>
+        <span style={{
+          fontSize: 28, fontWeight: 700, letterSpacing: "-0.01em",
+          color: titleInfo.accent ? "var(--accent)" : "var(--fg)",
+        }}>
+          {titleInfo.label}
+        </span>
+        {titleSuffix && (
+          <span style={{ fontSize: 28, fontWeight: 400, letterSpacing: "-0.01em", color: "var(--fg)" }}>
+            {", "}{titleSuffix}
           </span>
-          {isOffToday && (
-            <button type="button" onClick={() => setSelectedDate(today)} title="Return to today"
-              style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: "var(--accent)", border: "none", cursor: "pointer", padding: 0 }} />
-          )}
-        </div>
+        )}
+      </div>
+      {/* Line 2: Subtitle with arrows */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <ChevronBtn dir="prev" label="Previous day" onClick={() => setSelectedDate(prev => shiftDate(prev, -1))} />
+        <span style={{ fontSize: 14, fontWeight: 400, color: "var(--fg-muted)", userSelect: "none" }}>
+          {getDateSubtitle(selectedDate)}
+        </span>
+        {isOffToday && (
+          <button type="button" onClick={() => setSelectedDate(today)} title="Return to today"
+            style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: "var(--accent)", border: "none", cursor: "pointer", padding: 0 }} />
+        )}
         <ChevronBtn dir="next" label="Next day" onClick={() => setSelectedDate(prev => shiftDate(prev, 1))} />
         {!isMobile && calendarToggleBtn}
       </div>
-      <div style={{ height: 1, background: "var(--border)" }} />
     </div>
   );
 
@@ -200,7 +230,7 @@ export default function NotesPage() {
             flex: 1, overflow: "auto",
             paddingBottom: calendarOpen ? 0 : "calc(var(--tab-bar-h) + env(safe-area-inset-bottom))",
           }}>
-            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} moveItemsRef={dailyNoteMoveItemsRef} />
+            <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} moveItemsRef={dailyNoteMoveItemsRef} isMobile={isMobile} />
           </div>
         </div>
 
@@ -249,7 +279,7 @@ export default function NotesPage() {
       }}>
         {dateNav}
         <div style={{ flex: 1, overflow: "auto" }}>
-          <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} moveItemsRef={dailyNoteMoveItemsRef} />
+          <DailyNote selectedDate={selectedDate} onDateChange={setSelectedDate} moveItemRef={dailyNoteMoveRef} moveItemsRef={dailyNoteMoveItemsRef} isMobile={isMobile} />
         </div>
       </div>
 

@@ -388,7 +388,7 @@ a, button, input, select, textarea {
 
 /* ── Base font size — controlled by --font-size-notes token ── */
 .ProseMirror { font-size: var(--font-size-notes, 15px); line-height: 1.6; letter-spacing: 0; }
-.ProseMirror p { margin-bottom: 0.4em; margin-top: 0; }
+.ProseMirror p { margin-bottom: 0.55em; margin-top: 0; }
 
 /* ── Links ── */
 .ProseMirror a {
@@ -481,9 +481,9 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  gap: 0.6em;
+  gap: 0.85em;
   padding: 0;
-  margin: 0.25rem 0;
+  margin: 0.5rem 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > div {
@@ -513,12 +513,33 @@ a, button, input, select, textarea {
 }
 
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
-  width: 1em;
-  height: 1em;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.2em;
+  height: 1.2em;
   margin: 0;
   cursor: pointer;
-  accent-color: var(--accent);
   flex-shrink: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: 5px;
+  background: transparent;
+  position: relative;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.25em;
+  top: 0.05em;
+  width: 0.3em;
+  height: 0.55em;
+  border: solid white;
+  border-width: 0 0.13em 0.13em 0;
+  transform: rotate(45deg);
 }
 
 /* ── Completed checklist items ── */
@@ -561,6 +582,9 @@ a, button, input, select, textarea {
 .ProseMirror [data-type="toggle"][data-open="false"] .stride-toggle-content > *:not(:first-child) {
   display: none;
 }
+.ProseMirror [data-type="toggle"] .stride-toggle-content {
+  padding-left: 0.5em;
+}
 
 /* ── Daily note block selection highlight ── */
 .ProseMirror .dn-block-selected {
@@ -591,8 +615,8 @@ a, button, input, select, textarea {
 .tiptap p.is-empty::before {
   content: attr(data-placeholder);
   float: left;
-  color: var(--fg-faint);
-  font-style: italic;
+  color: var(--fg-placeholder);
+  font-style: normal;
   pointer-events: none;
   height: 0;
 }

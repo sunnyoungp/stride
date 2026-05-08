@@ -515,7 +515,7 @@ function UnlinkIcon() {
 export type MoveItemFn = (title: string, taskId: string | null, targetDate: string, nodeJson?: JSONContent | null) => Promise<void>;
 export type MoveItemsFn = (blocks: Array<{ title: string; taskId: string | null; json?: JSONContent | null; pos?: number }>, targetDate: string) => Promise<void>;
 
-export function DailyNote({ selectedDate, onDateChange, hideHeader = false, moveItemRef, moveItemsRef }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean; moveItemRef?: React.MutableRefObject<MoveItemFn | null>; moveItemsRef?: React.MutableRefObject<MoveItemsFn | null> }) {
+export function DailyNote({ selectedDate, onDateChange, hideHeader = false, moveItemRef, moveItemsRef, isMobile = false }: { selectedDate: string; onDateChange: (date: string) => void; hideHeader?: boolean; moveItemRef?: React.MutableRefObject<MoveItemFn | null>; moveItemsRef?: React.MutableRefObject<MoveItemsFn | null>; isMobile?: boolean }) {
   const dailyNotes        = useDailyNoteStore((s) => s.dailyNotes);
   const loadDailyNotes    = useDailyNoteStore((s) => s.loadDailyNotes);
   const getTodayNote      = useDailyNoteStore((s) => s.getTodayNote);
@@ -1203,7 +1203,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         XChecklistExtension,
         // DragHandleExtension, // disabled — drag handles are buggy in Tauri, will revisit
         ToggleNode,
-        Placeholder.configure({ placeholder: "Start writing…" }),
+        Placeholder.configure({ placeholder: "Press '/' for quick actions" }),
         slashCommandExtension,
         backspaceUnwrapExt,
         TextStyle,
@@ -1955,9 +1955,13 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           if (t.closest("[draggable]")) return;
           lassoStartRef.current = { x: e.clientX, y: e.clientY };
         }}
-        className="flex-1 overflow-y-auto px-8 py-8"
+        className="flex-1 overflow-y-auto"
         style={{
           position: "relative",
+          paddingLeft: isMobile ? 24 : 56,
+          paddingRight: isMobile ? 24 : 56,
+          paddingTop: 32,
+          paddingBottom: 200,
         }}
       >
         {/* Overdue tasks from past daily notes — only on today's note */}
