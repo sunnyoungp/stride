@@ -388,7 +388,7 @@ a, button, input, select, textarea {
 
 /* ── Base font size — controlled by --font-size-notes token ── */
 .ProseMirror { font-size: var(--font-size-notes, 15px); line-height: 1.6; letter-spacing: 0; }
-.ProseMirror p { padding: 2px 6px; margin-bottom: 0.15em; margin-top: 0; border-radius: 6px; }
+.ProseMirror p { padding: 2px 4px; margin-bottom: 0.15em; margin-top: 0; border-radius: 6px; }
 
 /* ── Links ── */
 .ProseMirror a {
@@ -446,12 +446,12 @@ a, button, input, select, textarea {
 /* ── Bullet lists (override Tailwind preflight which resets list-style) ── */
 .ProseMirror ul:not([data-type="taskList"]) {
   list-style-type: disc;
-  padding-left: 1.3rem;
+  padding-left: 1.1rem;
   margin: 0.1rem 0;
 }
 .ProseMirror ol {
   list-style-type: decimal;
-  padding-left: 1.3rem;
+  padding-left: 1.1rem;
   margin: 0.1rem 0;
 }
 .ProseMirror ul:not([data-type="taskList"]) li,
@@ -481,8 +481,8 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  gap: 0.35em;
-  padding: 2px 6px;
+  gap: 0.2em;
+  padding: 2px 4px;
   margin: 0.1rem 0;
   border-radius: 6px;
 }
