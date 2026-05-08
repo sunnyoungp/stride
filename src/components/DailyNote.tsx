@@ -780,88 +780,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }, [overdueItems, updateNoteContent, updateTask]);
 
   // ── Drop overdue item onto today's editor ──────────────────────────────────
-  const [editorDragOver, setEditorDragOver] = useState(false);
-
-  const handleEditorDragOver = useCallback((e: React.DragEvent) => {
-    // Only accept overdue drags (has our custom data type)
-    if (e.dataTransfer.types.includes("text/overdue-source-note-id")) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      setEditorDragOver(true);
-    }
-  }, []);
-
-  const handleEditorDragLeave = useCallback((e: React.DragEvent) => {
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setEditorDragOver(false);
-  }, []);
-
-  const handleEditorDrop = useCallback(async (e: React.DragEvent) => {
-    const sourceNoteId = e.dataTransfer.getData("text/overdue-source-note-id");
-    if (!sourceNoteId) {
-      setEditorDragOver(false);
-      return; // Not an overdue drag — let TipTap/browser handle it
-    }
-    e.preventDefault();
-
-    const ed = editorRef.current;
-    const currentNote = noteRef.current;
-    if (!ed || !currentNote) return;
-
-    const title = e.dataTransfer.getData("text/task-title") || "";
-    const taskId = e.dataTransfer.getData("text/task-id") || null;
-    const blockJsonRaw = e.dataTransfer.getData("text/block-json");
-    let blockJson: JSONContent | null = null;
-    if (blockJsonRaw) { try { blockJson = JSON.parse(blockJsonRaw); } catch { /* ignore */ } }
-
-    // 1. Remove from source note JSON
-    const sourceNote = dailyNotes.find((n) => n.id === sourceNoteId);
-    if (sourceNote) {
-      const doc = safeParseJson(sourceNote.content);
-      if (doc && Array.isArray((doc as any).content)) {
-        let removed = false;
-        const removeFirst = (nodes: JSONContent[]): JSONContent[] => {
-          return nodes.reduce<JSONContent[]>((acc, node) => {
-            if (
-              !removed &&
-              node.type === "taskItem" &&
-              !node.attrs?.checked &&
-              extractText(node).trim() === title &&
-              ((node.attrs?.taskId ?? null) === taskId)
-            ) {
-              removed = true;
-              return acc; // skip
-            }
-            if (node.content) {
-              const filtered = removeFirst(node.content);
-              if ((node.type === "taskList" || node.type === "bulletList" || node.type === "orderedList") && filtered.length === 0) {
-                return acc;
-              }
-              acc.push({ ...node, content: filtered });
-            } else {
-              acc.push(node);
-            }
-            return acc;
-          }, []);
-        };
-        (doc as any).content = removeFirst((doc as any).content);
-        await updateNoteContent(sourceNoteId, JSON.stringify(doc));
-      }
-    }
-
-    // 2. Insert into today's editor at end
-    const insertJson: JSONContent = blockJson ?? { type: "taskItem", attrs: { checked: false, taskId }, content: [{ type: "paragraph", content: [{ type: "text", text: title }] }] };
-    const endPos = ed.state.doc.content.size;
-    ed.chain().insertContentAt(endPos, { type: "taskList", content: [insertJson] }).run();
-
-    // 3. Save today's editor + update task dueDate
-    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    const saves: Promise<unknown>[] = [
-      updateNoteContent(currentNote.id, JSON.stringify(ed.getJSON())),
-    ];
-    if (taskId) saves.push(updateTask(taskId, { dueDate: today }));
-    await Promise.all(saves);
-  }, [dailyNotes, today, updateNoteContent, updateTask]);
+  // Handled via a global dragend listener instead of React onDrop on the wrapper,
+  // because React drag handlers on the wrapper interfere with all native drags
+  // (TipTap drag handle, block drags to MiniCalendar, etc.).
 
   // Long-press → contextmenu on mobile (simulates right-click for task items)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1859,18 +1780,12 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           if (t.closest(".pm-drag-handle")) return;
           if (t.closest("[data-selection-bar]")) return;
           if (t.closest("[data-overdue-section]")) return;
+          if (t.closest("[draggable]")) return;
           lassoStartRef.current = { x: e.clientX, y: e.clientY };
         }}
-        onDragOver={handleEditorDragOver}
-        onDragLeave={handleEditorDragLeave}
-        onDrop={handleEditorDrop}
         className="flex-1 overflow-y-auto px-8 py-8"
         style={{
           position: "relative",
-          outline: editorDragOver ? "2px solid var(--accent)" : "none",
-          outlineOffset: -2,
-          borderRadius: editorDragOver ? 12 : undefined,
-          transition: "outline 0.15s ease",
         }}
       >
         {/* Overdue tasks from past daily notes — only on today's note */}
