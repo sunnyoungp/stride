@@ -388,7 +388,7 @@ a, button, input, select, textarea {
 
 /* ── Base font size — controlled by --font-size-notes token ── */
 .ProseMirror { font-size: var(--font-size-notes, 15px); line-height: 1.6; letter-spacing: 0; }
-.ProseMirror p { padding: 4px 0; margin-bottom: 0.15em; margin-top: 0; }
+.ProseMirror p { padding: 2px 6px; margin-bottom: 0.15em; margin-top: 0; border-radius: 6px; }
 
 /* ── Links ── */
 .ProseMirror a {
@@ -482,8 +482,9 @@ a, button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 0.6em;
-  padding: 4px 0;
+  padding: 2px 6px;
   margin: 0.1rem 0;
+  border-radius: 6px;
 }
 
 .ProseMirror ul[data-type="taskList"] li > div {
