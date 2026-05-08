@@ -1149,6 +1149,49 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     },
   }), []);
 
+  // Backspace at the start of an empty list/task item: first press converts to
+  // plain paragraph (unwraps), second press is default TipTap behavior.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const backspaceUnwrapExt = useMemo(() => Extension.create({
+    name: "backspaceUnwrap",
+    addKeyboardShortcuts() {
+      return {
+        Backspace: ({ editor: ed }) => {
+          const { $from, empty } = ed.state.selection;
+          // Only at start of a block (cursor at offset 0 inside the text node)
+          if (!empty || $from.parentOffset !== 0) return false;
+
+          // Check if we're inside a list item type
+          for (let d = $from.depth; d >= 1; d--) {
+            const node = $from.node(d);
+            const name = node.type.name;
+
+            if (name === "taskItem") {
+              // Empty task item → lift to paragraph
+              if (node.textContent === "") {
+                return ed.chain().liftListItem("taskItem").setParagraph().run();
+              }
+              // Non-empty, cursor at start → convert to paragraph
+              return ed.chain().liftListItem("taskItem").setParagraph().run();
+            }
+            if (name === "listItem") {
+              if (node.textContent === "") {
+                return ed.chain().liftListItem("listItem").run();
+              }
+              // Cursor at start of text → lift out of list
+              return ed.chain().liftListItem("listItem").run();
+            }
+            if (name === "blockquote") {
+              // Unwrap blockquote
+              return ed.chain().lift("blockquote").run();
+            }
+          }
+          return false; // Let TipTap handle all other cases
+        },
+      };
+    },
+  }), []);
+
   const editor = useEditor(
     {
       extensions: [
@@ -1160,6 +1203,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         // DragHandleExtension, // disabled — drag handles are buggy in Tauri, will revisit
         Placeholder.configure({ placeholder: "Start writing…" }),
         slashCommandExtension,
+        backspaceUnwrapExt,
         TextStyle,
         Color,
         Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),

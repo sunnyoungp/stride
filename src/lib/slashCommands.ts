@@ -22,12 +22,12 @@ export type SlashMenuState = { items: SlashCmd[]; activeIndex: number; rect: DOM
 
 export const ALL_SLASH_CMDS: SlashCmd[] = [
   { id: "text",    label: "Text",          desc: "Plain paragraph",               icon: "¶",  run: (e) => e.chain().focus().setParagraph().run() },
+  { id: "task",    label: "Task",          desc: "Checklist item",                icon: "☑",  run: (e) => e.chain().focus().toggleTaskList().run() },
+  { id: "bullet",  label: "Bullet List",   desc: "Unordered list",                icon: "•",  run: (e) => e.chain().focus().toggleBulletList().run() },
+  { id: "ordered", label: "Numbered List", desc: "Ordered list",                  icon: "1.", run: (e) => e.chain().focus().toggleOrderedList().run() },
   { id: "h1",      label: "Heading 1",     desc: "Large section header",          icon: "H1", run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
   { id: "h2",      label: "Heading 2",     desc: "Medium section header",         icon: "H2", run: (e) => e.chain().focus().toggleHeading({ level: 2 }).run() },
   { id: "h3",      label: "Heading 3",     desc: "Small section header",          icon: "H3", run: (e) => e.chain().focus().toggleHeading({ level: 3 }).run() },
-  { id: "bullet",  label: "Bullet List",   desc: "Unordered list",                icon: "•",  run: (e) => e.chain().focus().toggleBulletList().run() },
-  { id: "ordered", label: "Numbered List", desc: "Ordered list",                  icon: "1.", run: (e) => e.chain().focus().toggleOrderedList().run() },
-  { id: "task",    label: "Task",          desc: "Trackable checklist item",      icon: "☑",  run: (e) => e.chain().focus().toggleTaskList().run() },
   { id: "quote",   label: "Blockquote",    desc: "Highlighted quote block",       icon: "❝",  run: (e) => e.chain().focus().toggleBlockquote().run() },
   { id: "code",    label: "Code Block",    desc: "Code with syntax highlighting", icon: "<>", run: (e) => e.chain().focus().toggleCodeBlock().run() },
   { id: "divider", label: "Divider",       desc: "Horizontal rule",               icon: "—",  run: (e) => e.chain().focus().setHorizontalRule().run() },
