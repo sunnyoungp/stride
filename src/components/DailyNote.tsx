@@ -1882,7 +1882,14 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
                 const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
                 if (anchor?.href) {
                   e.preventDefault();
-                  window.open(anchor.href, "_blank", "noopener,noreferrer");
+                  // Use a real <a> click for Tauri compatibility (window.open may be blocked)
+                  const a = document.createElement("a");
+                  a.href = anchor.href;
+                  a.target = "_blank";
+                  a.rel = "noopener noreferrer";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
                 }
               }}
             >

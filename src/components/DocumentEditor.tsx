@@ -434,7 +434,13 @@ export function DocumentEditor({ documentId }: Props) {
               const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
               if (anchor?.href) {
                 e.preventDefault();
-                window.open(anchor.href, "_blank", "noopener,noreferrer");
+                const a = document.createElement("a");
+                a.href = anchor.href;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
               }
             }}
           >

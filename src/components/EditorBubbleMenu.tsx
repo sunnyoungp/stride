@@ -1,29 +1,163 @@
 "use client";
 import { BubbleMenu } from "@tiptap/react/menus";
 import type { Editor } from "@tiptap/core";
-import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Palette, Calendar } from "lucide-react";
-import { useState } from "react";
+import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Palette, Calendar, Check, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { EDITOR_COLORS } from "@/lib/colorPalette";
 
 export function EditorBubbleMenu({ editor }: { editor: Editor }) {
   const [showColor, setShowColor] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [showDateInput, setShowDateInput] = useState(false);
+  const [dateValue, setDateValue] = useState("");
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
 
-  const toggleLink = () => {
-    if (editor.isActive("link")) {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-    const previousUrl = editor.getAttributes("link").href || "";
-    const url = window.prompt("URL", previousUrl);
-    if (url === null) return;
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  const openLinkInput = () => {
+    const previousUrl = editor.isActive("link")
+      ? editor.getAttributes("link").href || ""
+      : "";
+    setLinkUrl(previousUrl);
+    setShowLinkInput(true);
+    setShowColor(false);
+    setShowDateInput(false);
+    setTimeout(() => linkInputRef.current?.focus(), 50);
   };
+
+  const applyLink = () => {
+    if (linkUrl.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    } else {
+      editor.chain().focus().extendMarkRange("link").setLink({ href: linkUrl.trim() }).run();
+    }
+    setShowLinkInput(false);
+    setLinkUrl("");
+  };
+
+  const cancelLink = () => {
+    setShowLinkInput(false);
+    setLinkUrl("");
+    editor.chain().focus().run();
+  };
+
+  const removeLink = () => {
+    editor.chain().focus().unsetLink().run();
+    setShowLinkInput(false);
+    setLinkUrl("");
+  };
+
+  const openDateInput = () => {
+    setDateValue(new Date().toISOString().split("T")[0]);
+    setShowDateInput(true);
+    setShowColor(false);
+    setShowLinkInput(false);
+    setTimeout(() => dateInputRef.current?.focus(), 50);
+  };
+
+  const applyDate = () => {
+    if (dateValue) {
+      const event = new CustomEvent("stride-move-block", { detail: { date: dateValue, editor } });
+      window.dispatchEvent(event);
+    }
+    setShowDateInput(false);
+    setDateValue("");
+  };
+
+  const cancelDate = () => {
+    setShowDateInput(false);
+    setDateValue("");
+    editor.chain().focus().run();
+  };
+
+  // Inline input mode — link URL
+  if (showLinkInput) {
+    return (
+      <BubbleMenu
+        editor={editor}
+        options={{ placement: "top" }}
+        className="flex items-center gap-1.5 p-1.5"
+        style={{
+          background: "var(--bg-subtle)",
+          backdropFilter: "var(--glass-blur-card)",
+          WebkitBackdropFilter: "var(--glass-blur-card)",
+          boxShadow: "var(--shadow-lg)",
+          border: "1px solid var(--glass-border)",
+          borderTop: "1px solid var(--glass-border-top)",
+          borderRadius: 20,
+        }}
+      >
+        <input
+          ref={linkInputRef}
+          type="url"
+          value={linkUrl}
+          onChange={(e) => setLinkUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); applyLink(); }
+            if (e.key === "Escape") cancelLink();
+          }}
+          placeholder="https://…"
+          className="outline-none text-sm"
+          style={{
+            background: "transparent",
+            color: "var(--fg)",
+            width: 180,
+            padding: "4px 8px",
+            fontSize: 13,
+          }}
+        />
+        <MenuButton isActive={false} onClick={applyLink} icon={<Check size={14} />} />
+        {editor.isActive("link") && (
+          <MenuButton isActive={false} onClick={removeLink} icon={<X size={14} />} />
+        )}
+        {!editor.isActive("link") && (
+          <MenuButton isActive={false} onClick={cancelLink} icon={<X size={14} />} />
+        )}
+      </BubbleMenu>
+    );
+  }
+
+  // Inline input mode — date
+  if (showDateInput) {
+    return (
+      <BubbleMenu
+        editor={editor}
+        options={{ placement: "top" }}
+        className="flex items-center gap-1.5 p-1.5"
+        style={{
+          background: "var(--bg-subtle)",
+          backdropFilter: "var(--glass-blur-card)",
+          WebkitBackdropFilter: "var(--glass-blur-card)",
+          boxShadow: "var(--shadow-lg)",
+          border: "1px solid var(--glass-border)",
+          borderTop: "1px solid var(--glass-border-top)",
+          borderRadius: 20,
+        }}
+      >
+        <input
+          ref={dateInputRef}
+          type="date"
+          value={dateValue}
+          onChange={(e) => setDateValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); applyDate(); }
+            if (e.key === "Escape") cancelDate();
+          }}
+          className="outline-none text-sm"
+          style={{
+            background: "transparent",
+            color: "var(--fg)",
+            padding: "4px 8px",
+            fontSize: 13,
+          }}
+        />
+        <MenuButton isActive={false} onClick={applyDate} icon={<Check size={14} />} />
+        <MenuButton isActive={false} onClick={cancelDate} icon={<X size={14} />} />
+      </BubbleMenu>
+    );
+  }
 
   return (
     <BubbleMenu
@@ -100,7 +234,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
         {!showColor && (
           <MenuButton
             isActive={editor.isActive("link")}
-            onClick={toggleLink}
+            onClick={editor.isActive("link") ? removeLink : openLinkInput}
             icon={<LinkIcon size={15} />}
           />
         )}
@@ -108,14 +242,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
         {!showColor && (
           <MenuButton
             isActive={false}
-            onClick={() => {
-              const date = window.prompt("Schedule for date (YYYY-MM-DD)", new Date().toISOString().split("T")[0]);
-              if (date) {
-                // We'll use a custom command or event to handle this in components
-                const event = new CustomEvent("stride-move-block", { detail: { date, editor } });
-                window.dispatchEvent(event);
-              }
-            }}
+            onClick={openDateInput}
             icon={<Calendar size={15} />}
           />
         )}
