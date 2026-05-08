@@ -446,12 +446,12 @@ a, button, input, select, textarea {
 /* ── Bullet lists (override Tailwind preflight which resets list-style) ── */
 .ProseMirror ul:not([data-type="taskList"]) {
   list-style-type: disc;
-  padding-left: 1.5rem;
+  padding-left: 1.3rem;
   margin: 0.1rem 0;
 }
 .ProseMirror ol {
   list-style-type: decimal;
-  padding-left: 1.5rem;
+  padding-left: 1.3rem;
   margin: 0.1rem 0;
 }
 .ProseMirror ul:not([data-type="taskList"]) li,
@@ -481,7 +481,7 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: center;
-  gap: 0.6em;
+  gap: 0.35em;
   padding: 2px 6px;
   margin: 0.1rem 0;
   border-radius: 6px;
