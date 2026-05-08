@@ -1157,7 +1157,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         TaskList,
         TaskItemWithId,
         XChecklistExtension,
-        DragHandleExtension,
+        // DragHandleExtension, // disabled — drag handles are buggy in Tauri, will revisit
         Placeholder.configure({ placeholder: "Start writing…" }),
         slashCommandExtension,
         TextStyle,
