@@ -68,11 +68,10 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, onD
     }
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent, item: OverdueItem) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent, item: OverdueItem) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = {
       item,
       startX: e.clientX,
@@ -84,7 +83,7 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, onD
   }, []);
 
   useEffect(() => {
-    const onPointerMove = (e: PointerEvent) => {
+    const onMouseMove = (e: MouseEvent) => {
       const drag = dragRef.current;
       if (!drag) return;
 
@@ -120,7 +119,7 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, onD
       }
     };
 
-    const onPointerUp = (e: PointerEvent) => {
+    const onMouseUp = (e: MouseEvent) => {
       const drag = dragRef.current;
       dragRef.current = null;
 
@@ -153,11 +152,11 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, onD
       }
     };
 
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
     return () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
     };
   }, [clearHighlight, onDropOnDate, onDropOnEditor]);
 
@@ -226,9 +225,9 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, onD
             {items.map((item, i) => (
               <div
                 key={`${item.noteId}-${item.posInSourceDoc}-${i}`}
-                onPointerDown={(e) => handlePointerDown(e, item)}
+                onMouseDown={(e) => handleMouseDown(e, item)}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-100 hover:bg-[var(--bg-hover)]"
-                style={{ cursor: "grab", touchAction: "none" }}
+                style={{ cursor: "grab" }}
               >
                 <button
                   type="button"

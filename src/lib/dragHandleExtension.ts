@@ -204,7 +204,9 @@ function createDragHandlePlugin() {
             const nodeRect = nodeDom.getBoundingClientRect();
             const handleH  = 24;
             handle.style.top  = `${nodeRect.top + (nodeRect.height - handleH) / 2}px`;
-            handle.style.left = `${nodeRect.left - 20}px`;
+            // Position handle flush against the block's left edge (overlapping slightly)
+            // so the mouse doesn't leave a dead zone between handle and block
+            handle.style.left = `${nodeRect.left - 18}px`;
             handle.style.opacity = "0.4";
             currentTopPos = topPos;
           } catch {
@@ -218,7 +220,14 @@ function createDragHandlePlugin() {
           const related = (event as MouseEvent).relatedTarget as Node | null;
           // Don't hide if mouse moved onto the handle itself
           if (related && handle?.contains(related)) return false;
-          if (handle) handle.style.opacity = "0";
+          // Delay hide so user can move from block to handle without flicker
+          const h = handle;
+          if (h) {
+            setTimeout(() => {
+              if (h.matches(":hover")) return; // mouse reached the handle in time
+              h.style.opacity = "0";
+            }, 150);
+          }
           return false;
         },
       },
