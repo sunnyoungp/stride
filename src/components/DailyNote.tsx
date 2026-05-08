@@ -837,7 +837,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
         slashCommandExtension,
         TextStyle,
         Color,
-        Link.configure({ openOnClick: false }),
+        Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
         selectionHighlightExt,
@@ -1540,7 +1540,18 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       >
         {editor ? (
           <>
-            <EditorContent editor={editor} />
+            <div
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+                if (anchor?.href) {
+                  e.preventDefault();
+                  window.open(anchor.href, "_blank", "noopener,noreferrer");
+                }
+              }}
+            >
+              <EditorContent editor={editor} />
+            </div>
             {!noteContextMenu && <EditorBubbleMenu editor={editor} />}
             <FormatPanel editor={editor} isOpen={formatPanelOpen} onClose={() => setFormatPanelOpen(false)} documentId={note.id} />
           </>

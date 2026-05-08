@@ -171,7 +171,7 @@ export function DocumentEditor({ documentId }: Props) {
         slashCommandExtension,
         TextStyle,
         Color,
-        TiptapLink.configure({ openOnClick: false }),
+        TiptapLink.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
         FontSizeTextStyle,
         FontSizeKeyboardExtension,
       ],
