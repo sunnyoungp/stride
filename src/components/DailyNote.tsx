@@ -797,11 +797,12 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }, []);
 
   const handleEditorDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setEditorDragOver(false);
-
     const sourceNoteId = e.dataTransfer.getData("text/overdue-source-note-id");
-    if (!sourceNoteId) return; // Not an overdue drag
+    if (!sourceNoteId) {
+      setEditorDragOver(false);
+      return; // Not an overdue drag — let TipTap/browser handle it
+    }
+    e.preventDefault();
 
     const ed = editorRef.current;
     const currentNote = noteRef.current;
@@ -1848,6 +1849,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
           if (t.tagName === "INPUT" || t.tagName === "BUTTON" || t.tagName === "A") return;
           if (t.closest(".pm-drag-handle")) return;
           if (t.closest("[data-selection-bar]")) return;
+          if (t.closest("[data-overdue-section]")) return;
           lassoStartRef.current = { x: e.clientX, y: e.clientY };
         }}
         onDragOver={handleEditorDragOver}

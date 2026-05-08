@@ -82,6 +82,7 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, isMoving }: Props
 
   return (
     <div
+      data-overdue-section
       className="mb-4 rounded-xl overflow-hidden"
       style={{
         background: "var(--bg-card)",
@@ -194,18 +195,6 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, isMoving }: Props
                 style={{ fontSize: 14, color: "var(--fg)" }}
               >
                 {item.title}
-              </span>
-
-              {/* Source tag */}
-              <span
-                className="flex-shrink-0"
-                style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "var(--fg-faint)",
-                }}
-              >
-                Daily Note
               </span>
             </div>
           ))}
