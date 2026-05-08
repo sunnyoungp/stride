@@ -19,6 +19,7 @@ interface Props {
   onCheck: (item: OverdueItem) => void;
   onMoveAll: () => void;
   onDropOnDate: (item: OverdueItem, targetDate: string) => void;
+  onDropOnEditor: (item: OverdueItem) => void;
   isMoving: boolean;
 }
 
@@ -28,18 +29,24 @@ function formatBadgeDate(dateStr: string): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(dt);
 }
 
-// ── Pointer-event drag state (module-level to avoid re-renders during drag) ──
-
 type DragState = {
   item: OverdueItem;
   startX: number;
   startY: number;
   curX: number;
   curY: number;
-  active: boolean; // true once past the 6px threshold
+  active: boolean;
 };
 
-function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isMoving }: Props) {
+/** Temporarily hide an element, call elementFromPoint, then restore it. */
+function elementFromPointSkipping(x: number, y: number, skip: HTMLElement | null): Element | null {
+  if (skip) skip.style.display = "none";
+  const el = document.elementFromPoint(x, y);
+  if (skip) skip.style.display = "";
+  return el;
+}
+
+function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, onDropOnEditor, isMoving }: Props) {
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("stride-overdue-collapsed") === "true";
@@ -49,25 +56,23 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
     localStorage.setItem("stride-overdue-collapsed", String(collapsed));
   }, [collapsed]);
 
-  // Pointer-event drag
   const dragRef = useRef<DragState | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const highlightedCellRef = useRef<HTMLElement | null>(null);
+  const highlightedRef = useRef<{ el: HTMLElement; orig: string } | null>(null);
 
   const clearHighlight = useCallback(() => {
-    if (highlightedCellRef.current) {
-      highlightedCellRef.current.style.background = "";
-      highlightedCellRef.current.style.outline = "";
-      highlightedCellRef.current = null;
+    if (highlightedRef.current) {
+      highlightedRef.current.el.style.outline = highlightedRef.current.orig;
+      highlightedRef.current = null;
     }
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, item: OverdueItem) => {
-    // Only left button, skip checkboxes
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = {
       item,
       startX: e.clientX,
@@ -92,38 +97,59 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
         setIsDragging(true);
       }
 
-      // Move the preview
+      // Position preview
       if (previewRef.current) {
         previewRef.current.style.left = `${e.clientX + 12}px`;
         previewRef.current.style.top = `${e.clientY - 16}px`;
       }
 
-      // Highlight calendar cell under cursor
+      // Highlight drop target under cursor (hiding preview to avoid self-hit)
       clearHighlight();
-      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const el = elementFromPointSkipping(e.clientX, e.clientY, previewRef.current);
       const cell = el?.closest("[data-calendar-date]") as HTMLElement | null;
+      const editor = el?.closest(".ProseMirror") as HTMLElement | null;
+
       if (cell) {
+        highlightedRef.current = { el: cell, orig: cell.style.outline };
         cell.style.outline = "2px solid var(--accent)";
-        cell.style.borderRadius = "50%";
-        highlightedCellRef.current = cell;
+      } else if (editor) {
+        highlightedRef.current = { el: editor, orig: editor.style.outline };
+        editor.style.outline = "2px solid var(--accent)";
+        editor.style.outlineOffset = "-2px";
+        editor.style.borderRadius = "8px";
       }
     };
 
     const onPointerUp = (e: PointerEvent) => {
       const drag = dragRef.current;
       dragRef.current = null;
-      clearHighlight();
+
+      // Restore highlight
+      if (highlightedRef.current) {
+        const h = highlightedRef.current;
+        h.el.style.outline = h.orig;
+        h.el.style.outlineOffset = "";
+        h.el.style.borderRadius = "";
+        highlightedRef.current = null;
+      }
       setIsDragging(false);
 
       if (!drag?.active) return;
 
-      // Check if released over a calendar cell
-      const el = document.elementFromPoint(e.clientX, e.clientY);
+      // Detect drop target (hiding preview)
+      const el = elementFromPointSkipping(e.clientX, e.clientY, previewRef.current);
       const cell = el?.closest("[data-calendar-date]") as HTMLElement | null;
       const targetDate = cell?.getAttribute("data-calendar-date");
 
       if (targetDate) {
         onDropOnDate(drag.item, targetDate);
+        return;
+      }
+
+      // Check if dropped on the editor
+      const editor = el?.closest(".ProseMirror") as HTMLElement | null;
+      if (editor) {
+        onDropOnEditor(drag.item);
       }
     };
 
@@ -133,7 +159,7 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
     };
-  }, [clearHighlight, onDropOnDate]);
+  }, [clearHighlight, onDropOnDate, onDropOnEditor]);
 
   if (items.length === 0) return null;
 
@@ -168,23 +194,10 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
             ) : (
               <ChevronDown size={14} style={{ color: "var(--fg-muted)", flexShrink: 0 }} />
             )}
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--accent)",
-              }}
-            >
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
               Scheduled for Previous Days
             </span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "var(--fg-faint)",
-                marginLeft: 2,
-              }}
-            >
+            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--fg-faint)", marginLeft: 2 }}>
               {items.length}
             </span>
           </button>
@@ -217,40 +230,24 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
                 className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-100 hover:bg-[var(--bg-hover)]"
                 style={{ cursor: "grab", touchAction: "none" }}
               >
-                {/* Checkbox */}
                 <button
                   type="button"
                   onClick={() => onCheck(item)}
                   className="flex items-center justify-center flex-shrink-0"
                   style={{
-                    width: 17,
-                    height: 17,
-                    borderRadius: 4,
+                    width: 17, height: 17, borderRadius: 4,
                     border: "1.5px solid var(--border-strong)",
-                    background: "transparent",
-                    cursor: "pointer",
+                    background: "transparent", cursor: "pointer",
                     transition: "all 0.15s",
                   }}
                 />
-
-                {/* Date badge */}
                 <span
                   className="flex-shrink-0 rounded-md px-1.5 py-0.5"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "var(--fg-muted)",
-                    background: "var(--bg-hover)",
-                  }}
+                  style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-muted)", background: "var(--bg-hover)" }}
                 >
                   {formatBadgeDate(item.noteDate)}
                 </span>
-
-                {/* Title */}
-                <span
-                  className="flex-1 min-w-0 truncate"
-                  style={{ fontSize: 14, color: "var(--fg)" }}
-                >
+                <span className="flex-1 min-w-0 truncate" style={{ fontSize: 14, color: "var(--fg)" }}>
                   {item.title}
                 </span>
               </div>
@@ -259,7 +256,7 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
         )}
       </div>
 
-      {/* Floating drag preview */}
+      {/* Floating drag preview — rendered via portal, hidden from elementFromPoint */}
       {isDragging && dragRef.current?.active && createPortal(
         <div
           ref={previewRef}
@@ -283,16 +280,10 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, onDropOnDate, isM
             opacity: 0.92,
           }}
         >
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--fg-muted)",
-              background: "var(--bg-hover)",
-              padding: "2px 6px",
-              borderRadius: 5,
-            }}
-          >
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: "var(--fg-muted)",
+            background: "var(--bg-hover)", padding: "2px 6px", borderRadius: 5,
+          }}>
             {formatBadgeDate(dragRef.current.item.noteDate)}
           </span>
           <span>

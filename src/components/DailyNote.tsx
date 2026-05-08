@@ -709,6 +709,52 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     }
   }, [dailyNotes, today, updateNoteContent, upsertNote, updateTask]);
 
+  /** Drop a single overdue item onto today's editor (append at end). */
+  const handleOverdueDropOnEditor = useCallback(async (item: OverdueItem) => {
+    const ed = editorRef.current;
+    const currentNote = noteRef.current;
+    if (!ed || !currentNote) return;
+
+    // 1. Remove from source note JSON
+    const sourceNote = dailyNotes.find((n) => n.id === item.noteId);
+    if (sourceNote) {
+      const doc = safeParseJson(sourceNote.content);
+      if (doc && Array.isArray((doc as any).content)) {
+        let removed = false;
+        const removeFirst = (nodes: JSONContent[]): JSONContent[] =>
+          nodes.reduce<JSONContent[]>((acc, node) => {
+            if (!removed && node.type === "taskItem" && !node.attrs?.checked
+              && extractText(node).trim() === item.title
+              && ((node.attrs?.taskId ?? null) === item.taskId)) {
+              removed = true;
+              return acc;
+            }
+            if (node.content) {
+              const filtered = removeFirst(node.content);
+              if ((node.type === "taskList" || node.type === "bulletList" || node.type === "orderedList") && filtered.length === 0) return acc;
+              acc.push({ ...node, content: filtered });
+            } else { acc.push(node); }
+            return acc;
+          }, []);
+        (doc as any).content = removeFirst((doc as any).content);
+        await updateNoteContent(sourceNote.id, JSON.stringify(doc));
+      }
+    }
+
+    // 2. Append to today's editor
+    const blockJson = item.nodeJson as JSONContent;
+    const endPos = ed.state.doc.content.size;
+    ed.chain().insertContentAt(endPos, { type: "taskList", content: [blockJson] }).run();
+
+    // 3. Save + update dueDate
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    const saves: Promise<unknown>[] = [
+      updateNoteContent(currentNote.id, JSON.stringify(ed.getJSON())),
+    ];
+    if (item.taskId) saves.push(updateTask(item.taskId, { dueDate: today }));
+    await Promise.all(saves);
+  }, [dailyNotes, today, updateNoteContent, updateTask]);
+
   /** Move all overdue items to today's note. */
   const handleMoveAllToToday = useCallback(async () => {
     const ed = editorRef.current;
@@ -1864,6 +1910,7 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
             onCheck={handleOverdueCheck}
             onMoveAll={handleMoveAllToToday}
             onDropOnDate={handleOverdueDropOnDate}
+            onDropOnEditor={handleOverdueDropOnEditor}
             isMoving={isMovingAll}
           />
         )}
