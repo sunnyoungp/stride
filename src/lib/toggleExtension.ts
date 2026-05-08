@@ -1,9 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
-
-/**
- * Toggle block — a collapsible section with a summary line and hidden content.
- * Renders as <details><summary>…</summary><div>…</div></details>.
- */
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import { ToggleView } from "@/components/ToggleView";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -16,15 +13,25 @@ declare module "@tiptap/core" {
 export const ToggleNode = Node.create({
   name: "toggle",
   group: "block",
-  content: "toggleSummary toggleContent",
+  content: "block+",
   defining: true,
 
+  addAttributes() {
+    return {
+      open: { default: true },
+    };
+  },
+
   parseHTML() {
-    return [{ tag: "details" }];
+    return [{ tag: 'div[data-type="toggle"]' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["details", mergeAttributes(HTMLAttributes, { class: "stride-toggle" }), 0];
+    return ["div", mergeAttributes(HTMLAttributes, { "data-type": "toggle" }), 0];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ToggleView);
   },
 
   addCommands() {
@@ -34,46 +41,10 @@ export const ToggleNode = Node.create({
         ({ commands }) => {
           return commands.insertContent({
             type: "toggle",
-            content: [
-              {
-                type: "toggleSummary",
-                content: [{ type: "text", text: "Toggle" }],
-              },
-              {
-                type: "toggleContent",
-                content: [{ type: "paragraph" }],
-              },
-            ],
+            attrs: { open: true },
+            content: [{ type: "paragraph" }],
           });
         },
     };
-  },
-});
-
-export const ToggleSummary = Node.create({
-  name: "toggleSummary",
-  content: "inline*",
-  defining: true,
-
-  parseHTML() {
-    return [{ tag: "summary" }];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ["summary", mergeAttributes(HTMLAttributes, { class: "stride-toggle-summary" }), 0];
-  },
-});
-
-export const ToggleContent = Node.create({
-  name: "toggleContent",
-  content: "block+",
-  defining: true,
-
-  parseHTML() {
-    return [{ tag: "div[data-toggle-content]" }];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ["div", mergeAttributes(HTMLAttributes, { "data-toggle-content": "", class: "stride-toggle-content" }), 0];
   },
 });
