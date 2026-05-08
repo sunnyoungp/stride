@@ -119,6 +119,12 @@ function todayDateString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function daysAgoString(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function isIncomplete(task: Task): boolean {
   return task.status !== "done" && task.status !== "cancelled";
 }
@@ -127,7 +133,13 @@ export const useTaskStore = create<TaskStore>((set, get) => {
   const loadTasks: TaskStore["loadTasks"] = async () => {
     try {
       set({ isLoading: true });
-      const { data: rows, error } = await supabase.from("tasks").select("*");
+      // Load active tasks + recently completed (last 7 days) to keep undo/visibility.
+      // Old done/cancelled tasks are excluded to reduce payload.
+      const recentCutoff = daysAgoString(7);
+      const { data: rows, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .or(`and(status.neq.done,status.neq.cancelled),updated_at.gte.${recentCutoff}`);
       if (error) throw error;
       const tasks = (rows ?? []).map(taskFromRow);
       set({ tasks });
@@ -407,17 +419,28 @@ export const useTaskStore = create<TaskStore>((set, get) => {
       updatedAt,
     }));
 
-    await Promise.all(updated.map((task) =>
-      supabase
-        .from("tasks")
-        .update({
-          due_date: task.dueDate,
-          rolled_over: true,
-          rolled_over_from: task.rolledOverFrom,
-          updated_at: updatedAt,
-        })
-        .eq("id", task.id)
-    ));
+    // Group by original due date so tasks with the same rolledOverFrom
+    // can share a single .update().in() call instead of N individual updates.
+    const byOrigDate = new Map<string, string[]>();
+    for (const t of updated) {
+      const from = t.rolledOverFrom ?? today;
+      const arr = byOrigDate.get(from) ?? [];
+      arr.push(t.id);
+      byOrigDate.set(from, arr);
+    }
+    await Promise.all(
+      [...byOrigDate.entries()].map(([origDate, ids]) =>
+        supabase
+          .from("tasks")
+          .update({
+            due_date: today,
+            rolled_over: true,
+            rolled_over_from: origDate,
+            updated_at: updatedAt,
+          })
+          .in("id", ids)
+      )
+    );
 
     const byId = new Map(updated.map((t) => [t.id, t] as const));
     set((state) => ({ tasks: state.tasks.map((t) => byId.get(t.id) ?? t) }));

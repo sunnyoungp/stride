@@ -1468,11 +1468,28 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   }, []);
 
   const goToDate = async (date: string) => {
+    // 1. Check store (covers recent notes loaded in bulk)
     const existing = dailyNotes.find((n) => n.date === date);
     if (existing) { setNote(existing); return; }
-    const createdOrFound = await ensureDailyNote(date);
-    await loadDailyNotes();
-    setNote(createdOrFound);
+    // 2. Fetch directly from Supabase (covers notes older than the 90-day bulk load window)
+    const { createClient: makeClient } = await import("@/lib/supabase/client");
+    const { data: row } = await makeClient()
+      .from("daily_notes").select("*").eq("date", date).maybeSingle();
+    if (row) {
+      const note: DailyNote = {
+        id: row.id as string, date: row.date as string,
+        content: row.content as string, linkedTaskIds: (row.linked_task_ids as string[]) ?? [],
+      };
+      // Add to store so it's cached for this session
+      useDailyNoteStore.setState((s) => ({
+        dailyNotes: [...s.dailyNotes.filter((n) => n.id !== note.id), note],
+      }));
+      setNote(note);
+      return;
+    }
+    // 3. Note doesn't exist — create blank
+    const blank = await upsertNote(date, JSON.stringify({ type: "doc", content: [] }));
+    setNote(blank);
   };
 
   // Sync note content whenever the parent changes selectedDate.

@@ -48,10 +48,22 @@ function todayDateString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export const useDailyNoteStore = create<DailyNoteStore>((set, get) => {
   const loadDailyNotes: DailyNoteStore["loadDailyNotes"] = async () => {
     try {
-      const { data: rows, error } = await supabase.from("daily_notes").select("*");
+      // Only load last 90 days — covers overdue scanning and typical navigation.
+      // Older notes are fetched on-demand via goToDate → upsertNote fallback.
+      const cutoff = daysAgo(90);
+      const { data: rows, error } = await supabase
+        .from("daily_notes")
+        .select("*")
+        .gte("date", cutoff);
       if (error) throw error;
       set({ dailyNotes: (rows ?? []).map(noteFromRow) });
     } catch (error) {
