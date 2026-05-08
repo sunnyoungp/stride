@@ -388,7 +388,7 @@ a, button, input, select, textarea {
 
 /* ── Base font size — controlled by --font-size-notes token ── */
 .ProseMirror { font-size: var(--font-size-notes, 15px); line-height: 1.6; letter-spacing: 0; }
-.ProseMirror p { padding: 2px 4px; margin-bottom: 0.15em; margin-top: 0; border-radius: 6px; }
+.ProseMirror p { margin-bottom: 0.4em; margin-top: 0; }
 
 /* ── Links ── */
 .ProseMirror a {
@@ -446,12 +446,12 @@ a, button, input, select, textarea {
 /* ── Bullet lists (override Tailwind preflight which resets list-style) ── */
 .ProseMirror ul:not([data-type="taskList"]) {
   list-style-type: disc;
-  padding-left: 1.1rem;
+  padding-left: 1.5rem;
   margin: 0.1rem 0;
 }
 .ProseMirror ol {
   list-style-type: decimal;
-  padding-left: 1.1rem;
+  padding-left: 1.5rem;
   margin: 0.1rem 0;
 }
 .ProseMirror ul:not([data-type="taskList"]) li,
@@ -481,10 +481,9 @@ a, button, input, select, textarea {
 .ProseMirror ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  gap: 0.2em;
-  padding: 2px 4px;
-  margin: 0.1rem 0;
-  border-radius: 6px;
+  gap: 0.6em;
+  padding: 0;
+  margin: 0.25rem 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > div {
@@ -496,9 +495,9 @@ a, button, input, select, textarea {
    is controlled by the li margin alone — prevents double-spacing */
 .ProseMirror ul[data-type="taskList"] li > div > p {
   margin-bottom: 0;
-  padding: 0;
 }
 
+/* Ensure no top margin on first paragraph in task items to avoid alignment shift */
 .ProseMirror ul[data-type="taskList"] li > div > p:first-child {
   margin-top: 0;
 }
@@ -509,7 +508,7 @@ a, button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.35em;
+  margin-top: 0.2em;
   padding-top: 0;
 }
 
@@ -561,8 +560,7 @@ a, button, input, select, textarea {
 /* ── Daily note block selection highlight ── */
 .ProseMirror .dn-block-selected {
   background: rgba(99, 130, 191, 0.13) !important;
-  border-radius: 6px;
-  padding: 2px 4px;
+  border-radius: 5px;
 }
 
 /* ── Daily note drag feedback ── */
