@@ -1735,7 +1735,18 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       if (title) void handleMoveItem(title, taskId, date);
     };
     window.addEventListener("stride-move-block" as any, h);
-    return () => window.removeEventListener("stride-move-block" as any, h);
+
+    // Handle drag-handle drops onto calendar cells (mouse-event based drag)
+    const onCalDrop = (e: Event) => {
+      const { title, taskId, date, json } = (e as CustomEvent).detail;
+      if (title) void handleMoveItem(title, taskId ?? null, date, json ?? null);
+    };
+    window.addEventListener("stride-block-drop-calendar" as any, onCalDrop);
+
+    return () => {
+      window.removeEventListener("stride-move-block" as any, h);
+      window.removeEventListener("stride-block-drop-calendar" as any, onCalDrop);
+    };
   }, [editor, handleMoveItem]);
 
   /**
