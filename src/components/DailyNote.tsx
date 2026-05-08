@@ -1463,9 +1463,26 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [updateNoteContent]);
 
+  // Flush pending save — updates store immediately so reads see fresh content,
+  // then persists to Supabase in the background.
+  const flushPendingSave = useCallback(() => {
+    if (!saveTimerRef.current || !noteRef.current || !editorRef.current || editorRef.current.isDestroyed) return;
+    window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = null;
+    const content = JSON.stringify(editorRef.current.getJSON());
+    const noteId = noteRef.current.id;
+    // Sync store update so subsequent reads (goToDate) see the latest content
+    useDailyNoteStore.setState((s) => ({
+      dailyNotes: s.dailyNotes.map((n) => (n.id === noteId ? { ...n, content } : n)),
+    }));
+    // Async Supabase persist
+    void updateNoteContent(noteId, content);
+  }, [updateNoteContent]);
+
+  // Flush on unmount (leaving the Notes page) so edits aren't lost
   useEffect(() => {
-    return () => { if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current); };
-  }, []);
+    return () => flushPendingSave();
+  }, [flushPendingSave]);
 
   const goToDate = async (date: string) => {
     // 1. Check store (covers recent notes loaded in bulk)
@@ -1493,15 +1510,9 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
   };
 
   // Sync note content whenever the parent changes selectedDate.
-  // Flush any pending save for the CURRENT note before switching to avoid
-  // the debounced save overwriting the newly-loaded note.
+  // Flush pending save synchronously so goToDate reads fresh content from the store.
   useEffect(() => {
-    // Flush pending save for the outgoing note
-    if (saveTimerRef.current && noteRef.current && editorRef.current && !editorRef.current.isDestroyed) {
-      window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-      void updateNoteContent(noteRef.current.id, JSON.stringify(editorRef.current.getJSON()));
-    }
+    flushPendingSave();
     void goToDate(selectedDate);
   }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
