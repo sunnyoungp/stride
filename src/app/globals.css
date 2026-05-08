@@ -496,9 +496,9 @@ a, button, input, select, textarea {
    is controlled by the li margin alone — prevents double-spacing */
 .ProseMirror ul[data-type="taskList"] li > div > p {
   margin-bottom: 0;
+  padding: 0;
 }
 
-/* Ensure no top margin on first paragraph in task items to avoid alignment shift */
 .ProseMirror ul[data-type="taskList"] li > div > p:first-child {
   margin-top: 0;
 }
@@ -509,7 +509,7 @@ a, button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.2em;
+  margin-top: 0.35em;
   padding-top: 0;
 }
 
