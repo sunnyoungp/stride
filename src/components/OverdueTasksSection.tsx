@@ -83,6 +83,7 @@ function OverdueTasksSectionInner({ items, onCheck, onMoveAll, isMoving }: Props
   return (
     <div
       data-overdue-section
+      onMouseDown={(e) => e.stopPropagation()}
       className="mb-4 rounded-xl overflow-hidden"
       style={{
         background: "var(--bg-card)",

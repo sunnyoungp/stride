@@ -993,11 +993,20 @@ export function DailyNote({ selectedDate, onDateChange, hideHeader = false, move
       lassoRectRef.current = null;
       setLassoRect(null);
     };
+    // Cancel lasso when a native drag starts — the browser owns the gesture now
+    const onDragStart = () => {
+      isDragSelectingRef.current = false;
+      lassoStartRef.current = null;
+      lassoRectRef.current = null;
+      setLassoRect(null);
+    };
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("dragstart", onDragStart);
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("dragstart", onDragStart);
     };
   }, [selectBlocksInRect]);
 
