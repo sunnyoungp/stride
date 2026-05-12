@@ -655,12 +655,25 @@ a, button, input, select, textarea {
 
 /* Pastel event blocks — colored bg, darker text of same hue */
 .fc .fc-event {
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   border: none !important;
   font-size: 0.78rem;
   font-weight: 500;
   box-shadow: none !important;
   opacity: 0.92;
+}
+
+/* Calendar events — solid left accent stripe */
+.fc .fc-event.stride-event {
+  border-left: 3px solid var(--stride-event-color, currentColor) !important;
+  border-radius: 0 10px 10px 0 !important;
+  opacity: 1;
+}
+
+/* Routines — subtle, no border */
+.fc .fc-event.stride-routine {
+  opacity: 0.55;
+  border: none !important;
 }
 
 .fc .fc-event-main {

@@ -954,6 +954,10 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                   setPopover({ timeBlockId: arg.event.id, x: arg.jsEvent.clientX, y: arg.jsEvent.clientY });
                 }}
                 eventDidMount={(info) => {
+                  // Set accent color for the left border on events
+                  if (!info.event.extendedProps.isRoutine) {
+                    info.el.style.setProperty("--stride-event-color", info.event.textColor);
+                  }
                   info.el.addEventListener("contextmenu", (e) => {
                     e.preventDefault();
                     setPopover(null);
@@ -999,15 +1003,12 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                     <div style={{
                       padding: "2px 6px", overflow: "hidden", height: "100%",
                       opacity: arg.event.extendedProps.isPending ? 0.5 : 1,
-                      borderLeft: isRoutine ? undefined : `3px solid ${arg.event.textColor}`,
-                      borderRadius: isRoutine ? undefined : 0,
                     }}>
                       <div style={{
                         fontSize: "0.75rem",
                         fontWeight: isRoutine ? 400 : 600,
                         lineHeight: 1.3,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        opacity: isRoutine ? 0.7 : 1,
                       }}>
                         {arg.event.title}
                       </div>
@@ -1036,7 +1037,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                     </div>
                   );
                 }}
-                eventClassNames={(arg) => arg.event.extendedProps.isRoutine ? ["rounded-lg"] : ["rounded-xl"]}
+                eventClassNames={(arg) => arg.event.extendedProps.isRoutine ? ["stride-routine"] : ["stride-event"]}
                 slotLabelClassNames={() => ["text-xs"]}
               />
             </div>
