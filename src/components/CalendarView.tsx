@@ -508,13 +508,14 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   const events = useMemo(() => {
     const base = timeBlocks.map((b) => {
       const color = b.color ?? getDefaultBlockColor();
+      const isRoutine = b.type === "routine";
       return {
         id: b.id, title: b.title, start: b.startTime, end: b.endTime,
         allDay: b.allDay ?? false,
-        backgroundColor: hexToRgba(color, 0.15),
-        borderColor: hexToRgba(color, 0.4),
+        backgroundColor: hexToRgba(color, isRoutine ? 0.08 : 0.15),
+        borderColor: "transparent",
         textColor: color,
-        extendedProps: { timeBlockType: b.type, taskId: b.taskId },
+        extendedProps: { timeBlockType: b.type, taskId: b.taskId, isRoutine },
       };
     });
     if (pendingBlock) {
@@ -992,16 +993,27 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                     }
                   })();
                 }}
-                eventContent={(arg) => (
-                  <div style={{
-                    padding: "2px 6px", overflow: "hidden", height: "100%",
-                    opacity: arg.event.extendedProps.isPending ? 0.5 : 1,
-                  }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 600, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {arg.event.title}
+                eventContent={(arg) => {
+                  const isRoutine = arg.event.extendedProps.isRoutine;
+                  return (
+                    <div style={{
+                      padding: "2px 6px", overflow: "hidden", height: "100%",
+                      opacity: arg.event.extendedProps.isPending ? 0.5 : 1,
+                      borderLeft: isRoutine ? undefined : `3px solid ${arg.event.textColor}`,
+                      borderRadius: isRoutine ? undefined : 0,
+                    }}>
+                      <div style={{
+                        fontSize: "0.75rem",
+                        fontWeight: isRoutine ? 400 : 600,
+                        lineHeight: 1.3,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        opacity: isRoutine ? 0.7 : 1,
+                      }}>
+                        {arg.event.title}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                }}
                 dayHeaderContent={(arg) => {
                   const isToday = arg.isToday;
                   const dayName = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(arg.date).toUpperCase();
@@ -1024,7 +1036,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                     </div>
                   );
                 }}
-                eventClassNames={() => ["rounded-xl"]}
+                eventClassNames={(arg) => arg.event.extendedProps.isRoutine ? ["rounded-lg"] : ["rounded-xl"]}
                 slotLabelClassNames={() => ["text-xs"]}
               />
             </div>
