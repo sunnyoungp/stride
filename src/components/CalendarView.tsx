@@ -6,6 +6,7 @@ import interactionPlugin, {
   Draggable, type EventReceiveArg,
 } from "@fullcalendar/interaction";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import momentTimezonePlugin from "@fullcalendar/moment-timezone";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -904,7 +905,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
             <div className="h-full rounded-xl overflow-hidden">
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, momentTimezonePlugin]}
                 initialView={cfg.type}
                 duration={cfg.duration}
                 headerToolbar={false}

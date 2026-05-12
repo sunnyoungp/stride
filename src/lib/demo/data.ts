@@ -280,10 +280,8 @@ export function initDemoData(): DemoData {
   setDemoTable("daily_notes",       dailyNotes.map(noteRow));
   setDemoTable("routine_templates", templates.map(templateRow));
 
-  // Default demo mode to PST
-  if (!localStorage.getItem("stride-timezone")) {
-    localStorage.setItem("stride-timezone", "America/Los_Angeles");
-  }
+  // Always set demo mode to PST
+  localStorage.setItem("stride-timezone", "America/Los_Angeles");
 
   return { sections, tasks, documents, projects, timeBlocks, dailyNotes, templates };
 }
