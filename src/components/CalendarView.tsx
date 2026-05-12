@@ -76,6 +76,12 @@ function getDefaultBlockColor(): string {
 
 type PendingBlock = { startTime: string; endTime: string; x: number; y: number };
 
+/** Get the current hour in the app's configured timezone */
+function nowHourInAppTz(): number {
+  const h = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: getAppTimezone() }).format(new Date());
+  return parseInt(h, 10);
+}
+
 // ─── Agenda helpers ───────────────────────────────────────────────────────────
 
 function localDateStr(d: Date): string {
@@ -532,8 +538,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   // Scroll calendar to current time on initial mount
   useEffect(() => {
     const timer = setTimeout(() => {
-      const now = new Date();
-      calendarRef.current?.getApi().scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 });
+      calendarRef.current?.getApi().scrollToTime({ hours: Math.max(0, nowHourInAppTz() - 1), minutes: 0 });
     }, 120);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -578,8 +583,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
     // Always snap to today's default position when switching views
     api.gotoDate(defaultStart(key));
     // Scroll to current time so the indicator is always visible
-    const now = new Date();
-    setTimeout(() => api.scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 }), 80);
+    setTimeout(() => api.scrollToTime({ hours: Math.max(0, nowHourInAppTz() - 1), minutes: 0 }), 80);
   };
 
   const [todayLabel, setTodayLabel] = useState("");
@@ -593,11 +597,11 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
     const isOpen = showRoutinesSidebar || showTasksSidebar;
     const api = calendarRef.current?.getApi();
     if (!api) return;
-    const now = new Date();
-    const targetHour = Math.max(0, now.getHours() - 1);
+    const h = nowHourInAppTz();
+    const targetHour = Math.max(0, h - 1);
     const timer = setTimeout(() => {
       if (isOpen) {
-        api.scrollToTime({ hours: Math.min(23, now.getHours() + 1), minutes: 0 });
+        api.scrollToTime({ hours: Math.min(23, h + 1), minutes: 0 });
       } else {
         api.scrollToTime({ hours: targetHour, minutes: 0 });
       }
@@ -820,8 +824,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                   const api = calendarRef.current?.getApi();
                   if (!api) return;
                   api.gotoDate(defaultStart(view));
-                  const now = new Date();
-                  setTimeout(() => api.scrollToTime({ hours: Math.max(0, now.getHours() - 1), minutes: 0 }), 50);
+                  setTimeout(() => api.scrollToTime({ hours: Math.max(0, nowHourInAppTz() - 1), minutes: 0 }), 50);
                 }}
                 style={{
                   padding: "3px 10px", borderRadius: 9999,
