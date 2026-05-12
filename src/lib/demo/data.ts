@@ -39,7 +39,20 @@ const IDs = {
   },
   doc:  { roadmap: "demo-doc-roadmap", standup: "demo-doc-standup" },
   proj: { stride: "demo-proj-stride", client: "demo-proj-client" },
-  tb:   { deepWork: "demo-tb-deep", sync: "demo-tb-sync", review: "demo-tb-review", focus: "demo-tb-focus", plan: "demo-tb-plan" },
+  tb:   {
+    // Today
+    sleepT: "demo-tb-sleep-0", morningT: "demo-tb-morning-0", workoutT: "demo-tb-workout-0",
+    deepWork: "demo-tb-deep", sync: "demo-tb-sync", lunch0: "demo-tb-lunch-0", review: "demo-tb-review",
+    // Tomorrow
+    sleep1: "demo-tb-sleep-1", morning1: "demo-tb-morning-1", workout1: "demo-tb-workout-1",
+    focus: "demo-tb-focus", lunch1: "demo-tb-lunch-1", plan: "demo-tb-plan",
+    // Day after
+    sleep2: "demo-tb-sleep-2", morning2: "demo-tb-morning-2", workout2: "demo-tb-workout-2",
+    deep2: "demo-tb-deep-2", lunch2: "demo-tb-lunch-2", review2: "demo-tb-review-2",
+    // Yesterday
+    sleepY: "demo-tb-sleep-y", morningY: "demo-tb-morning-y", workoutY: "demo-tb-workout-y",
+    deepY: "demo-tb-deep-y", lunchY: "demo-tb-lunch-y", reviewY: "demo-tb-review-y",
+  },
   note: "demo-note-today",
   tmpl: { sleep: "demo-tmpl-sleep", morning: "demo-tmpl-morning", commute: "demo-tmpl-commute", workout: "demo-tmpl-workout", deep: "demo-tmpl-deep", lunch: "demo-tmpl-lunch" },
 };
@@ -166,11 +179,38 @@ function buildProjects(): Project[] {
 
 function buildTimeBlocks(): TimeBlock[] {
   return [
-    { id: IDs.tb.deepWork, title: "Deep Work",       startTime: localISO(0, 9),     endTime: localISO(0, 12),     type: "event", color: "#3b82f6" },
-    { id: IDs.tb.sync,     title: "Team Sync",       startTime: localISO(0, 14),    endTime: localISO(0, 14, 30), type: "event", color: "#8b5cf6" },
-    { id: IDs.tb.review,   title: "Code Review",     startTime: localISO(0, 15),    endTime: localISO(0, 16),     type: "event", color: "#f97316" },
-    { id: IDs.tb.focus,    title: "Focus Block",     startTime: localISO(1, 9),     endTime: localISO(1, 11),     type: "event", color: "#3b82f6" },
-    { id: IDs.tb.plan,     title: "Planning Session",startTime: localISO(1, 13),    endTime: localISO(1, 14),     type: "event", color: "#22c55e" },
+    // ── Yesterday ──
+    { id: IDs.tb.sleepY,    title: "Sleep",            startTime: localISO(-1, 22),    endTime: localISO(0, 6),      type: "routine", routineTemplateId: IDs.tmpl.sleep,   color: "#52525b" },
+    { id: IDs.tb.morningY,  title: "Morning Routine",  startTime: localISO(-1, 7),     endTime: localISO(-1, 8, 30), type: "routine", routineTemplateId: IDs.tmpl.morning, color: "#f59e0b" },
+    { id: IDs.tb.workoutY,  title: "Workout",          startTime: localISO(-1, 6),     endTime: localISO(-1, 7),     type: "routine", routineTemplateId: IDs.tmpl.workout, color: "#22c55e" },
+    { id: IDs.tb.deepY,     title: "Deep Work",        startTime: localISO(-1, 9),     endTime: localISO(-1, 12),    type: "event",   color: "#3b82f6" },
+    { id: IDs.tb.lunchY,    title: "Lunch Break",      startTime: localISO(-1, 12),    endTime: localISO(-1, 13),    type: "routine", routineTemplateId: IDs.tmpl.lunch,   color: "#f97316" },
+    { id: IDs.tb.reviewY,   title: "Code Review",      startTime: localISO(-1, 14),    endTime: localISO(-1, 15),    type: "event",   color: "#f97316" },
+
+    // ── Today ──
+    { id: IDs.tb.sleepT,    title: "Sleep",            startTime: localISO(0, 22),     endTime: localISO(1, 6),      type: "routine", routineTemplateId: IDs.tmpl.sleep,   color: "#52525b" },
+    { id: IDs.tb.morningT,  title: "Morning Routine",  startTime: localISO(0, 7),      endTime: localISO(0, 8, 30),  type: "routine", routineTemplateId: IDs.tmpl.morning, color: "#f59e0b" },
+    { id: IDs.tb.workoutT,  title: "Workout",          startTime: localISO(0, 6),      endTime: localISO(0, 7),      type: "routine", routineTemplateId: IDs.tmpl.workout, color: "#22c55e" },
+    { id: IDs.tb.deepWork,  title: "Deep Work",        startTime: localISO(0, 9),      endTime: localISO(0, 12),     type: "event",   color: "#3b82f6" },
+    { id: IDs.tb.lunch0,    title: "Lunch Break",      startTime: localISO(0, 12),     endTime: localISO(0, 13),     type: "routine", routineTemplateId: IDs.tmpl.lunch,   color: "#f97316" },
+    { id: IDs.tb.sync,      title: "Team Sync",        startTime: localISO(0, 14),     endTime: localISO(0, 14, 30), type: "event",   color: "#8b5cf6" },
+    { id: IDs.tb.review,    title: "Code Review",      startTime: localISO(0, 15),     endTime: localISO(0, 16),     type: "event",   color: "#f97316" },
+
+    // ── Tomorrow ──
+    { id: IDs.tb.sleep1,    title: "Sleep",            startTime: localISO(1, 22),     endTime: localISO(2, 6),      type: "routine", routineTemplateId: IDs.tmpl.sleep,   color: "#52525b" },
+    { id: IDs.tb.morning1,  title: "Morning Routine",  startTime: localISO(1, 7),      endTime: localISO(1, 8, 30),  type: "routine", routineTemplateId: IDs.tmpl.morning, color: "#f59e0b" },
+    { id: IDs.tb.workout1,  title: "Workout",          startTime: localISO(1, 6),      endTime: localISO(1, 7),      type: "routine", routineTemplateId: IDs.tmpl.workout, color: "#22c55e" },
+    { id: IDs.tb.focus,     title: "Focus Block",      startTime: localISO(1, 9),      endTime: localISO(1, 11),     type: "event",   color: "#3b82f6" },
+    { id: IDs.tb.lunch1,    title: "Lunch Break",      startTime: localISO(1, 12),     endTime: localISO(1, 13),     type: "routine", routineTemplateId: IDs.tmpl.lunch,   color: "#f97316" },
+    { id: IDs.tb.plan,      title: "Planning Session", startTime: localISO(1, 13),     endTime: localISO(1, 14),     type: "event",   color: "#22c55e" },
+
+    // ── Day after tomorrow ──
+    { id: IDs.tb.sleep2,    title: "Sleep",            startTime: localISO(2, 22),     endTime: localISO(3, 6),      type: "routine", routineTemplateId: IDs.tmpl.sleep,   color: "#52525b" },
+    { id: IDs.tb.morning2,  title: "Morning Routine",  startTime: localISO(2, 7),      endTime: localISO(2, 8, 30),  type: "routine", routineTemplateId: IDs.tmpl.morning, color: "#f59e0b" },
+    { id: IDs.tb.workout2,  title: "Workout",          startTime: localISO(2, 6),      endTime: localISO(2, 7),      type: "routine", routineTemplateId: IDs.tmpl.workout, color: "#22c55e" },
+    { id: IDs.tb.deep2,     title: "Deep Work",        startTime: localISO(2, 9),      endTime: localISO(2, 12),     type: "event",   color: "#3b82f6" },
+    { id: IDs.tb.lunch2,    title: "Lunch Break",      startTime: localISO(2, 12),     endTime: localISO(2, 13),     type: "routine", routineTemplateId: IDs.tmpl.lunch,   color: "#f97316" },
+    { id: IDs.tb.review2,   title: "Code Review",      startTime: localISO(2, 14),     endTime: localISO(2, 15, 30), type: "event",   color: "#f97316" },
   ];
 }
 
