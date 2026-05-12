@@ -266,7 +266,7 @@ export const useRoutineTemplateStore = create<RoutineTemplateStore>((set, get) =
     await useTimeBlockStore.getState().loadTimeBlocks();
   };
 
-  if (typeof window !== "undefined") void loadTemplates();
+  if (typeof window !== "undefined" && !isDemoMode()) void loadTemplates();
 
   return {
     templates: [],

@@ -143,7 +143,7 @@ export const useTimeBlockStore = create<TimeBlockStore>((set, get) => {
     set({ timeBlocks: get().timeBlocks.filter((b) => b.id !== id) });
   };
 
-  if (typeof window !== "undefined") void loadTimeBlocks();
+  if (typeof window !== "undefined" && !isDemoMode()) void loadTimeBlocks();
 
   return {
     timeBlocks: [],

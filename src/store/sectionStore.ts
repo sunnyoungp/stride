@@ -271,9 +271,10 @@ export const useSectionStore = create<SectionStore>((set, get) => {
     await useTaskStore.getState().loadTasks();
   };
 
-  if (typeof window !== "undefined") void loadSections();
-  if (typeof window !== "undefined") void loadSubsections();
-  if (typeof window !== "undefined") void loadDeletedSections();
+  // Skip auto-load in demo mode — ClientLayout injects fresh demo data
+  if (typeof window !== "undefined" && !isDemoMode()) void loadSections();
+  if (typeof window !== "undefined" && !isDemoMode()) void loadSubsections();
+  if (typeof window !== "undefined" && !isDemoMode()) void loadDeletedSections();
 
   return {
     sections: [],

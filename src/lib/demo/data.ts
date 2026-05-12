@@ -1,10 +1,8 @@
-// Generates and persists realistic demo data for portfolio visitors.
+// Generates fresh demo data on every page load for portfolio visitors.
 // Returns camelCase typed data for direct Zustand state injection.
 
-import { getDemoTable, setDemoTable, DEMO_USER_ID } from "./storage";
+import { setDemoTable, DEMO_USER_ID } from "./storage";
 import type { Task, TaskSection, TimeBlock, DailyNote, StrideDocument, Project, RoutineTemplate } from "@/types/index";
-
-const INIT_KEY = "stride-demo-initialized";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -243,48 +241,6 @@ function templateRow(t: RoutineTemplate): Record<string, unknown> {
   return { id: t.id, user_id: DEMO_USER_ID, title: t.title, duration_minutes: t.durationMinutes, default_start_time: t.defaultStartTime ?? null, color: t.color, days_of_week: t.daysOfWeek, is_built_in: t.isBuiltIn, icon: t.icon ?? null, pinned: t.pinned ?? null, order: t.order };
 }
 
-// ── Row → camelCase helpers (for returning-visitor state reconstruction) ──────
-
-function taskFromRow(r: Record<string, unknown>): Task {
-  return {
-    id: r.id as string, title: r.title as string, notes: (r.notes as string) ?? "",
-    status: r.status as Task["status"], priority: r.priority as Task["priority"],
-    tags: (r.tags as string[]) ?? [], sectionId: (r.section_id as string | null) ?? undefined,
-    dueDate: (r.due_date as string | null) ?? undefined, scheduledStart: (r.scheduled_start as string | null) ?? undefined,
-    scheduledEnd: (r.scheduled_end as string | null) ?? undefined, rolledOver: (r.rolled_over as boolean) ?? false,
-    rolledOverFrom: (r.rolled_over_from as string | null) ?? undefined, recurrence: (r.recurrence as Task["recurrence"] | null) ?? undefined,
-    parentTaskId: (r.parent_task_id as string | null) ?? undefined, subtaskIds: (r.subtask_ids as string[]) ?? [],
-    sourceDocumentId: (r.source_document_id as string | null) ?? undefined, sourceDocumentTitle: (r.source_document_title as string | null) ?? undefined,
-    projectId: (r.project_id as string | null) ?? undefined, order: (r.order as number) ?? 0,
-    createdAt: r.created_at as string, updatedAt: r.updated_at as string,
-    subsectionId: (r.subsection_id as string | null) ?? undefined,
-  };
-}
-
-function sectionFromRow(r: Record<string, unknown>): TaskSection {
-  return { id: r.id as string, title: r.title as string, color: (r.color as string | null) ?? undefined, icon: (r.icon as string | null) ?? undefined, order: r.order as number };
-}
-
-function docFromRow(r: Record<string, unknown>): StrideDocument {
-  return { id: r.id as string, title: r.title as string, content: r.content as string, projectId: (r.project_id as string | null) ?? undefined, linkedTaskIds: (r.linked_task_ids as string[]) ?? [], createdAt: r.created_at as string, updatedAt: r.updated_at as string };
-}
-
-function projectFromRow(r: Record<string, unknown>): Project {
-  return { id: r.id as string, title: r.title as string, description: (r.description as string | null) ?? undefined, status: r.status as Project["status"], taskIds: (r.task_ids as string[]) ?? [], documentIds: (r.document_ids as string[]) ?? [], color: (r.color as string | null) ?? undefined };
-}
-
-function timeBlockFromRow(r: Record<string, unknown>): TimeBlock {
-  return { id: r.id as string, title: r.title as string, startTime: r.start_time as string, endTime: r.end_time as string, type: r.type as TimeBlock["type"], taskId: (r.task_id as string | null) ?? undefined, routineTemplateId: (r.routine_template_id as string | null) ?? undefined, color: (r.color as string | null) ?? undefined };
-}
-
-function noteFromRow(r: Record<string, unknown>): DailyNote {
-  return { id: r.id as string, date: r.date as string, content: r.content as string, linkedTaskIds: (r.linked_task_ids as string[]) ?? [] };
-}
-
-function templateFromRow(r: Record<string, unknown>): RoutineTemplate {
-  return { id: r.id as string, title: r.title as string, durationMinutes: r.duration_minutes as number, defaultStartTime: (r.default_start_time as string | null) ?? undefined, color: r.color as string, daysOfWeek: (r.days_of_week as number[]) ?? [], isBuiltIn: (r.is_built_in as boolean) ?? false, icon: (r.icon as string | null) ?? undefined, pinned: (r.pinned as boolean | null) ?? undefined, order: (r.order as number) ?? 0 };
-}
-
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export type DemoData = {
@@ -301,49 +257,33 @@ export type DemoData = {
  * Ensures demo data exists in localStorage and returns the current state
  * as camelCase typed data ready for direct Zustand state injection.
  *
- * - First call (new visitor): generates fresh demo data and saves to localStorage
- * - Subsequent calls (returning visitor): reads existing localStorage state
- *   so any changes made in a previous session are preserved
+ * Always generates fresh demo data on every call (no persistence across refreshes).
+ * Data is also written to localStorage demo tables so the supabase proxy can
+ * serve CRUD operations during the session.
  */
 export function initDemoData(): DemoData {
-  const initialized = typeof window !== "undefined" && localStorage.getItem(INIT_KEY) === "true";
+  const sections   = buildSections();
+  const tasks      = buildTasks();
+  const documents  = buildDocuments();
+  const projects   = buildProjects();
+  const timeBlocks = buildTimeBlocks();
+  const dailyNotes = [buildDailyNote()];
+  const templates  = buildTemplates();
 
-  if (!initialized) {
-    const sections   = buildSections();
-    const tasks      = buildTasks();
-    const documents  = buildDocuments();
-    const projects   = buildProjects();
-    const timeBlocks = buildTimeBlocks();
-    const dailyNotes = [buildDailyNote()];
-    const templates  = buildTemplates();
+  setDemoTable("sections",          sections.map(sectionRow));
+  setDemoTable("deleted_sections",  []);
+  setDemoTable("task_subsections",  []);
+  setDemoTable("tasks",             tasks.map(taskRow));
+  setDemoTable("documents",         documents.map(docRow));
+  setDemoTable("projects",          projects.map(projectRow));
+  setDemoTable("time_blocks",       timeBlocks.map(timeBlockRow));
+  setDemoTable("daily_notes",       dailyNotes.map(noteRow));
+  setDemoTable("routine_templates", templates.map(templateRow));
 
-    setDemoTable("sections",          sections.map(sectionRow));
-    setDemoTable("deleted_sections",  []);
-    setDemoTable("task_subsections",  []);
-    setDemoTable("tasks",             tasks.map(taskRow));
-    setDemoTable("documents",         documents.map(docRow));
-    setDemoTable("projects",          projects.map(projectRow));
-    setDemoTable("time_blocks",       timeBlocks.map(timeBlockRow));
-    setDemoTable("daily_notes",       dailyNotes.map(noteRow));
-    setDemoTable("routine_templates", templates.map(templateRow));
-
-    // Default demo mode to PST
-    if (!localStorage.getItem("stride-timezone")) {
-      localStorage.setItem("stride-timezone", "America/Los_Angeles");
-    }
-
-    localStorage.setItem(INIT_KEY, "true");
-    return { sections, tasks, documents, projects, timeBlocks, dailyNotes, templates };
+  // Default demo mode to PST
+  if (!localStorage.getItem("stride-timezone")) {
+    localStorage.setItem("stride-timezone", "America/Los_Angeles");
   }
 
-  // Returning visitor: reconstruct camelCase state from current localStorage
-  return {
-    sections:   getDemoTable("sections").map(sectionFromRow),
-    tasks:      getDemoTable("tasks").map(taskFromRow),
-    documents:  getDemoTable("documents").map(docFromRow),
-    projects:   getDemoTable("projects").map(projectFromRow),
-    timeBlocks: getDemoTable("time_blocks").map(timeBlockFromRow),
-    dailyNotes: getDemoTable("daily_notes").map(noteFromRow),
-    templates:  getDemoTable("routine_templates").map(templateFromRow),
-  };
+  return { sections, tasks, documents, projects, timeBlocks, dailyNotes, templates };
 }

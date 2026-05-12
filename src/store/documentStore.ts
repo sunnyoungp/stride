@@ -146,7 +146,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     }
   };
 
-  if (typeof window !== "undefined") void loadDocuments();
+  if (typeof window !== "undefined" && !isDemoMode()) void loadDocuments();
 
   return {
     documents: [],
