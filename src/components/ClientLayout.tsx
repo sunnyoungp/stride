@@ -11,7 +11,7 @@ import { useSectionStore } from "@/store/sectionStore";
 import { useDocumentStore } from "@/store/documentStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
-import { setDemoMode } from "@/lib/demo/storage";
+import { isDemoMode, setDemoMode } from "@/lib/demo/storage";
 import { initDemoData } from "@/lib/demo/data";
 import { loadSettings } from "@/lib/settings";
 import { Sidebar } from "@/components/Sidebar";
@@ -68,8 +68,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         const supabase = createClient();
         supabase.auth.getSession().then(({ data }: any) => {
             const user = data.session?.user ?? null;
-            setUser(user);
-            if (user) {
+            const isDemo = isDemoMode() || !user;
+            setUser(isDemo ? null : user);
+            if (!isDemo) {
                 void loadSettings();
                 void useTaskStore.getState().loadTasks();
                 void useProjectStore.getState().loadProjects();
