@@ -706,14 +706,29 @@ a, button, input, select, textarea {
   background-color: rgba(0, 0, 0, 0.018) !important;
 }
 
-/* Today column header — clear FullCalendar's default blue highlight */
+/* Today column — clear FullCalendar's default highlight (header + timegrid) */
 .fc .fc-col-header-cell.fc-day-today {
   background: transparent !important;
 }
+.fc .fc-timegrid-col.fc-day-today {
+  background: transparent !important;
+}
 
-/* Month view today cell */
+/* Month view today cell — no border highlight, circle on day number instead */
 .fc .fc-daygrid-day.fc-day-today {
-  border: 1px solid var(--accent) !important;
+  border: none !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white !important;
+  font-weight: 600;
 }
 
 .fc-daygrid-event {

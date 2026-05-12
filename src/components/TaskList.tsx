@@ -11,6 +11,7 @@ import type { Task, TaskPriority } from "@/types/index";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskContextMenu } from "@/components/TaskContextMenu";
 import { DatePickerContent } from "@/components/ui/DatePicker";
+import { todayInAppTz } from "@/lib/timezone";
 
 // ── Selection context ─────────────────────────────────────────────────────────
 
@@ -407,7 +408,7 @@ export function localDateStr(d: Date): string {
 }
 
 export function todayStr(): string {
-  return localDateStr(new Date());
+  return todayInAppTz();
 }
 
 export function isOverdue(v: string): boolean {

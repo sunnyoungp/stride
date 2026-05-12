@@ -6,6 +6,7 @@ import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useFocusStore, FocusMode } from "@/store/focusStore";
 import { useTaskStore } from "@/store/taskStore";
 import type { Task } from "@/types/index";
+import { todayInAppTz } from "@/lib/timezone";
 
 export function FocusSetupModal({ isSwitching = false }: { isSwitching?: boolean } = {}) {
   const { isSetupModalOpen, setSetupModalOpen, startFocusSession, focusState, switchMode } = useFocusStore();
@@ -18,7 +19,7 @@ export function FocusSetupModal({ isSwitching = false }: { isSwitching?: boolean
   const [autoFlow, setAutoFlow] = useState(false);
 
   const eligibleTasks = useMemo(() => {
-    const todayStr = new Date().toLocaleDateString('en-CA');
+    const todayStr = todayInAppTz();
     return allTasks.filter(t => {
       const isCompleted = t.status === "done" || t.status === "cancelled";
       if (isCompleted) return false;

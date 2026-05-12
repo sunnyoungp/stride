@@ -10,11 +10,12 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useDocumentStore } from "@/store/documentStore";
 import { useRouter } from "next/navigation";
+import { todayInAppTz } from "@/lib/timezone";
 
 function localDateString(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function todayStr()    { return localDateString(new Date()); }
+function todayStr()    { return todayInAppTz(); }
 function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return localDateString(d); }
 
 const LAST_SECTION_KEY = "stride-last-section";

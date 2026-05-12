@@ -6,6 +6,7 @@ import { Settings } from "lucide-react";
 
 import { useRoutineTemplateStore } from "@/store/routineTemplateStore";
 import { RoutineChip } from "@/components/RoutineChip";
+import { todayInAppTz } from "@/lib/timezone";
 
 type Props = { onManageTemplates: () => void };
 
@@ -45,7 +46,7 @@ export function RoutineTemplateStrip({ onManageTemplates }: Props) {
   }, [templates]);
 
   const handleApply = (id: string) => {
-    const today = new Date().toISOString().split("T")[0]!;
+    const today = todayInAppTz();
     void applyTemplatesToDay([id], today);
   };
 

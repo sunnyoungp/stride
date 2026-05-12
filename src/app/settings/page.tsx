@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { THEMES, type ThemeId } from "@/lib/themes";
 import { useTheme } from "@/components/ThemeProvider";
+import { TIMEZONE_OPTIONS } from "@/lib/timezone";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -768,6 +769,7 @@ function CalendarCard() {
   const [calEnd,       setCalEnd]      = useState(() => ls("stride-calendar-end",        "23:00"));
   const [showWeekends, setShowWeekends]= useState(() => ls("stride-show-weekends",       "true") === "true");
   const [timeFormat,   setTimeFormat]  = useState(() => ls("stride-time-format",         "12hr"));
+  const [timezone,     setTimezone]    = useState(() => ls("stride-timezone", ""));
 
   return (
     <SettingCard id="calendar" title="Calendar">
@@ -834,6 +836,30 @@ function CalendarCard() {
           value={timeFormat}
           onChange={(v) => { setTimeFormat(v); void saveSettings("stride-time-format", v); }}
         />
+      </SettingRow>
+      <SettingRow label="Time zone" description={!timezone ? `Auto-detected: ${Intl.DateTimeFormat().resolvedOptions().timeZone}` : undefined}>
+        <select
+          value={timezone}
+          onChange={(e) => {
+            setTimezone(e.target.value);
+            if (e.target.value) {
+              void saveSettings("stride-timezone", e.target.value);
+            } else {
+              localStorage.removeItem("stride-timezone");
+            }
+            window.dispatchEvent(new StorageEvent("storage", { key: "stride-timezone" }));
+          }}
+          style={{
+            fontSize: 13, padding: "4px 8px", borderRadius: 8,
+            border: "1px solid var(--border)", background: "var(--bg-subtle)",
+            color: "var(--fg)", outline: "none", maxWidth: 260,
+          }}
+        >
+          <option value="">Auto-detect</option>
+          {TIMEZONE_OPTIONS.map((tz) => (
+            <option key={tz.value} value={tz.value}>{tz.label}</option>
+          ))}
+        </select>
       </SettingRow>
     </SettingCard>
   );

@@ -19,6 +19,7 @@ import { useDailyNoteStore } from "@/store/dailyNoteStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import type { DailyNote, RoutineTemplate, Task, TimeBlock } from "@/types/index";
+import { getAppTimezone, todayInAppTz } from "@/lib/timezone";
 
 type ViewKey = "1d" | "2d" | "3d" | "4d" | "week" | "month" | "agenda";
 
@@ -316,6 +317,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   const [calSlotMax, setCalSlotMax] = useState("24:00:00");
   const [calWeekends, setCalWeekends] = useState(true);
   const [calTimeFormat, setCalTimeFormat] = useState("12hr");
+  const [calTimezone, setCalTimezone] = useState<string>("local");
 
   useEffect(() => {
     // Apply persisted settings on mount (client-only)
@@ -329,6 +331,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
     setCalSlotMax(lsStr("stride-calendar-end", "24:00") + ":00");
     setCalWeekends(lsStr("stride-show-weekends", "true") === "true");
     setCalTimeFormat(lsStr("stride-time-format", "12hr"));
+    setCalTimezone(getAppTimezone());
 
     const handleStorage = (e: StorageEvent) => {
       switch (e.key) {
@@ -352,6 +355,9 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
           break;
         case "stride-time-format":
           if (e.newValue) setCalTimeFormat(e.newValue);
+          break;
+        case "stride-timezone":
+          setCalTimezone(getAppTimezone());
           break;
       }
     };
@@ -390,7 +396,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
   const viewRef = useRef<ViewKey>(dashboardMode ? "1d" : initialView);
 
   const [todayStr, setTodayStr] = useState("");
-  useEffect(() => { setTodayStr(localDateStr(new Date())); }, []);
+  useEffect(() => { setTodayStr(todayInAppTz()); }, []);
 
   const agendaDays = useMemo(() => {
     if (!todayStr) return [];
@@ -577,7 +583,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
 
   const [todayLabel, setTodayLabel] = useState("");
   useEffect(() => {
-    setTodayLabel(new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date()));
+    setTodayLabel(new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: getAppTimezone() }).format(new Date()));
   }, []);
 
   // Scroll calendar to keep current time visible when the bottom dock opens/closes
@@ -903,6 +909,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 duration={cfg.duration}
                 headerToolbar={false}
                 height="100%"
+                timeZone={calTimezone}
                 nowIndicator
                 allDaySlot
                 firstDay={calFirstDay}
@@ -1003,7 +1010,7 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                       <span style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         width: 26, height: 26, borderRadius: "50%",
-                        background: isToday ? "var(--fg)" : "transparent",
+                        background: isToday ? "var(--accent)" : "transparent",
                         color: isToday ? "var(--bg)" : "var(--fg-muted)",
                         fontSize: 14, fontWeight: isToday ? 600 : 400,
                         lineHeight: 1,

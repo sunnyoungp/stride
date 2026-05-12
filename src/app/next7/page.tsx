@@ -27,6 +27,7 @@ import { KanbanBoard, KanbanColumn } from "@/components/KanbanBoard";
 import { TaskGroup, TaskSelectionProvider, ConnectedTaskContextMenu, localDateStr, TaskRow, AddTaskRow } from "@/components/TaskList";
 import { SortFilterPopover, type GroupBy, type SortBy } from "@/components/SortFilterPopover";
 import type { Task } from "@/types/index";
+import { todayInAppTz } from "@/lib/timezone";
 
 function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
   switch (sortBy) {
@@ -52,7 +53,7 @@ function SortFilterIcon() {
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
-function todayStr() { return localDateStr(new Date()); }
+function todayStr() { return todayInAppTz(); }
 
 function dayLabel(dateStr: string, today: string): string {
   const diff = Math.round(

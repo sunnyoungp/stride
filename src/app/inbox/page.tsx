@@ -10,11 +10,12 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 import { TaskGroup, TaskSelectionProvider, ConnectedTaskContextMenu } from "@/components/TaskList";
 import { SortFilterPopover, type GroupBy, type SortBy } from "@/components/SortFilterPopover";
 import type { Task } from "@/types/index";
+import { todayInAppTz } from "@/lib/timezone";
 
 function localDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function todayStr() { return localDate(new Date()); }
+function todayStr() { return todayInAppTz(); }
 
 function applySortBy(tasks: Task[], sortBy: SortBy): Task[] {
   switch (sortBy) {
