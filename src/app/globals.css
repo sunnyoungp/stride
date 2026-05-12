@@ -660,24 +660,16 @@ a, button, input, select, textarea {
   font-size: 0.78rem;
   font-weight: 500;
   box-shadow: none !important;
-  opacity: 0.92;
+  overflow: hidden !important;
 }
 
-/* Calendar events — solid left accent stripe */
-.fc .fc-event.stride-event {
-  border-left: 3px solid var(--stride-event-color, currentColor) !important;
-  border-radius: 0 10px 10px 0 !important;
-  opacity: 1;
-}
-
-/* Routines — subtle, no border */
+/* Routines — slightly muted */
 .fc .fc-event.stride-routine {
-  opacity: 0.55;
-  border: none !important;
+  opacity: 0.75;
 }
 
 .fc .fc-event-main {
-  padding: 4px 8px;
+  padding: 0;
 }
 
 .fc .fc-scrollgrid,

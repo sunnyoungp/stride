@@ -954,10 +954,6 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                   setPopover({ timeBlockId: arg.event.id, x: arg.jsEvent.clientX, y: arg.jsEvent.clientY });
                 }}
                 eventDidMount={(info) => {
-                  // Set accent color for the left border on events
-                  if (!info.event.extendedProps.isRoutine) {
-                    info.el.style.setProperty("--stride-event-color", info.event.textColor);
-                  }
                   info.el.addEventListener("contextmenu", (e) => {
                     e.preventDefault();
                     setPopover(null);
@@ -999,18 +995,31 @@ export function CalendarView({ initialView = "week", hideSidebar: _hideSidebar =
                 }}
                 eventContent={(arg) => {
                   const isRoutine = arg.event.extendedProps.isRoutine;
+                  const color = arg.event.textColor;
                   return (
                     <div style={{
-                      padding: "2px 6px", overflow: "hidden", height: "100%",
+                      display: "flex", height: "100%", overflow: "hidden",
                       opacity: arg.event.extendedProps.isPending ? 0.5 : 1,
                     }}>
+                      {/* Left accent stripe — inset inside the rounded card like Notion Calendar */}
+                      {!isRoutine && (
+                        <div style={{
+                          width: 4, flexShrink: 0,
+                          background: color,
+                          borderRadius: "4px 0 0 4px",
+                        }} />
+                      )}
                       <div style={{
-                        fontSize: "0.75rem",
-                        fontWeight: isRoutine ? 400 : 600,
-                        lineHeight: 1.3,
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        padding: "3px 8px", overflow: "hidden", flex: 1,
                       }}>
-                        {arg.event.title}
+                        <div style={{
+                          fontSize: "0.75rem",
+                          fontWeight: isRoutine ? 400 : 600,
+                          lineHeight: 1.3,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                          {arg.event.title}
+                        </div>
                       </div>
                     </div>
                   );
