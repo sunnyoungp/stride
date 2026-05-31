@@ -16,6 +16,7 @@ import { RoutineTemplatePanel } from "@/components/RoutineTemplatePanel";
 import { useTaskStore } from "@/store/taskStore";
 import { useTimeBlockStore } from "@/store/timeBlockStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { todayInAppTz } from "@/lib/timezone";
 
 function getAccentColor(): string {
   if (typeof document !== "undefined") {
@@ -30,9 +31,6 @@ function shiftDate(date: string, days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function localDateString(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function formatDashboardDate(date: string, today: string): string {
   if (!date || !today) return "";
@@ -66,11 +64,11 @@ export default function Page() {
   const [selectedDate, setSelectedDate] = useState<string>("");
 
   useEffect(() => {
-    const now = localDateString(new Date());
+    const now = todayInAppTz();
     setToday(now);
     setSelectedDate(now);
     const id = setInterval(() => {
-      const d = localDateString(new Date());
+      const d = todayInAppTz();
       setToday((prev) => {
         if (prev !== d) setSelectedDate(d); // reset view to new day at midnight
         return prev !== d ? d : prev;
