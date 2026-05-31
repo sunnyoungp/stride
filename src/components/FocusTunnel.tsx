@@ -405,14 +405,14 @@ export function FocusTunnel() {
                   position: "relative", width: "240px", height: "240px", 
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: "50%",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  boxShadow: "inset 0 4px 20px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)"
+                  border: "1px solid var(--glass-border)",
+                  boxShadow: "var(--glass-shadow-card)"
                 }}>
                   <svg width="240" height="240" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
                     <defs>
                       <linearGradient id="pomodoroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--fg)" />
-                        <stop offset="100%" stopColor="var(--accent)" />
+                        <stop offset="0%" stopColor="var(--accent)" />
+                        <stop offset="100%" stopColor="var(--fg-muted)" />
                       </linearGradient>
                     </defs>
                     <circle cx="120" cy="120" r="108" fill="none" stroke="var(--border-mid)" strokeWidth="12" opacity={0.3} />
@@ -435,7 +435,7 @@ export function FocusTunnel() {
                       fontWeight: 500,
                       fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                       fontVariantNumeric: "tabular-nums",
-                      background: "linear-gradient(135deg, var(--fg) 20%, var(--accent) 100%)",
+                      background: "linear-gradient(135deg, var(--accent) 0%, var(--fg-muted) 100%)",
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
                       lineHeight: 1,
@@ -481,7 +481,7 @@ export function FocusTunnel() {
                 fontWeight: 400,
                 fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                 fontVariantNumeric: "tabular-nums",
-                background: "linear-gradient(135deg, var(--fg) 20%, var(--accent) 100%)",
+                background: "linear-gradient(135deg, var(--accent) 0%, var(--fg-muted) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 lineHeight: 1,
@@ -497,7 +497,7 @@ export function FocusTunnel() {
       {/* ── Main content area ────────────────────────────────────────────────────── */}
       <div
         className={`flex-1 flex flex-col relative z-10 transition-all duration-700 ${isSpotlightOn ? 'items-center justify-center overflow-hidden' : 'items-center overflow-y-auto'}`}
-        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '300px' : mode === 'timer' ? '250px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        style={{ paddingTop: isSpotlightOn ? 0 : mode === 'pomodoro' ? '380px' : mode === 'timer' ? '300px' : '20vh', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         <style dangerouslySetInnerHTML={{ __html: `.flex-1::-webkit-scrollbar { display: none; }` }} />
 
@@ -526,8 +526,15 @@ export function FocusTunnel() {
                         duration: 0.5,
                         ease: [0.33, 1, 0.68, 1] // Custom easeOutQuart
                       }}
-                      className="relative w-full rounded-[32px] p-8 md:p-10 mb-4 last:mb-0 shadow-none border"
-                      style={{ background: style.bg, border: style.border }}
+                      className="relative w-full rounded-[32px] p-8 md:p-10 mb-4 last:mb-0"
+                      style={{
+                        background: style.bg,
+                        backdropFilter: "var(--glass-blur-card)",
+                        WebkitBackdropFilter: "var(--glass-blur-card)",
+                        border: "1px solid var(--glass-border)",
+                        borderTop: "1px solid var(--glass-border-top)",
+                        boxShadow: "var(--glass-shadow-card)",
+                      }}
                     >
                       <div className="flex items-center gap-10">
                         <button
@@ -571,8 +578,9 @@ export function FocusTunnel() {
             background: "var(--bg-card)",
             backdropFilter: "var(--glass-blur-card)",
             WebkitBackdropFilter: "var(--glass-blur-card)",
-            border: "1px solid var(--border-strong)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+            border: "1px solid var(--glass-border)",
+            borderTop: "1px solid var(--glass-border-top)",
+            boxShadow: "var(--glass-shadow-card)",
             cursor: isDraggingPill ? "grabbing" : "grab",
           }}
           onPointerDown={handlePillPointerDown}
