@@ -409,17 +409,11 @@ export function FocusTunnel() {
                   boxShadow: "var(--glass-shadow-card)"
                 }}>
                   <svg width="240" height="240" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", overflow: "visible" }}>
-                    <defs>
-                      <linearGradient id="pomodoroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--accent)" />
-                        <stop offset="100%" stopColor="var(--fg-muted)" />
-                      </linearGradient>
-                    </defs>
-                    <circle cx="120" cy="120" r="108" fill="none" stroke="var(--border-mid)" strokeWidth="12" opacity={0.3} />
+                    <circle cx="120" cy="120" r="108" fill="none" stroke="var(--border)" strokeWidth="12" opacity={0.3} />
                     <motion.circle
                       cx="120" cy="120" r="108"
                       fill="none"
-                      stroke="url(#pomodoroGrad)"
+                      stroke="var(--accent)"
                       strokeWidth="12"
                       strokeDasharray={2 * Math.PI * 108}
                       initial={{ strokeDashoffset: 2 * Math.PI * 108 * (1 - ringProgress) }}
@@ -435,12 +429,9 @@ export function FocusTunnel() {
                       fontWeight: 500,
                       fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                       fontVariantNumeric: "tabular-nums",
-                      background: "linear-gradient(135deg, var(--accent) 0%, var(--fg-muted) 100%)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
+                      color: "var(--accent)",
                       lineHeight: 1,
                       letterSpacing: "-0.02em",
-                      filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
                     }}>
                       {formatTime(timeRemaining)}
                     </span>
@@ -481,9 +472,7 @@ export function FocusTunnel() {
                 fontWeight: 400,
                 fontFamily: '"SF Pro Display", "Inter", "Helvetica Neue", sans-serif',
                 fontVariantNumeric: "tabular-nums",
-                background: "linear-gradient(135deg, var(--accent) 0%, var(--fg-muted) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: "var(--accent)",
                 lineHeight: 1,
                 letterSpacing: "-0.02em"
               }}>
