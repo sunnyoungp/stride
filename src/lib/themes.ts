@@ -161,8 +161,8 @@ export const THEMES = [
   {
     id: 'neutral-light', name: 'Neutral', description: 'Original warm cream, coral accent', type: 'light' as const,
     '--tint-h': '30', '--tint-s': '16%',
-    '--bg': '#fafafa', '--bg-subtle': '#ffffff',
-    '--bg-app': '#fafafa', '--bg-panel': 'rgba(255, 255, 255, 0.75)', '--bg-card': 'rgba(255, 255, 255, 0.75)',
+    '--bg': '#ffffff', '--bg-subtle': '#f6f6f6',
+    '--bg-app': '#ffffff', '--bg-panel': 'rgba(255, 255, 255, 0.75)', '--bg-card': 'rgba(255, 255, 255, 0.75)',
     '--bg-hover': 'rgba(0,0,0,0.04)', '--bg-active': 'rgba(232,96,60,0.07)',
     '--fg': '#09090b', '--fg-muted': '#52525b', '--fg-faint': '#a1a1aa', '--fg-placeholder': '#d4d4d8',
     '--accent': '#e8603c', '--accent-hover': '#d44e2a', '--accent-fg': '#ffffff',
