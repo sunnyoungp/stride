@@ -302,12 +302,16 @@ a, button, input, select, textarea {
 }
 
 /* ═══════════════════════════════════════════
-   SCROLLBARS
+   SCROLLBARS — Hidden globally
 ═══════════════════════════════════════════ */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--fg-faint); }
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+*::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
 
 /* ═══════════════════════════════════════════
    ANIMATIONS
